@@ -10,12 +10,12 @@ except ImportError:
 
 version = os.path.split(os.path.abspath(__file__))[-2].split('-')[-1]
 
-packages = ['btc']
+packages = ['tbc']
 
-package_dir = {'btc': 'btc/pym'}
+package_dir = {'tbc': 'tbc/pym'}
 
 setup(
-	name="btc",
+	name="tbc",
 	version=version,
 	author='Zorry',
 	author_email='tinderbox-cluster@gentoo.org',
