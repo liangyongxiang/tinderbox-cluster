@@ -4,12 +4,12 @@
 # Distributed under the terms of the GNU General Public License v2
 
 from __future__ import print_function
-from btc.readconf import get_conf_settings
-from btc.ConnectionManager import NewConnection
-from btc.sqlquerys import add_btc_logs, get_config_id, check_host_updatedb, update_deamon_status
-from btc.check_setup import check_configure_guest
-from btc.build_job import build_job_action
-from btc.jobs import jobs_main
+from tbc.readconf import get_conf_settings
+from tbc.ConnectionManager import NewConnection
+from tbc.sqlquerys import add_tbc_logs, get_config_id, check_host_updatedb, update_deamon_status
+from tbc.check_setup import check_configure_guest
+from tbc.build_job import build_job_action
+from tbc.jobs import jobs_main
 from sqlalchemy.orm import sessionmaker
 import portage
 import sys
@@ -19,13 +19,13 @@ import time
 def main():
 	repeat = True
 	reader = get_conf_settings()
-	btc_settings_dict=reader.read_btc_settings_all()
-	config = btc_settings_dict['btc_config']
-	hostname = btc_settings_dict['hostname']
-	Session = sessionmaker(bind=NewConnection(btc_settings_dict))
+	tbc_settings_dict=reader.read_tbc_settings_all()
+	config = tbc_settings_dict['tbc_config']
+	hostname = tbc_settings_dict['hostname']
+	Session = sessionmaker(bind=NewConnection(tbc_settings_dict))
 	session = Session()
 	config_id = get_config_id(session, config, hostname)
-	add_btc_logs(session, "Job and build deamon started.", "info", config_id)
+	add_tbc_logs(session, "Job and build deamon started.", "info", config_id)
 	init_build_job = build_job_action(config_id, session)
 	while repeat:
 		jobs_main(session, config)

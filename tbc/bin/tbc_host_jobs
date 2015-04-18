@@ -1,0 +1,33 @@
+#!/usr/bin/python
+#
+# Copyright 1998-2015 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+
+from __future__ import print_function
+
+from tbc.readconf import get_conf_settings
+from tbc.jobs import jobs_main
+from tbc.ConnectionManager import NewConnection
+from tbc.sqlquerys import add_tbc_logs, get_config_id
+from sqlalchemy.orm import sessionmaker
+import time
+
+def main():
+	# Main
+	reader = get_conf_settings()
+	tbc_settings_dict=reader.read_tbc_settings_all()
+	config = tbc_settings_dict['tbc_config']
+	hostname = tbc_settings_dict['hostname']
+	Session = sessionmaker(bind=NewConnection(tbc_settings_dict))
+	session = Session()
+	config_id = get_config_id(session, config, hostname)
+	add_tbc_logs(session, "Job deamon started", "info", config_id)
+	repeat = True
+	while repeat:
+		jobs_main(session, config_id)
+		repeat = False
+		time.sleep(60)
+	add_tbc_logs(session, "Job deamon stoped", "info", config_id)
+
+if __name__ == "__main__":
+	main()
