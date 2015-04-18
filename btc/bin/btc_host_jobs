@@ -1,0 +1,33 @@
+#!/usr/bin/python
+#
+# Copyright 1998-2015 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
+
+from __future__ import print_function
+
+from btc.readconf import get_conf_settings
+from btc.jobs import jobs_main
+from btc.ConnectionManager import NewConnection
+from btc.sqlquerys import add_btc_logs, get_config_id
+from sqlalchemy.orm import sessionmaker
+import time
+
+def main():
+	# Main
+	reader = get_conf_settings()
+	btc_settings_dict=reader.read_btc_settings_all()
+	config = btc_settings_dict['btc_config']
+	hostname = btc_settings_dict['hostname']
+	Session = sessionmaker(bind=NewConnection(btc_settings_dict))
+	session = Session()
+	config_id = get_config_id(session, config, hostname)
+	add_btc_logs(session, "Job deamon started", "info", config_id)
+	repeat = True
+	while repeat:
+		jobs_main(session, config_id)
+		repeat = False
+		time.sleep(60)
+	add_btc_logs(session, "Job deamon stoped", "info", config_id)
+
+if __name__ == "__main__":
+	main()
