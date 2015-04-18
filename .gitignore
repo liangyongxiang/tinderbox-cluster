@@ -1,0 +1,8 @@
+# Backup files
+*~
+# log dir
+frontend/static/logs
+# Python compiled files
+*.pyc
+frontend/python/tinderbox/settings.py
+frontend/python/tinderbox/wsgi.py
