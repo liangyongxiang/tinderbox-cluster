@@ -16,6 +16,7 @@ class Keywords(Base):
 class Setups(Base):
 	SetupId = Column('setup_id', Integer, primary_key=True)
 	Setup = Column('setup', String(100))
+	Profile = Column('profile', String(150))
 	__tablename__ = 'setups'
 
 class Configs(Base):
@@ -46,7 +47,6 @@ class Jobs(Base):
 class ConfigsMetaData(Base):
 	Id = Column('id', Integer, primary_key=True)
 	ConfigId = Column('config_id', Integer, ForeignKey('configs.config_id'))
-	Profile = Column('profile', String(150))
 	KeywordId = Column('keyword_id', Integer, ForeignKey('keywords.keyword_id'))
 	MakeConfText = Column('make_conf_text', Text)
 	Checksum = Column('checksum', String(100))
@@ -215,6 +215,18 @@ class BuildLogsUse(Base):
 	UseId = Column('use_id', Integer, ForeignKey('uses.use_id'))
 	Status = Column('status', Boolean, default=False)
 	__tablename__ = 'build_logs_use'
+
+class BuildLogsQA(Base):
+	Id = Column('id', Integer, primary_key=True)
+	BuildLogId = Column('build_log_id', Integer, ForeignKey('build_logs.build_log_id'))
+	SummeryText = Column('summery_text', Text)
+	__tablename__ = 'build_logs_qa'
+
+class BuildLogsRepoman(Base):
+	Id = Column('id', Integer, primary_key=True)
+	BuildLogId = Column('build_log_id', Integer, ForeignKey('build_logs.build_log_id'))
+	SummeryText = Column('summery_text', Text)
+	__tablename__ = 'build_logs_repoman'
 
 class ErrorsInfo(Base):
 	ErrorId = Column('error_id', Integer, primary_key=True)

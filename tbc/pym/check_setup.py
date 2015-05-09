@@ -9,16 +9,19 @@ import errno
 from portage.exception import DigestException, FileNotFound, ParseError, PermissionDenied
 from tbc.text import get_file_text
 from tbc.sqlquerys import get_config_all_info, add_tbc_logs, get_configmetadata_info, get_setup_info
+from tbc.sync import git_pull
 
 def check_make_conf(session, config_id, tbc_settings_dict):
 	log_msg = "Checking configs for changes and errors"
 	add_tbc_logs(session, log_msg, "info", config_id)
+	git_repo = tbc_settings_dict['tbc_gitrepopath'] + "/"
+	git_pull(session, git_repo, config_id)
 	configsDict = {}
 	for ConfigInfo in get_config_all_info(session):
 		attDict={}
 		# Set the config dir
 		SetupInfo = get_setup_info(session, ConfigInfo.ConfigId)
-		check_config_dir = "/var/cache/tbc/" + tbc_settings_dict['tbc_gitreponame'] + "/" + ConfigInfo.Hostname +"/" + SetupInfo.Setup + "/"
+		check_config_dir = tbc_settings_dict['tbc_gitrepopath'] + "/" + ConfigInfo.Hostname +"/" + SetupInfo.Setup + "/"
 		make_conf_file = check_config_dir + "etc/portage/make.conf"
 		ConfigsMetaDataInfo = get_configmetadata_info(session, ConfigInfo.ConfigId)
 		# Check if we can take a checksum on it.
@@ -48,7 +51,9 @@ def check_make_conf(session, config_id, tbc_settings_dict):
 	log_msg = "Checking configs for changes and errors ... Done"
 	add_tbc_logs(session, log_msg, "info", config_id)
 
-def check_make_conf_guest(session, config_id):
+def check_make_conf_guest(session, tbc_settings_dict, config_id):
+	git_repo = tbc_settings_dict['tbc_gitrepopath'] + "/"
+	git_pull(session, git_repo, config_id)
 	make_conf_file = "/etc/portage/make.conf"
 	# Check if we can open the file and close it
 	# Check if we have some error in the file (portage.util.getconfig)
@@ -68,7 +73,7 @@ def check_make_conf_guest(session, config_id):
 		return False
 	return True
 
-def check_configure_guest(session, config_id):
-	pass_make_conf = check_make_conf_guest(session, config_id)
+def check_configure_guest(session, tbc_settings_dict, config_id):
+	pass_make_conf = check_make_conf_guest(session, tbc_settings_dict, config_id)
 	print(pass_make_conf)
 	return pass_make_conf

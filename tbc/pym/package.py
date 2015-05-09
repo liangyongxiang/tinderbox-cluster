@@ -26,7 +26,7 @@ class tbc_package(object):
 
 	def change_config(self, host_config):
 		# Change config_root  config_setup = table config
-		my_new_setup = "/var/cache/tbc/" + self._tbc_settings_dict['tbc_gitreponame'] + "/" + host_config + "/"
+		my_new_setup = tbc_settings_dict['tbc_gitrepopath'] + "/" + host_config + "/"
 		mysettings_setup = portage.config(config_root = my_new_setup)
 		return mysettings_setup
 

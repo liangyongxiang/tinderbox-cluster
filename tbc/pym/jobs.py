@@ -43,26 +43,11 @@ def jobs_main(session, config_id):
 			#	update_job_list(session, "Fail", job_id)
 			#	log_msg = "Job %s did fail." % (job_id,)
 			#	add_tbc_logs(session, log_msg, "info", config_id)
-		elif job == "gsync":
-			update_job_list(session, "Runing", job_id)
-			log_msg = "Job %s is runing." % (job_id,)
-			add_tbc_logs(session, log_msg, "info", config_id)
-			result = True
-			# result = git_pull(session)
-			if result:
-				update_job_list(session, "Done", job_id)
-				log_msg = "Job %s is done.." % (job_id,)
-				add_tbc_logs(session, log_msg, "info", config_id)
-			else:
-				update_job_list(session, "Fail", job_id)
-				log_msg = "Job %s did fail." % (job_id,)
-				add_tbc_logs(session, log_msg, "info", config_id)
 		elif job == "esync":
 			update_job_list(session, "Runing", job_id)
 			log_msg = "Job %s is runing." % (job_id,)
 			add_tbc_logs(session, log_msg, "info", config_id)
-			result =  sync_tree(session)
-			if result:
+			if sync_tree(session) and update_db_main(session, config_id):
 				update_job_list(session, "Done", job_id)
 				log_msg = "Job %s is done.." % (job_id,)
 				add_tbc_logs(session, log_msg, "info", config_id)
@@ -74,8 +59,7 @@ def jobs_main(session, config_id):
 			update_job_list(session, "Runing", job_id)
 			log_msg = "Job %s is runing." % (job_id,)
 			add_tbc_logs(session, log_msg, "info", config_id)
-			result = update_db_main(session, config_id)
-			if result:
+			ifupdate_db_main(session, config_id):
 				update_job_list(session, "Done", job_id)
 				log_msg = "Job %s is done.." % (job_id,)
 				add_tbc_logs(session, log_msg, "info", config_id)

@@ -7,9 +7,10 @@ import os
 import errno
 import sys
 import time
+from pygit2 import Repository, GIT_MERGE_ANALYSIS_FASTFORWARD, GIT_MERGE_ANALYSIS_NORMAL, \
+        GIT_MERGE_ANALYSIS_UP_TO_DATE
 
 from _emerge.main import emerge_main
-from tbc.readconf import get_conf_settings
 from tbc.sqlquerys import get_config_id, add_tbc_logs, get_config_all_info, get_configmetadata_info
 from tbc.updatedb import update_db_main
 from tbc.readconf import read_config_settings
@@ -20,7 +21,7 @@ def sync_tree(session):
 	_config = tbc_settings_dict['tbc_config']
 	config_id = get_config_id(session, _config, _hostname)
 	host_config = _hostname +"/" + _config
-	default_config_root = "/var/cache/tbc/" + tbc_settings_dict['tbc_gitreponame'] + "/" + host_config + "/"
+	default_config_root = tbc_settings_dict['tbc_gitrepopath']  + "/" + host_config + "/"
 	mysettings = portage.config(config_root = default_config_root)
 	GuestBusy = True
 	log_msg = "Waiting for Guest to be idel"
@@ -65,9 +66,38 @@ def sync_tree(session):
 			pass
 		log_msg = "Emerge --sync ... Done."
 		add_tbc_logs(session, log_msg, "info", config_id)
-	result = update_db_main(session, config_id)
-	if result:
-		return True
+	return True
+
+def git_pull(session, git_repo, config_id):
+	log_msg = "Git pull"
+	add_zobcs_logs(session, log_msg, "info", config_id)
+	repo = Repository(git_repo + ".git")
+	remote = repo.remotes["origin"]
+	remote.fetch()
+	remote_master_id = repo.lookup_reference('refs/remotes/origin/master').target
+	merge_result, _ = repo.merge_analysis(remote_master_id)
+	if merge_result & GIT_MERGE_ANALYSIS_UP_TO_DATE:
+		log_msg = "Repo is up to date"
+		add_zobcs_logs(session, log_msg, "info", config_id)
+	elif merge_result & GIT_MERGE_ANALYSIS_FASTFORWARD:
+		repo.checkout_tree(repo.get(remote_master_id))
+		master_ref = repo.lookup_reference('refs/heads/master')
+		master_ref.set_target(remote_master_id)
+		repo.head.set_target(remote_master_id)
+	elif merge_result & GIT_MERGE_ANALYSIS_NORMAL:
+		repo.merge(remote_master_id)
+		assert repo.index.conflicts is None, 'Conflicts, ahhhh!'
+		user = repo.default_signature
+		tree = repo.index.write_tree()
+		commit = repo.create_commit('HEAD',
+			user,
+			user,
+			'Merge!',
+			tree,
+			[repo.head.target, remote_master_id])
+		repo.state_cleanup()
 	else:
-		log_msg = "Updatedb fail"
-		add_tbc_logs(session, log_msg, "info", config_id)
+		raise AssertionError('Unknown merge analysis result')
+	log_msg = "Git pull ... Done"
+	add_zobcs_logs(session, log_msg, "info", config_id)
+	return True

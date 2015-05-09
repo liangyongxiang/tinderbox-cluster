@@ -25,7 +25,7 @@ def init_portage_settings(session, config_id, tbc_settings_dict):
 	
 	# Get default config from the configs table  and default_config=1
 	host_config = tbc_settings_dict['hostname'] +"/" + tbc_settings_dict['tbc_config']
-	default_config_root = "/var/cache/tbc/" + tbc_settings_dict['tbc_gitreponame'] + "/" + host_config + "/"
+	default_config_root = tbc_settings_dict['tbc_gitrepopath'] + "/" + host_config + "/"
 
 	# Set config_root (PORTAGE_CONFIGROOT)  to default_config_root
 	mysettings = portage.config(config_root = default_config_root)

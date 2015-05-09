@@ -7,7 +7,7 @@ from tbc.db_mapping import Configs, Logs, ConfigsMetaData, Jobs, BuildJobs, Pack
 	Uses, ConfigsEmergeOptions, EmergeOptions, HiLight, BuildLogs, BuildLogsConfig, BuildJobsUse, BuildJobsRedo, \
 	HiLightCss, BuildLogsHiLight, BuildLogsEmergeOptions, BuildLogsErrors, ErrorsInfo, EmergeInfo, BuildLogsUse, \
 	BuildJobsEmergeOptions, EbuildsMetadata, EbuildsIUse, Restrictions, EbuildsRestrictions, EbuildsKeywords, \
-        Keywords, PackagesMetadata, Emails, PackagesEmails, Setups
+        Keywords, PackagesMetadata, Emails, PackagesEmails, Setups, BuildLogsQA,  BuildLogsRepoman
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy import and_, or_
 
@@ -69,15 +69,17 @@ def is_build_job_done(session, build_job_id):
 def get_packages_to_build(session, config_id):
 	SetupInfo = get_setup_info(session, config_id)
 	BuildJobsTmp = session.query(BuildJobs).filter(BuildJobs.SetupId==SetupInfo.SetupId). \
-				order_by(BuildJobs.BuildJobId)
-	if session.query(BuildJobs).filter_by(SetupId = SetupInfo.SetupId).filter_by(BuildNow = True).filter_by(Status = 'Waiting').all() == [] and session.query(BuildJobs).filter_by(SetupId = SetupInfo.SetupId).filter_by(Status = 'Waiting').all() == []:
+		order_by(BuildJobs.BuildJobId).filter_by(Status = 'Waiting')
+	if BuildJobsTmp.all() == []:
 		return None
-	if not BuildJobsTmp.filter_by(BuildNow = True).first() is None:
-		BuildJobsInfo = session.query(BuildJobs).filter_by(SetupId = SetupInfo.SetupId).filter_by(BuildNow = True). \
-			filter_by(Status = 'Waiting').order_by(BuildJobs.BuildJobId).first()
+	elif BuildJobsTmp.filter_by(BuildNow = True).all() != []:
+		BuildJobsInfo = BuildJobsTmp.filter_by(BuildNow = True).first()
+	elif BuildJobsTmp.filter_by(BuildNow = False).all() != []:
+		BuildJobsInfo = BuildJobsTmp.filter_by(BuildNow = False).first()
 	else:
-		BuildJobsInfo = session.query(BuildJobs).filter_by(SetupId = SetupInfo.SetupId).filter_by(Status = 'Waiting').\
-			order_by(BuildJobs.BuildJobId).first()
+		log_msg = "BuildJobsTmp found job but the if state mant did not."
+		add_zobcs_logs(session, log_msg, "error", config_id)
+		return None
 	update_buildjobs_status(session, BuildJobsInfo.BuildJobId, 'Looked', config_id)
 	EbuildsInfo = session.query(Ebuilds).filter_by(EbuildId = BuildJobsInfo.EbuildId).one()
 	PackagesInfo, CategoriesInfo = session.query(Packages, Categories).filter(Packages.PackageId==EbuildsInfo.PackageId).filter(Packages.CategoryId==Categories.CategoryId).one()
@@ -266,6 +268,22 @@ def add_new_buildlog(session, build_dict, build_log_dict):
 		del_old_build_jobs(session, build_dict['build_job_id'])
 		return build_log_id
 
+def add_repoman_qa(session, build_log_dict, log_id):
+	repoman_error = ""
+	qa_error = ""
+	if build_log_dict['qa_error_list']:
+		for qa_text in build_log_dict['qa_error_list']:
+			qa_error = qa_error + build_log_dict['qa_error_list']
+		NewBuildLogQA = BuildLogsQA(BuildLogId = log_id, SummeryText = qa_error)
+		session.add(NewBuildLogQA)
+		session.commit()
+	if build_log_dict['repoman_error_list']:
+		for repoman_text in build_log_dict['repoman_error_list']:
+			repoman_error = repoman_error + repoman_text
+		NewBuildLogRepoman = BuildLogsRepoman(BuildLogId = log_id, SummeryText = repoman_error)
+		session.add(NewBuildLogRepoman)
+		session.commit()
+
 def update_fail_times(session, FailInfo):
 	NewBuildJobs = session.query(BuildJobs).filter_by(BuildJobId = FailInfo.BuildJobId).one()
 	NewBuildJobs.TimeStamp = datetime.datetime.utcnow()
@@ -279,7 +297,6 @@ def get_fail_times(session, build_dict):
 	return True
 
 def add_fail_times(session, fail_querue_dict):
-	print(fail_querue_dict)
 	NewBuildJobsRedo = BuildJobsRedo(BuildJobId = fail_querue_dict['build_job_id'], FailType = fail_querue_dict['fail_type'], FailTimes = fail_querue_dict['fail_times'])
 	session.add(NewBuildJobsRedo)
 	session.commit()

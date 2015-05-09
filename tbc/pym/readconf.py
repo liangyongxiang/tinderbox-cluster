@@ -32,10 +32,10 @@ class get_conf_settings(object):
 			if element[0] == 'SQLPASSWD':		# Password
 				get_sql_passwd = element[1]
 			# Buildhost root (dir for host/setup on host)
-			if element[0] == 'ZOBCSGITREPONAME':
-				get_tbc_gitreponame = element[1]
+			if element[0] == 'TBCREPOPATH':
+				get_tbc_gitrepopath = element[1]
 			# Buildhost setup (host/setup on guest)
-			if element[0] == 'ZOBCSCONFIG':
+			if element[0] == 'TBCCONFIG':
 				get_tbc_config = element[1]
 			# if element[0] == 'LOGFILE':
 			#	get_tbc_logfile = element[1]
@@ -47,7 +47,7 @@ class get_conf_settings(object):
 		tbc_settings_dict['sql_host'] = get_sql_host.rstrip('\n')
 		tbc_settings_dict['sql_user'] = get_sql_user.rstrip('\n')
 		tbc_settings_dict['sql_passwd'] = get_sql_passwd.rstrip('\n')
-		tbc_settings_dict['tbc_gitreponame'] = get_tbc_gitreponame.rstrip('\n')
+		tbc_settings_dict['tbc_gitrepopath'] = get_tbc_gitrepopath.rstrip('\n')
 		tbc_settings_dict['tbc_config'] = get_tbc_config.rstrip('\n')
 		tbc_settings_dict['hostname'] = getfqdn()
 		# tbc_settings_dict['tbc_logfile'] = get_tbc_logfile.rstrip('\n')
