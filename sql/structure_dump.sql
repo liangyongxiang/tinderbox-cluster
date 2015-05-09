@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: May 09, 2015 at 02:34 PM
+-- Generation Time: May 09, 2015 at 03:13 PM
 -- Server version: 10.0.15-MariaDB-log
 -- PHP Version: 5.6.5-pl0-gentoo
 
@@ -17,7 +17,7 @@ SET time_zone = "+00:00";
 /*!40101 SET NAMES utf8 */;
 
 --
--- Database: `zobcs`
+-- Database: `tbc`
 --
 
 DELIMITER $$
@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS `build_jobs` (
   `build_now` tinyint(1) NOT NULL,
   `removebin` tinyint(1) NOT NULL,
   `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM AUTO_INCREMENT=3113 DEFAULT CHARSET=utf8 COMMENT='The build work list';
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='The build work list';
 
 -- --------------------------------------------------------
 
@@ -99,7 +99,7 @@ CREATE TABLE IF NOT EXISTS `build_jobs_use` (
   `build_job_id` int(11) NOT NULL,
   `use_id` int(11) NOT NULL,
   `status` tinyint(1) NOT NULL DEFAULT '0'
-) ENGINE=MyISAM AUTO_INCREMENT=17343 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -115,7 +115,7 @@ CREATE TABLE IF NOT EXISTS `build_logs` (
   `log_hash` varchar(100) NOT NULL,
   `bug_id` int(10) NOT NULL DEFAULT '0',
   `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM AUTO_INCREMENT=17625 DEFAULT CHARSET=utf8 COMMENT='Main log info for the builds';
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Main log info for the builds';
 
 -- --------------------------------------------------------
 
@@ -130,7 +130,7 @@ CREATE TABLE IF NOT EXISTS `build_logs_config` (
   `einfo_id` int(11) NOT NULL,
   `logname` varchar(150) NOT NULL COMMENT 'filename of the log',
   `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM AUTO_INCREMENT=44160 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -154,7 +154,7 @@ CREATE TABLE IF NOT EXISTS `build_logs_errors` (
 `id` int(11) NOT NULL,
   `build_log_id` int(11) NOT NULL,
   `error_id` int(11) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=3379 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -168,7 +168,7 @@ CREATE TABLE IF NOT EXISTS `build_logs_hilight` (
   `start_line` int(11) NOT NULL,
   `end_line` int(11) NOT NULL,
   `hilight_css_id` int(11) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=413189 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -192,7 +192,7 @@ CREATE TABLE IF NOT EXISTS `build_logs_repoman` (
 `id` int(11) NOT NULL,
   `build_log_id` int(11) NOT NULL,
   `summery_text` text NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=51 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -205,7 +205,7 @@ CREATE TABLE IF NOT EXISTS `build_logs_use` (
   `build_log_id` int(11) NOT NULL,
   `use_id` int(11) NOT NULL,
   `status` tinyint(1) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=76204 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -218,7 +218,7 @@ CREATE TABLE IF NOT EXISTS `categories` (
   `category` varchar(50) NOT NULL,
   `active` tinyint(1) NOT NULL DEFAULT '0',
   `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM AUTO_INCREMENT=181 DEFAULT CHARSET=utf8 COMMENT='Categories main table (C)';
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Categories main table (C)';
 
 -- --------------------------------------------------------
 
@@ -231,7 +231,7 @@ CREATE TABLE IF NOT EXISTS `configs` (
   `hostname` varchar(50) NOT NULL,
   `setup_id` int(11) NOT NULL COMMENT 'setup',
   `default_config` tinyint(1) NOT NULL COMMENT 'Host setup'
-) ENGINE=MyISAM AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COMMENT='Main config table';
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Main config table';
 
 -- --------------------------------------------------------
 
@@ -243,7 +243,7 @@ CREATE TABLE IF NOT EXISTS `configs_emerge_options` (
 `id` int(11) NOT NULL,
   `config_id` int(11) NOT NULL COMMENT 'config id',
   `eoption_id` int(11) NOT NULL COMMENT 'emerge option id'
-) ENGINE=MyISAM AUTO_INCREMENT=21 DEFAULT CHARSET=utf8 COMMENT='Emerge command options for the configs';
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Emerge command options for the configs';
 
 -- --------------------------------------------------------
 
@@ -266,7 +266,7 @@ CREATE TABLE IF NOT EXISTS `configs_metadata` (
   `auto` tinyint(1) NOT NULL,
   `git_www` varchar(100) NOT NULL COMMENT 'git repo www wiev address',
   `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM AUTO_INCREMENT=7 DEFAULT CHARSET=utf8 COMMENT='Config Status';
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Config Status';
 
 -- --------------------------------------------------------
 
@@ -281,7 +281,7 @@ CREATE TABLE IF NOT EXISTS `ebuilds` (
   `checksum` varchar(100) NOT NULL,
   `active` tinyint(1) NOT NULL DEFAULT '0',
   `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM AUTO_INCREMENT=81657 DEFAULT CHARSET=utf8 COMMENT='Version main table (V)';
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Version main table (V)';
 
 -- --------------------------------------------------------
 
@@ -294,7 +294,7 @@ CREATE TABLE IF NOT EXISTS `ebuilds_iuse` (
   `ebuild_id` int(11) NOT NULL,
   `use_id` int(11) NOT NULL,
   `status` tinyint(1) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=456109 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -307,7 +307,7 @@ CREATE TABLE IF NOT EXISTS `ebuilds_keywords` (
   `ebuild_id` int(11) NOT NULL,
   `keyword_id` int(11) NOT NULL,
   `status` enum('Stable','Unstable','Negative') NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=559659 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -319,7 +319,7 @@ CREATE TABLE IF NOT EXISTS `ebuilds_metadata` (
 `id` int(11) NOT NULL,
   `ebuild_id` int(11) NOT NULL,
   `revision` varchar(10) NOT NULL COMMENT 'CVS revision'
-) ENGINE=MyISAM AUTO_INCREMENT=81657 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -331,7 +331,7 @@ CREATE TABLE IF NOT EXISTS `ebuilds_restrictions` (
 `id` int(11) NOT NULL,
   `ebuild_id` int(11) NOT NULL,
   `restriction_id` int(11) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=14328 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -342,7 +342,7 @@ CREATE TABLE IF NOT EXISTS `ebuilds_restrictions` (
 CREATE TABLE IF NOT EXISTS `emails` (
 `email_id` int(11) NOT NULL,
   `email` varchar(150) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=679 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -353,7 +353,7 @@ CREATE TABLE IF NOT EXISTS `emails` (
 CREATE TABLE IF NOT EXISTS `emerge_info` (
 `einfo_id` int(11) NOT NULL,
   `emerge_info_text` text NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=18635 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -364,7 +364,7 @@ CREATE TABLE IF NOT EXISTS `emerge_info` (
 CREATE TABLE IF NOT EXISTS `emerge_options` (
 `eoption_id` int(11) NOT NULL COMMENT 'emerge command options id',
   `eoption` varchar(15) NOT NULL COMMENT 'emerge command options'
-) ENGINE=MyISAM AUTO_INCREMENT=7 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -376,7 +376,7 @@ CREATE TABLE IF NOT EXISTS `errors_info` (
 `error_id` int(11) NOT NULL,
   `error_name` varchar(10) NOT NULL,
   `error_search` varchar(20) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=8 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -392,7 +392,7 @@ CREATE TABLE IF NOT EXISTS `hilight` (
   `hilight_css_id` int(11) NOT NULL,
   `hilight_start` int(11) NOT NULL,
   `hilight_end` int(11) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=52 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -404,7 +404,7 @@ CREATE TABLE IF NOT EXISTS `hilight_css` (
 `hilight_css_id` int(11) NOT NULL,
   `hilight_css_name` varchar(11) NOT NULL,
   `hilight_css_collor` varchar(10) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=6 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -420,7 +420,7 @@ CREATE TABLE IF NOT EXISTS `jobs` (
   `config_id` int(11) NOT NULL,
   `run_config_id` int(11) NOT NULL,
   `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -431,7 +431,7 @@ CREATE TABLE IF NOT EXISTS `jobs` (
 CREATE TABLE IF NOT EXISTS `keywords` (
 `keyword_id` int(11) NOT NULL COMMENT 'keyword index',
   `keyword` varchar(15) NOT NULL COMMENT 'keyword'
-) ENGINE=MyISAM AUTO_INCREMENT=42 DEFAULT CHARSET=utf8 COMMENT='KEYWORD';
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='KEYWORD';
 
 -- --------------------------------------------------------
 
@@ -445,7 +445,7 @@ CREATE TABLE IF NOT EXISTS `logs` (
   `log_type` enum('info','error','debug','qa') NOT NULL,
   `msg` text NOT NULL,
   `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM AUTO_INCREMENT=22201403 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -461,7 +461,7 @@ CREATE TABLE IF NOT EXISTS `packages` (
   `checksum` varchar(100) NOT NULL,
   `active` tinyint(1) NOT NULL,
   `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM AUTO_INCREMENT=18514 DEFAULT CHARSET=utf8 COMMENT='Packages main table (P)';
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Packages main table (P)';
 
 -- --------------------------------------------------------
 
@@ -473,7 +473,7 @@ CREATE TABLE IF NOT EXISTS `packages_emails` (
 `id` int(11) NOT NULL,
   `package_id` int(11) NOT NULL,
   `email_id` int(11) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=22365 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -485,7 +485,7 @@ CREATE TABLE IF NOT EXISTS `packages_metadata` (
 `id` int(11) NOT NULL,
   `package_id` int(11) NOT NULL,
   `checksum` varchar(100) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=18513 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -496,7 +496,7 @@ CREATE TABLE IF NOT EXISTS `packages_metadata` (
 CREATE TABLE IF NOT EXISTS `repos` (
 `repo_id` int(11) NOT NULL,
   `repo` varchar(100) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=3 DEFAULT CHARSET=utf8 COMMENT='Repo main table (repo)';
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Repo main table (repo)';
 
 -- --------------------------------------------------------
 
@@ -507,7 +507,7 @@ CREATE TABLE IF NOT EXISTS `repos` (
 CREATE TABLE IF NOT EXISTS `restrictions` (
 `restriction_id` int(11) NOT NULL,
   `restriction` varchar(50) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=55 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -519,7 +519,7 @@ CREATE TABLE IF NOT EXISTS `setups` (
 `setup_id` int(11) NOT NULL,
   `setup` varchar(100) NOT NULL,
   `profile` varchar(150) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=4 DEFAULT CHARSET=utf8;
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
 
@@ -530,7 +530,7 @@ CREATE TABLE IF NOT EXISTS `setups` (
 CREATE TABLE IF NOT EXISTS `uses` (
 `use_id` int(11) NOT NULL,
   `flag` varchar(50) NOT NULL
-) ENGINE=MyISAM AUTO_INCREMENT=6180 DEFAULT CHARSET=utf8 COMMENT='Use flags main table';
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Use flags main table';
 
 --
 -- Indexes for dumped tables
@@ -766,7 +766,7 @@ ALTER TABLE `uses`
 -- AUTO_INCREMENT for table `build_jobs`
 --
 ALTER TABLE `build_jobs`
-MODIFY `build_job_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3113;
+MODIFY `build_job_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `build_jobs_emerge_options`
 --
@@ -781,17 +781,17 @@ MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 -- AUTO_INCREMENT for table `build_jobs_use`
 --
 ALTER TABLE `build_jobs_use`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=17343;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `build_logs`
 --
 ALTER TABLE `build_logs`
-MODIFY `build_log_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=17625;
+MODIFY `build_log_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `build_logs_config`
 --
 ALTER TABLE `build_logs_config`
-MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=44160;
+MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `build_logs_emerge_options`
 --
@@ -801,12 +801,12 @@ MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 -- AUTO_INCREMENT for table `build_logs_errors`
 --
 ALTER TABLE `build_logs_errors`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3379;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `build_logs_hilight`
 --
 ALTER TABLE `build_logs_hilight`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=413189;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `build_logs_qa`
 --
@@ -816,137 +816,137 @@ MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 -- AUTO_INCREMENT for table `build_logs_repoman`
 --
 ALTER TABLE `build_logs_repoman`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=51;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `build_logs_use`
 --
 ALTER TABLE `build_logs_use`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=76204;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `categories`
 --
 ALTER TABLE `categories`
-MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=181;
+MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `configs`
 --
 ALTER TABLE `configs`
-MODIFY `config_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Config index',AUTO_INCREMENT=7;
+MODIFY `config_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Config index';
 --
 -- AUTO_INCREMENT for table `configs_emerge_options`
 --
 ALTER TABLE `configs_emerge_options`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=21;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `configs_metadata`
 --
 ALTER TABLE `configs_metadata`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=7;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `ebuilds`
 --
 ALTER TABLE `ebuilds`
-MODIFY `ebuild_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=81657;
+MODIFY `ebuild_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `ebuilds_iuse`
 --
 ALTER TABLE `ebuilds_iuse`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=456109;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `ebuilds_keywords`
 --
 ALTER TABLE `ebuilds_keywords`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=559659;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `ebuilds_metadata`
 --
 ALTER TABLE `ebuilds_metadata`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=81657;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `ebuilds_restrictions`
 --
 ALTER TABLE `ebuilds_restrictions`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=14328;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `emails`
 --
 ALTER TABLE `emails`
-MODIFY `email_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=679;
+MODIFY `email_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `emerge_info`
 --
 ALTER TABLE `emerge_info`
-MODIFY `einfo_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=18635;
+MODIFY `einfo_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `emerge_options`
 --
 ALTER TABLE `emerge_options`
-MODIFY `eoption_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'emerge command options id',AUTO_INCREMENT=7;
+MODIFY `eoption_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'emerge command options id';
 --
 -- AUTO_INCREMENT for table `errors_info`
 --
 ALTER TABLE `errors_info`
-MODIFY `error_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=8;
+MODIFY `error_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `hilight`
 --
 ALTER TABLE `hilight`
-MODIFY `hilight_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=52;
+MODIFY `hilight_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `hilight_css`
 --
 ALTER TABLE `hilight_css`
-MODIFY `hilight_css_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=6;
+MODIFY `hilight_css_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `jobs`
 --
 ALTER TABLE `jobs`
-MODIFY `job_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=4;
+MODIFY `job_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `keywords`
 --
 ALTER TABLE `keywords`
-MODIFY `keyword_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'keyword index',AUTO_INCREMENT=42;
+MODIFY `keyword_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'keyword index';
 --
 -- AUTO_INCREMENT for table `logs`
 --
 ALTER TABLE `logs`
-MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=22201403;
+MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `packages`
 --
 ALTER TABLE `packages`
-MODIFY `package_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=18514;
+MODIFY `package_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `packages_emails`
 --
 ALTER TABLE `packages_emails`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=22365;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `packages_metadata`
 --
 ALTER TABLE `packages_metadata`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=18513;
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `repos`
 --
 ALTER TABLE `repos`
-MODIFY `repo_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=3;
+MODIFY `repo_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `restrictions`
 --
 ALTER TABLE `restrictions`
-MODIFY `restriction_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=55;
+MODIFY `restriction_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `setups`
 --
 ALTER TABLE `setups`
-MODIFY `setup_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=4;
+MODIFY `setup_id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `uses`
 --
 ALTER TABLE `uses`
-MODIFY `use_id` int(11) NOT NULL AUTO_INCREMENT,AUTO_INCREMENT=6180;
+MODIFY `use_id` int(11) NOT NULL AUTO_INCREMENT;
 DELIMITER $$
 --
 -- Events
