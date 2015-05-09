@@ -23,7 +23,7 @@ portage.proxy.lazyimport.lazyimport(globals(),
 from tbc.repoman_tbc import tbc_repoman
 from tbc.text import get_log_text_dict
 from tbc.package import tbc_package
-from zobcs.readconf import read_config_settings
+from tbc.readconf import read_config_settings
 from tbc.flags import tbc_use_flags
 from tbc.ConnectionManager import NewConnection
 from tbc.sqlquerys import add_tbc_logs, get_config_id, get_ebuild_id_db, add_new_buildlog, \
