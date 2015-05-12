@@ -2,7 +2,7 @@
 # Distributed under the terms of the GNU General Public License v2
 
 from __future__ import print_function
-from tbc.sync import sync_tree
+from tbc.sync import git_repo_sync_main
 #from tbc.buildquerydb import add_buildquery_main, del_buildquery_main
 from tbc.updatedb import update_db_main
 from tbc.sqlquerys import get_config_id, add_tbc_logs, get_jobs, update_job_list
@@ -47,7 +47,7 @@ def jobs_main(session, config_id):
 			update_job_list(session, "Runing", job_id)
 			log_msg = "Job %s is runing." % (job_id,)
 			add_tbc_logs(session, log_msg, "info", config_id)
-			if sync_tree(session) and update_db_main(session, config_id):
+			if update_db_main(session, git_repo_sync_main(session), config_id):
 				update_job_list(session, "Done", job_id)
 				log_msg = "Job %s is done.." % (job_id,)
 				add_tbc_logs(session, log_msg, "info", config_id)
@@ -59,7 +59,7 @@ def jobs_main(session, config_id):
 			update_job_list(session, "Runing", job_id)
 			log_msg = "Job %s is runing." % (job_id,)
 			add_tbc_logs(session, log_msg, "info", config_id)
-			if update_db_main(session, config_id):
+			 if update_db_main(session, None, config_id):
 				update_job_list(session, "Done", job_id)
 				log_msg = "Job %s is done.." % (job_id,)
 				add_tbc_logs(session, log_msg, "info", config_id)

@@ -15,7 +15,7 @@ from tbc.sqlquerys import add_tbc_logs, get_package_info, update_repo_db, \
 from tbc.check_setup import check_make_conf
 from tbc.package import tbc_package
 # Get the options from the config file set in tbc.readconf
-from tbc.readconf import get_conf_settings
+from tbc.readconf import  read_config_settings
 
 def init_portage_settings(session, config_id, tbc_settings_dict):
 	# check config setup
@@ -74,44 +74,56 @@ def update_cpv_db(session, config_id, tbc_settings_dict):
 			break
 		time.sleep(30)
 
-	mysettings =  init_portage_settings(session, config_id, tbc_settings_dict)
 	log_msg = "Checking categories, package, ebuilds"
 	add_tbc_logs(session, log_msg, "info", config_id)
 	new_build_jobs_list = []
 
-	# Setup portdb, package
+	# Setup settings, portdb and pool
+	mysettings =  init_portage_settings(session, config_id, tbc_settings_dict)
 	myportdb = portage.portdbapi(mysettings=mysettings)
-	repo_list = ()
-	repos_trees_list = []
-
+	
 	# Use all cores when multiprocessing
-	pool_cores= multiprocessing.cpu_count()
-	pool = multiprocessing.Pool(processes=pool_cores)
+	pool_cores = multiprocessing.cpu_count()
+	pool = multiprocessing.Pool(processes = pool_cores)
 
-	# Will run some update checks and update package if needed
+	# Get packages and repo
+	if repo_cp_dict is None:
+		repo_list = []
+		repos_trees_list = []
 
-	# Get the repos and update the repos db
-	repo_list = myportdb.getRepositories()
-	update_repo_db(session, repo_list)
+		# Get the repos and update the repos db
+		repo_list = myportdb.getRepositories()
+		update_repo_db(session, repo_list)
 
-	# Close the db for the multiprocessing pool will make new ones
-	# and we don't need this one for some time.
+		# Get the rootdirs for the repos
+		repo_trees_list = myportdb.porttrees
+		for repo_dir in repo_trees_list:
+			repo = myportdb.getRepositoryName(repo_dir)
+			repo_dir_list = []
+			repo_dir_list.append(repo_dir)
 
-	# Get the rootdirs for the repos
-	repo_trees_list = myportdb.porttrees
-	for repo_dir in repo_trees_list:
-		repo = myportdb.getRepositoryName(repo_dir)
-		repo_dir_list = []
-		repo_dir_list.append(repo_dir)
+			# Get the package list from the repo
+			package_list_tree = myportdb.cp_all(trees=repo_dir_list)
 
-		# Get the package list from the repo
-		package_list_tree = myportdb.cp_all(trees=repo_dir_list)
+			# Run the update package for all package in the list and in a multiprocessing pool
+			for cp in sorted(package_list_tree):
+				pool.apply_async(update_cpv_db_pool, (mysettings, myportdb, cp, repo, zobcs_settings_dict, config_id,))
+				# use this when debuging
+				#update_cpv_db_pool(mysettings, myportdb, cp, repo, zobcs_settings_dict, config_id)
+	else:
+		# Update needed repos and packages in the dict
+		for repo, v in repo_cp_dict.items():
+			# Get the repos and update the repos db
+			repo_list = []
+			repo_list.append(repo)
+			update_repo_db(session, repo_list)
 
-		# Run the update package for all package in the list and in a multiprocessing pool
-		for cp in sorted(package_list_tree):
-			pool.apply_async(update_cpv_db_pool, (mysettings, myportdb, cp, repo, tbc_settings_dict, config_id,))
-			# use this when debuging
-			#update_cpv_db_pool(mysettings, myportdb, cp, repo, tbc_settings_dict, config_id)
+			# Run the update package for all package in the list and in a multiprocessing pool
+			for cp in v['cp_list']:
+				pool.apply_async(update_cpv_db_pool, (mysettings, myportdb, cp, repo, zobcs_settings_dict, config_id,))
+				# use this when debuging
+				#update_cpv_db_pool(mysettings, myportdb, cp, repo, zobcs_settings_dict, config_id)
+
 
 	#close and join the multiprocessing pools
 	pool.close()
@@ -119,17 +131,17 @@ def update_cpv_db(session, config_id, tbc_settings_dict):
 	log_msg = "Checking categories, package and ebuilds ... done"
 	add_tbc_logs(session, log_msg, "info", config_id)
 
-def update_db_main(session, config_id):
+def update_db_main(session, repo_cp_dict, config_id):
 	# Main
-
+	 if repo_cp_dict == {}:
+		return True
 	# Logging
-	reader = get_conf_settings()
-	tbc_settings_dict=reader.read_tbc_settings_all()
+	tbc_settings_dict = reader. read_config_settings()
 	log_msg = "Update db started."
 	add_tbc_logs(session, log_msg, "info", config_id)
 
 	# Update the cpv db
-	update_cpv_db(session, config_id, tbc_settings_dict)
+	update_cpv_db(session, repo_cp_dict, config_id, tbc_settings_dict)
 	log_msg = "Update db ... Done."
 	add_tbc_logs(session, log_msg, "info", config_id)
 	return True

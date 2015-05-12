@@ -10,70 +10,23 @@ import time
 from pygit2 import Repository, GIT_MERGE_ANALYSIS_FASTFORWARD, GIT_MERGE_ANALYSIS_NORMAL, \
         GIT_MERGE_ANALYSIS_UP_TO_DATE
 
-from _emerge.main import emerge_main
 from tbc.sqlquerys import get_config_id, add_tbc_logs, get_config_all_info, get_configmetadata_info
-from tbc.updatedb import update_db_main
 from tbc.readconf import read_config_settings
 
-def sync_tree(session):
-	tbc_settings_dict = read_config_settings()
-	_hostname = tbc_settings_dict['hostname']
-	_config = tbc_settings_dict['tbc_config']
-	config_id = get_config_id(session, _config, _hostname)
-	host_config = _hostname +"/" + _config
-	default_config_root = tbc_settings_dict['tbc_gitrepopath']  + "/" + host_config + "/"
-	mysettings = portage.config(config_root = default_config_root)
-	GuestBusy = True
-	log_msg = "Waiting for Guest to be idel"
-	add_tbc_logs(session, log_msg, "info", config_id)
-	guestid_list = []
-	for config in get_config_all_info(session):
-		if not config.Host:
-			guestid_list.append(config.ConfigId)
-	while GuestBusy:
-		Status_list = []
-		for guest_id in guestid_list:
-			ConfigMetadata = get_configmetadata_info(session, guest_id)
-			Status_list.append(ConfigMetadata.Status)
-		if not 'Runing' in Status_list:
-			GuestBusy = False
-		time.sleep(30)
-	try:
-		os.remove(mysettings['PORTDIR'] + "/profiles/config/parent")
-		os.rmdir(mysettings['PORTDIR'] + "/profiles/config")
-	except:
-		pass
-	tmpcmdline = []
-	tmpcmdline.append("--sync")
-	tmpcmdline.append("--quiet")
-	tmpcmdline.append("--config-root=" + default_config_root)
-	log_msg = "Emerge --sync"
-	add_tbc_logs(session, log_msg, "info", config_id)
-	fail_sync = emerge_main(args=tmpcmdline)
-	if fail_sync:
-		log_msg = "Emerge --sync fail!"
-		add_tbc_logs(session, log_msg, "error", config_id)
-		return False
-	else:
-		# Need to add a config dir so we can use profiles/base for reading the tree.
-		# We may allready have the dir on local repo when we sync.
-		try:
-			os.mkdir(mysettings['PORTDIR'] + "/profiles/config", 0o777)
-			with open(mysettings['PORTDIR'] + "/profiles/config/parent", "w") as f:
-				f.write("../base\n")
-				f.close()
-		except:
-			pass
-		log_msg = "Emerge --sync ... Done."
-		add_tbc_logs(session, log_msg, "info", config_id)
-	return True
+def git_repos_list(session, myportdb):
+	repo_trees_list = myportdb.porttrees
+	for repo_dir in repo_trees_list:
+		repo_dir_list = []
+		repo_dir_list.append(repo_dir)
+	return repo_dir_list
 
-def git_pull(session, git_repo, config_id):
-	log_msg = "Git pull"
-	add_zobcs_logs(session, log_msg, "info", config_id)
-	repo = Repository(git_repo + ".git")
+def git_fetch(session, git_repo, config_id):
+	repo = Repository(git_repo)
 	remote = repo.remotes["origin"]
 	remote.fetch()
+	return repo
+
+def git_merge(session, repo, config_id):
 	remote_master_id = repo.lookup_reference('refs/remotes/origin/master').target
 	merge_result, _ = repo.merge_analysis(remote_master_id)
 	if merge_result & GIT_MERGE_ANALYSIS_UP_TO_DATE:
@@ -98,6 +51,83 @@ def git_pull(session, git_repo, config_id):
 		repo.state_cleanup()
 	else:
 		raise AssertionError('Unknown merge analysis result')
+
+def git_sync_main(session):
+	tbc_settings_dict = read_config_settings()
+	_hostname = tbc_settings_dict['hostname']
+	_config = tbc_settings_dict['tbc_config']
+	config_id = get_config_id(session, _config, _hostname)
+	host_config = _hostname +"/" + _config
+	default_config_root = tbc_settings_dict['tbc_gitrepopath']  + "/" + host_config + "/"
+	mysettings = portage.config(config_root = default_config_root)
+	myportdb = portage.portdbapi(mysettings=mysettings)
+	GuestBusy = True
+	log_msg = "Waiting for Guest to be idel"
+	add_tbc_logs(session, log_msg, "info", config_id)
+	guestid_list = []
+	for config in get_config_all_info(session):
+		if not config.Host:
+			guestid_list.append(config.ConfigId)
+	while GuestBusy:
+		Status_list = []
+		for guest_id in guestid_list:
+			ConfigMetadata = get_configmetadata_info(session, guest_id)
+			Status_list.append(ConfigMetadata.Status)
+		if not 'Runing' in Status_list:
+			GuestBusy = False
+		else:
+			time.sleep(30)
+	try:
+		os.remove(mysettings['PORTDIR'] + "/profiles/config/parent")
+		os.rmdir(mysettings['PORTDIR'] + "/profiles/config")
+	except:
+		pass
+
+	repo_cp_dict = {}
+	for repo_dir in git_repos_list(session, myportdb):
+		attr = {}
+		repo = git_fetch(session, repo_dir, config_id)
+		remote_master_id = repo.lookup_reference('refs/remotes/origin/master').target
+		merge_result, _ = repo.merge_analysis(remote_master_id)
+		if not merge_result & GIT_MERGE_ANALYSIS_UP_TO_DATE:
+			git_merge(session, repo, config_id)
+			out = repo.diff('HEAD', 'HEAD^')
+			repo_diff = out.patch
+			cp_list = []
+			reponame = myportdb.getRepositoryName(repo_dir)
+			for diff_line in repo_diff.splitlines():
+				if re.search("Manifest", diff_line) and re.search("^diff --git", diff_line):
+					diff_line2 = re.split(' ', re.sub('[a-b]/', '', re.sub('diff --git ', '', diff_line)))
+					if diff_line2[0] == diff_line2[1] or "Manifest" in diff_line2[0]:
+						cp = re.sub('/Manifest', '', diff_line2[0])
+						cp_list.append(cp)
+					else:
+						cp = re.sub('/Manifest', '', diff_line2[1])
+						cp_list.append(cp)
+			attr['cp_list'] = cp_list
+			repo_cp_dict[reponame] = attr
+		else:
+			log_msg = "Repo is up to date"
+			add_tbc_logs(session, log_msg, "info", config_id)
+	
+	# Need to add a config dir so we can use profiles/base for reading the tree.
+	# We may allready have the dir on local repo when we sync.
+	try:
+		os.mkdir(mysettings['PORTDIR'] + "/profiles/config", 0o777)
+		with open(mysettings['PORTDIR'] + "/profiles/config/parent", "w") as f:
+			f.write("../base\n")
+			f.close()
+	except:
+		pass
+	log_msg = "Repo sync ... Done."
+	add_tbc_logs(session, log_msg, "info", config_id)
+	return  repo_cp_dict
+
+def git_pull(session, git_repo, config_id):
+	log_msg = "Git pull"
+	add_tbc_logs(session, log_msg, "info", config_id)
+	reop = git_fetch(session, git_repo, config_id)
+	git_merge(session, repo, config_id)
 	log_msg = "Git pull ... Done"
-	add_zobcs_logs(session, log_msg, "info", config_id)
+	add_tbc_logs(session, log_msg, "info", config_id)
 	return True
