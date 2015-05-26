@@ -8,12 +8,13 @@ from tbc.flags import tbc_use_flags
 from tbc.manifest import tbc_manifest
 from tbc.text import get_ebuild_cvs_revision
 from tbc.flags import tbc_use_flags
+from tbc.qachecks import digestcheck, check_repoman
 from tbc.sqlquerys import add_tbc_logs, get_package_info, get_config_info, \
 	add_new_build_job, add_new_ebuild_sql, get_ebuild_id_list, add_old_ebuild, \
 	get_package_metadata_sql, update_package_metadata, update_manifest_sql, \
 	get_package_info_from_package_id, get_config_all_info, add_new_package_sql, \
-	get_ebuild_checksums, get_ebuild_id_db, get_configmetadata_info, get_setup_info
-from tbc.readconf import get_conf_settings
+	get_ebuild_checksums, get_ebuild_id_db, get_configmetadata_info, get_setup_info, \
+	get_ebuild_info_ebuild_id
 
 class tbc_package(object):
 
@@ -219,6 +220,30 @@ class tbc_package(object):
 		# Add the ebuild to the build jobs table if needed
 		self.add_new_build_job_db(ebuild_id_list, packageDict, config_cpv_listDict)
 
+	def get_manifest_checksum_tree(self, pkgdir, cp, repo, mytree):
+
+		# Get the cp manifest file checksum.
+		try:
+			manifest_checksum_tree = portage.checksum.sha256hash(pkgdir + "/Manifest")[0]
+		except:
+			# Get the package list from the repo
+			package_list_tree =self. _myportdb.cp_all(trees=mytree)
+			if cp in package_list_tree:
+				log_msg = "QA: Can't checksum the Manifest file. :%s:%s" % (cp, repo,)
+				add_zobcs_logs(self._session, log_msg, "error", self._config_id)
+				log_msg = "C %s:%s ... Fail." % (cp, repo)
+				add_zobcs_logs(self._session, log_msg, "error", self._config_id)
+			return "0"
+		fail_msg = digestcheck(self._mysettings, pkgdir)
+		if fail_msg:
+			log_msg = "QA: Manifest file has errors. :%s:%s" % (cp, repo,)
+			add_zobcs_logs(self._session, log_msg, "error", self._config_id)
+			add_zobcs_logs(self._session, fail_msg, "error", self._config_id)
+			log_msg = "C %s:%s ... Fail." % (cp, repo)
+			add_zobcs_logs(self._session, log_msg, "error", self._config_id)
+			return None
+		return manifest_checksum_tree
+
 	def add_new_package_db(self, cp, repo):
 		# Add new categories package ebuild to tables package and ebuilds
 		# C = Checking
@@ -230,16 +255,9 @@ class tbc_package(object):
 		repodir = self._myportdb.getRepositoryPath(repo)
 		pkgdir = repodir + "/" + cp # Get RepoDIR + cp
 
-		# Get the cp manifest file checksum.
-		try:
-			manifest_checksum_tree = portage.checksum.sha256hash(pkgdir + "/Manifest")[0]
-		except:
-			manifest_checksum_tree = "0"
-			log_msg = "QA: Can't checksum the Manifest file. :%s:%s" % (cp, repo,)
-			add_tbc_logs(self._session, log_msg, "info", self._config_id)
-			log_msg = "C %s:%s ... Fail." % (cp, repo)
-			add_tbc_logs(self._session, log_msg, "info", self._config_id)
-			return None
+		manifest_checksum_tree = self.get_manifest_checksum_tree(pkgdir, cp, repo, mytree)
+		if manifest_checksum_tree is None:
+			return
 		package_id = add_new_package_sql(self._session, cp, repo)
 		
 		package_metadataDict = self.get_package_metadataDict(pkgdir, package_id)
@@ -259,6 +277,10 @@ class tbc_package(object):
 		new_ebuild_id_list = []
 		old_ebuild_id_list = []
 		for cpv in sorted(ebuild_list_tree):
+			repoman_fail = check_repoman(self._mysettings, self._myportdb, cpv, repo)
+			if repoman_fail:
+				log_msg = "Repoman %s:%s ... Fail." % (cpv, repo)
+				add_tbc_logs(self._session, log_msg, "error", self._config_id)
 			packageDict[cpv] = self.get_packageDict(pkgdir, cpv, repo)
 
 		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_checksum_tree)
@@ -275,17 +297,11 @@ class tbc_package(object):
 		add_tbc_logs(self._session, log_msg, "info", self._config_id)
 		repodir = self._myportdb.getRepositoryPath(repo)
 		pkgdir = repodir + "/" + cp # Get RepoDIR + cp
-
-		# Get the cp mainfest file checksum
-		try:
-			manifest_checksum_tree = portage.checksum.sha256hash(pkgdir + "/Manifest")[0]
-		except:
-			manifest_checksum_tree = "0"
-			log_msg = "QA: Can't checksum the Manifest file. %s:%s" % (cp, repo,)
-			add_tbc_logs(self._session, log_msg, "info", self._config_id)
-			log_msg = "C %s:%s ... Fail." % (cp, repo)
-			add_tbc_logs(self._session, log_msg, "info", self._config_id)
-			return None
+		mytree = []
+		mytree.append(repodir)
+		manifest_checksum_tree = self.get_manifest_checksum_tree(pkgdir, cp, repo, mytree)
+		if manifest_checksum_tree is None:
+			return
 
 		# if we NOT have the same checksum in the db update the package
 		if manifest_checksum_tree != PackageInfo.Checksum:
@@ -295,18 +311,28 @@ class tbc_package(object):
 			add_tbc_logs(self._session, log_msg, "info", self._config_id)
 
 			# Get the ebuild list for cp
-			mytree = []
-			mytree.append(repodir)
+			old_ebuild_id_list = []
 			ebuild_list_tree = self._myportdb.cp_list(cp, use_cache=1, mytree=mytree)
 			if ebuild_list_tree == []:
-				log_msg = "QA: Can't get the ebuilds list. %s:%s" % (cp, repo,)
-				add_tbc_logs(self._session, log_msg, "info", self._config_id)
-				log_msg = "C %s:%s ... Fail." % (cp, repo)
-				add_tbc_logs(self._session, log_msg, "info", self._config_id)
-				return None
+				if manifest_checksum_tree == "0":
+					old_ebuild_id_list = get_ebuild_id_list(self._session, package_id)
+					for ebuild_id in old_ebuild_id_list:
+						EbuildInfo = get_ebuild_info_ebuild_id(self._session, ebuild_id)
+						cpv = cp + "-" + EbuildInfo.Version
+						# R =  remove ebuild
+						log_msg = "R %s:%s" % (cpv, repo,)
+						add_tbc_logs(self._session, log_msg, "info", self._config_id)
+					add_old_ebuild(session, old_ebuild_id_list)
+					log_msg = "C %s:%s ... Done." % (cp, repo)
+					add_tbc_logs(self._session, log_msg, "info", self._config_id)
+				else:
+					log_msg = "QA: Can't get the ebuilds list. %s:%s" % (cp, repo,)
+					add_tbc_logs(self._session, log_msg, "info", self._config_id)
+					log_msg = "C %s:%s ... Fail." % (cp, repo)
+					add_tbc_logs(self._session, log_msg, "info", self._config_id)
+				return
 			packageDict ={}
 			new_ebuild_id_list = []
-			old_ebuild_id_list = []
 			for cpv in sorted(ebuild_list_tree):
 
 				# split out ebuild version
@@ -333,6 +359,12 @@ class tbc_package(object):
 					ebuild_version_manifest_checksum_db = None
 				else:
 					ebuild_version_manifest_checksum_db = checksums_db
+
+				if ebuild_version_manifest_checksum_db is None or ebuild_version_checksum_tree != ebuild_version_manifest_checksum_db:
+					repoman_fail = check_repoman(self._mysettings, self._myportdb, cpv, repo)
+					if repoman_fail:
+						log_msg = "Repoman %s:%s ... Fail." % (cpv, repo)
+						add_zobcs_logs(self._session, log_msg, "info", self._config_id)
 
 				# Check if the checksum have change
 				if ebuild_version_manifest_checksum_db is None:

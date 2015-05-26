@@ -59,7 +59,7 @@ def jobs_main(session, config_id):
 			update_job_list(session, "Runing", job_id)
 			log_msg = "Job %s is runing." % (job_id,)
 			add_tbc_logs(session, log_msg, "info", config_id)
-			 if update_db_main(session, None, config_id):
+			if update_db_main(session, None, config_id):
 				update_job_list(session, "Done", job_id)
 				log_msg = "Job %s is done.." % (job_id,)
 				add_tbc_logs(session, log_msg, "info", config_id)

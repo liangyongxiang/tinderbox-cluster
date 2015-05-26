@@ -4,7 +4,7 @@
 # Distributed under the terms of the GNU General Public License v2
 
 from __future__ import print_function
-from tbc.readconf import get_conf_settings
+from tbc.readconf import read_config_settings
 from tbc.ConnectionManager import NewConnection
 from tbc.sqlquerys import add_tbc_logs, get_config_id, check_host_updatedb, update_deamon_status
 from tbc.check_setup import check_configure_guest
@@ -18,8 +18,7 @@ import time
 
 def main():
 	repeat = True
-	reader = get_conf_settings()
-	tbc_settings_dict=reader.read_tbc_settings_all()
+	tbc_settings_dict = read_config_settings()
 	config = tbc_settings_dict['tbc_config']
 	hostname = tbc_settings_dict['hostname']
 	Session = sessionmaker(bind=NewConnection(tbc_settings_dict))
@@ -29,7 +28,7 @@ def main():
 	init_build_job = build_job_action(config_id, session)
 	while repeat:
 		jobs_main(session, config)
-		if not check_configure_guest(session, config_id) or check_host_updatedb(session):
+		if not check_configure_guest(session, tbc_settings_dict, config_id) or check_host_updatedb(session):
 			time.sleep(30)
 			continue
 		else:

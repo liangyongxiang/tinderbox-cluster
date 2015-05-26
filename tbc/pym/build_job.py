@@ -12,9 +12,9 @@ from portage import _encodings
 from portage import _unicode_decode
 from portage.versions import cpv_getkey
 from portage.dep import check_required_use
-from tbc.manifest import tbc_manifest
 from tbc.depclean import do_depclean
 from tbc.flags import tbc_use_flags
+from tbc.qacheck import check_file_in_manifest
 from tbc.main import emerge_main
 from tbc.build_log import log_fail_queru
 from tbc.actions import load_emerge_config
@@ -32,20 +32,19 @@ class build_job_action(object):
 		package = build_dict['package']
 		cpv = build_dict['cpv']
 		pkgdir = portdb.getRepositoryPath(repo) + "/" + cp
-		init_manifest =  tbc_manifest(settings, pkgdir)
 		build_use_flags_list = []
 		try:
 			ebuild_version_checksum_tree = portage.checksum.sha256hash(pkgdir + "/" + package + "-" + build_dict['ebuild_version'] + ".ebuild")[0]
 		except:
 			ebuild_version_checksum_tree = None
 		if ebuild_version_checksum_tree == build_dict['checksum']:
-			manifest_error = init_manifest.check_file_in_manifest(portdb, cpv, build_use_flags_list, repo)
+			manifest_error = check_file_in_manifest(pkgdir, settings, portdb, cpv, build_use_flags_list, repo)
 			if manifest_error is None:
 				init_flags = tbc_use_flags(settings, portdb, cpv)
 				build_use_flags_list = init_flags.comper_useflags(build_dict)
 				log_msg = "build_use_flags_list %s" % (build_use_flags_list,)
 				add_tbc_logs(self._session, log_msg, "info", self._config_id)
-				manifest_error = init_manifest.check_file_in_manifest(portdb, cpv, build_use_flags_list, repo)
+				manifest_error = check_file_in_manifest(pkgdir, settings, portdb, cpv, build_use_flags_list, repo)
 			if manifest_error is None:
 				build_dict['check_fail'] = False
 				build_cpv_dict = {}

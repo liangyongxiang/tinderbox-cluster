@@ -147,6 +147,9 @@ def get_ebuild_info(session, build_dict):
 		return EbuildInfo.all(), True
 	return EbuildInfo2, False
 
+def get_ebuild_info_ebuild_id(session, ebuild_id):
+	return session.query(Ebuilds).filter_by(EbuildId = ebuild_id).filter_by(Active = True).one()
+
 def get_build_job_id(session, build_dict):
 	BuildJobsIdInfo = session.query(BuildJobs.BuildJobId).filter_by(EbuildId = build_dict['ebuild_id']).filter_by(ConfigId = build_dict['config_id']).all()
 	if BuildJobsIdInfo == []:
@@ -500,10 +503,6 @@ def get_ebuild_checksums(session, package_id, ebuild_version):
 	except MultipleResultsFound as e:
 		EbuildInfo2 = session.query(Ebuilds).filter_by(PackageId = package_id).filter_by(Version = ebuild_version).filter_by(Active = True).all()
 		for Ebuild in EbuildInfo2:
-			print("ebuild version checksum")
-			print(ebuild_version)
-			print(Ebuild.Version)
-			print(Ebuild.Checksum)
 			ebuild_checksum_list.append(Ebuild.Checksum)
 		return ebuild_checksum_list, True
 	return EbuildInfo.Checksum, False
@@ -522,8 +521,13 @@ def get_ebuild_id_db(session, checksum, package_id):
 	return EbuildInfos.EbuildId, False
 
 def check_host_updatedb(session):
+	jobs = False
 	try:
 		JobsInfo = session.query(Jobs).filter_by(Status = 'Done').filter_by(JobType = 'esync').one()
 	except NoResultFound as e:
-		return True
-	return False
+		jobs = True
+	try:
+		JobsInfo = session.query(Jobs).filter_by(Status = 'Done').filter_by(JobType = 'updatedb').one()
+	except NoResultFound as e:
+		jobs = True
+	return jobs

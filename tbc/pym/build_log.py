@@ -20,7 +20,7 @@ portage.proxy.lazyimport.lazyimport(globals(),
 	'tbc.actions:action_info,load_emerge_config',
 )
 
-from tbc.repoman_tbc import tbc_repoman
+from tbc.qachecks import check_repoman
 from tbc.text import get_log_text_dict
 from tbc.package import tbc_package
 from tbc.readconf import read_config_settings
@@ -184,7 +184,6 @@ def search_buildlog(session, logfile_text_dict, max_text_lines):
 
 def get_buildlog_info(session, settings, pkg, build_dict):
 	myportdb = portage.portdbapi(mysettings=settings)
-	init_repoman = tbc_repoman(settings, myportdb)
 	logfile_text_dict, max_text_lines = get_log_text_dict(settings.get("PORTAGE_LOG_FILE"))
 	hilight_dict = search_buildlog(session, logfile_text_dict, max_text_lines)
 	error_log_list = []
@@ -206,11 +205,9 @@ def get_buildlog_info(session, settings, pkg, build_dict):
 				i = i +1
 
 	# Run repoman check_repoman()
-	repoman_error_list = init_repoman.check_repoman(build_dict['cpv'], pkg.repo)
-	if repoman_error_list != []:
+	repoman_error_list = check_repoman(settings, myportdb, build_dict['cpv'], pkg.repo)
+	if repoman_error_list:
 		sum_build_log_list.append("1") # repoman = 1
-	else:
-		repoman_error_list = False
 	if qa_error_list != []:
 		sum_build_log_list.append("2") # qa = 2
 	else:

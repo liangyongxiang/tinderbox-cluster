@@ -133,7 +133,7 @@ def update_cpv_db(session, config_id, tbc_settings_dict):
 
 def update_db_main(session, repo_cp_dict, config_id):
 	# Main
-	 if repo_cp_dict == {}:
+	if repo_cp_dict == {}:
 		return True
 	# Logging
 	tbc_settings_dict = reader. read_config_settings()
