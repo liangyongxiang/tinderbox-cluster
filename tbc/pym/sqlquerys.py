@@ -17,7 +17,7 @@ def get_config_id(session, setup, host):
 	ConfigInfo = session.query(Configs).filter_by(SetupId = SetupInfo.SetupId).filter_by(Hostname = host).one()
 	return ConfigInfo.ConfigId
 
-def add_tbc_logs(session, log_msg, log_type, config_id):
+def add_logs(session, log_msg, log_type, config_id):
 	Add_Log = Logs(ConfigId = config_id, LogType = log_type, Msg = log_msg)
 	session.add(Add_Log)
 	session.commit()

@@ -26,7 +26,7 @@ from tbc.package import tbc_package
 from tbc.readconf import read_config_settings
 from tbc.flags import tbc_use_flags
 from tbc.ConnectionManager import NewConnection
-from tbc.sqlquerys import add_tbc_logs, get_config_id, get_ebuild_id_db, add_new_buildlog, \
+from tbc.sqlquerys import add_logs, get_config_id, get_ebuild_id_db, add_new_buildlog, \
 	get_package_info, get_build_job_id, get_use_id, get_config_info, get_hilight_info, get_error_info_list, \
 	add_e_info, get_fail_times, add_fail_times, update_fail_times, del_old_build_jobs, add_old_ebuild, \
 	update_buildjobs_status, update_manifest_sql, add_repoman_qa
@@ -40,7 +40,7 @@ def get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg):
 	repo = pkg.repo
 	ebuild_version = cpv_getversion(pkg.cpv)
 	log_msg = "Logging %s:%s" % (pkg.cpv, repo,)
-	add_tbc_logs(session, log_msg, "info", config_id)
+	add_logs(session, log_msg, "info", config_id)
 	PackageInfo = get_package_info(session, categories, package, repo)
 	build_dict = {}
 	build_dict['ebuild_version'] = ebuild_version
@@ -75,19 +75,19 @@ def get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg):
 	if status:
 		if ebuild_id_list is None:
 			log_msg = "%s:%s Don't have any ebuild_id!" % (pkg.cpv, repo,)
-			add_tbc_logs(session, log_msg, "info", config_id)
+			add_logs(session, log_msg, "info", config_id)
 			update_manifest_sql(session, build_dict['package_id'], "0")
 			init_package = tbc_package(session, settings, myportdb, config_id, tbc_settings_dict)
 			init_package.update_package_db(build_dict['package_id'])
 			ebuild_id_list, status = get_ebuild_id_db(session, build_dict['checksum'], build_dict['package_id'])
 			if status and ebuild_id_list is None:
 				log_msg = "%s:%s Don't have any ebuild_id!" % (pkg.cpv, repo,)
-				add_tbc_logs(session, log_msg, "error", config_id)
+				add_logs(session, log_msg, "error", config_id)
 		else:
 			old_ebuild_id_list = []
 			for ebuild_id in ebuild_id_list:
 				log_msg = "%s:%s:%s Dups of checksums" % (pkg.cpv, repo, ebuild_id,)
-				add_tbc_logs(session, log_msg, "error", config_id)
+				add_logs(session, log_msg, "error", config_id)
 				old_ebuild_id_list.append(ebuild_id)
 			add_old_ebuild(session, old_ebuild_id_list)
 		return
@@ -248,7 +248,7 @@ def add_buildlog_main(settings, pkg, trees):
 		build_dict = get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg)
 	if build_dict is None:
 		log_msg = "Package %s:%s is NOT logged." % (pkg.cpv, pkg.repo,)
-		add_tbc_logs(session, log_msg, "info", config_id)
+		add_logs(session, log_msg, "info", config_id)
 		session.close
 		return
 	build_log_dict = {}
@@ -265,18 +265,18 @@ def add_buildlog_main(settings, pkg, trees):
 	build_log_dict['log_hash'] = log_hash.hexdigest()
 	build_log_dict['logfilename'] = settings.get("PORTAGE_LOG_FILE").split(host_config)[1]
 	log_msg = "Logfile name: %s" % (settings.get("PORTAGE_LOG_FILE"),)
-	add_tbc_logs(session, log_msg, "info", config_id)
+	add_logs(session, log_msg, "info", config_id)
 	build_log_dict['emerge_info'] = get_emerge_info_id(settings, trees, session, config_id)
 	log_id = add_new_buildlog(session, build_dict, build_log_dict)
 
 	if log_id is None:
 		log_msg = "Package %s:%s is NOT logged." % (pkg.cpv, pkg.repo,)
-		add_tbc_logs(session, log_msg, "info", config_id)
+		add_logs(session, log_msg, "info", config_id)
 	else:
 		add_repoman_qa(session, build_log_dict, log_id)
 		os.chmod(settings.get("PORTAGE_LOG_FILE"), 0o664)
 		log_msg = "Package: %s:%s is logged." % (pkg.cpv, pkg.repo,)
-		add_tbc_logs(session, log_msg, "info", config_id)
+		add_logs(session, log_msg, "info", config_id)
 		print("\n>>> Logging %s:%s\n" % (pkg.cpv, pkg.repo,))
 	session.close
 

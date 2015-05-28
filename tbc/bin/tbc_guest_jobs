@@ -6,7 +6,7 @@
 from __future__ import print_function
 from tbc.readconf import read_config_settings
 from tbc.ConnectionManager import NewConnection
-from tbc.sqlquerys import add_tbc_logs, get_config_id, check_host_updatedb, update_deamon_status
+from tbc.sqlquerys import add_logs, get_config_id, check_host_updatedb, update_deamon_status
 from tbc.check_setup import check_configure_guest
 from tbc.build_job import build_job_action
 from tbc.jobs import jobs_main
@@ -24,7 +24,7 @@ def main():
 	Session = sessionmaker(bind=NewConnection(tbc_settings_dict))
 	session = Session()
 	config_id = get_config_id(session, config, hostname)
-	add_tbc_logs(session, "Job and build deamon started.", "info", config_id)
+	add_logs(session, "Job and build deamon started.", "info", config_id)
 	init_build_job = build_job_action(config_id, session)
 	while repeat:
 		jobs_main(session, config)

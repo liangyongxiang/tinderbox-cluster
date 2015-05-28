@@ -11,7 +11,7 @@ import re
 from pygit2 import Repository, GIT_MERGE_ANALYSIS_FASTFORWARD, GIT_MERGE_ANALYSIS_NORMAL, \
         GIT_MERGE_ANALYSIS_UP_TO_DATE
 
-from tbc.sqlquerys import get_config_id, add_tbc_logs, get_config_all_info, get_configmetadata_info
+from tbc.sqlquerys import get_config_id, add_logs, get_config_all_info, get_configmetadata_info
 from tbc.readconf import read_config_settings
 
 def git_repos_list(session, myportdb):
@@ -68,7 +68,7 @@ def git_sync_main(session):
 	myportdb = portage.portdbapi(mysettings=mysettings)
 	GuestBusy = True
 	log_msg = "Waiting for Guest to be idel"
-	add_tbc_logs(session, log_msg, "info", config_id)
+	add_logs(session, log_msg, "info", config_id)
 	guestid_list = []
 	# check if the guests is idel
 	for config in get_config_all_info(session):
@@ -117,7 +117,7 @@ def git_sync_main(session):
 			repo_cp_dict[reponame] = attr
 		else:
 			log_msg = "Repo is up to date"
-			add_tbc_logs(session, log_msg, "info", config_id)
+			add_logs(session, log_msg, "info", config_id)
 	
 	# Need to add a clone of profiles/base for reading the tree
 	try:
@@ -129,15 +129,15 @@ def git_sync_main(session):
 		pass
 
 	log_msg = "Repo sync ... Done."
-	add_tbc_logs(session, log_msg, "info", config_id)
+	add_logs(session, log_msg, "info", config_id)
 	return  repo_cp_dict
 
 def git_pull(session, git_repo, config_id):
 	# do a gitt pull
 	log_msg = "Git pull"
-	add_tbc_logs(session, log_msg, "info", config_id)
+	add_logs(session, log_msg, "info", config_id)
 	repo = git_fetch(session, git_repo, config_id)
 	git_merge(session, repo, config_id)
 	log_msg = "Git pull ... Done"
-	add_tbc_logs(session, log_msg, "info", config_id)
+	add_logs(session, log_msg, "info", config_id)
 	return True
