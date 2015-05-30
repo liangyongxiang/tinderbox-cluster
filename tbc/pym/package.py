@@ -14,7 +14,7 @@ from tbc.sqlquerys import add_logs, get_package_info, get_config_info, \
 	get_package_metadata_sql, update_package_metadata, update_manifest_sql, \
 	get_package_info_from_package_id, get_config_all_info, add_new_package_sql, \
 	get_ebuild_checksums, get_ebuild_id_db, get_configmetadata_info, get_setup_info, \
-	get_ebuild_info_ebuild_id
+	get_ebuild_info_ebuild_id, get_ebuild_restrictions
 
 class tbc_package(object):
 
@@ -147,6 +147,10 @@ class tbc_package(object):
 
 					# Comper and add the cpv to buildqueue
 					if build_cpv == k:
+						restrictions_dict = get_ebuild_restrictions(self._session, ebuild_id)
+						if restrictions_dict:
+							if "test" in restrictions_dict and "test" in use_flagsDict:
+								use_flagsDict['test'] = False
 						add_new_build_job(self._session, ebuild_id, setup_id, use_flagsDict, self._config_id)
 						# B = Build cpv use-flags config
 						# FIXME log_msg need a fix to log the use flags corect.
@@ -252,6 +256,8 @@ class tbc_package(object):
 		log_msg = "N %s:%s" % (cp, repo)
 		add_logs(self._session, log_msg, "info", self._config_id)
 		repodir = self._myportdb.getRepositoryPath(repo)
+		mytree = []
+		mytree.append(repodir)
 		pkgdir = repodir + "/" + cp # Get RepoDIR + cp
 
 		manifest_checksum_tree = self.get_manifest_checksum_tree(pkgdir, cp, repo, mytree)
@@ -261,8 +267,6 @@ class tbc_package(object):
 		
 		package_metadataDict = self.get_package_metadataDict(pkgdir, package_id)
 		# Get the ebuild list for cp
-		mytree = []
-		mytree.append(repodir)
 		ebuild_list_tree = self._myportdb.cp_list(cp, use_cache=1, mytree=mytree)
 		if ebuild_list_tree == []:
 			log_msg = "QA: Can't get the ebuilds list. %s:%s" % (cp, repo,)
@@ -363,7 +367,7 @@ class tbc_package(object):
 					repoman_fail = check_repoman(self._mysettings, self._myportdb, cpv, repo)
 					if repoman_fail:
 						log_msg = "Repoman %s:%s ... Fail." % (cpv, repo)
-						add_zobcs_logs(self._session, log_msg, "info", self._config_id)
+						add_logs(self._session, log_msg, "info", self._config_id)
 
 				# Check if the checksum have change
 				if ebuild_version_manifest_checksum_db is None:

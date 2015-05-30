@@ -7,7 +7,7 @@ from tbc.db_mapping import Configs, Logs, ConfigsMetaData, Jobs, BuildJobs, Pack
 	Uses, ConfigsEmergeOptions, EmergeOptions, HiLight, BuildLogs, BuildLogsConfig, BuildJobsUse, BuildJobsRedo, \
 	HiLightCss, BuildLogsHiLight, BuildLogsEmergeOptions, BuildLogsErrors, ErrorsInfo, EmergeInfo, BuildLogsUse, \
 	BuildJobsEmergeOptions, EbuildsMetadata, EbuildsIUse, Restrictions, EbuildsRestrictions, EbuildsKeywords, \
-        Keywords, PackagesMetadata, Emails, PackagesEmails, Setups, BuildLogsQA,  BuildLogsRepoman
+	Keywords, PackagesMetadata, Emails, PackagesEmails, Setups, BuildLogsQA,  BuildLogsRepoman
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy import and_, or_
 
@@ -304,6 +304,18 @@ def add_fail_times(session, fail_querue_dict):
 	session.add(NewBuildJobsRedo)
 	session.commit()
 
+def check_host_updatedb(session):
+	jobs = False
+	try:
+		JobsInfo = session.query(Jobs).filter_by(Status = 'Done').filter_by(JobType = 'esync').one()
+	except NoResultFound as e:
+		jobs = True
+	try:
+		JobsInfo = session.query(Jobs).filter_by(Status = 'Done').filter_by(JobType = 'updatedb').one()
+	except NoResultFound as e:
+		jobs = True
+	return jobs
+
 # Host Functions
 def update_repo_db(session, repo_list):
 	for repo in repo_list:
@@ -520,14 +532,15 @@ def get_ebuild_id_db(session, checksum, package_id):
 		return ebuilds_id, True
 	return EbuildInfos.EbuildId, False
 
-def check_host_updatedb(session):
-	jobs = False
+def get_ebuild_restrictions(session, ebuild_id):
+	restrictions = []
 	try:
-		JobsInfo = session.query(Jobs).filter_by(Status = 'Done').filter_by(JobType = 'esync').one()
+		EbuildsRestrictionsInfo = session.query(EbuildsRestrictions).filter_by(EbuildId = ebuild_id).one()
 	except NoResultFound as e:
-		jobs = True
-	try:
-		JobsInfo = session.query(Jobs).filter_by(Status = 'Done').filter_by(JobType = 'updatedb').one()
-	except NoResultFound as e:
-		jobs = True
-	return jobs
+		return False
+	except MultipleResultsFound as e:
+		EbuildsRestrictionsInfos = session.query(EbuildsRestrictions).filter_by(EbuildId = ebuild_id).all()
+		for EbuildsRestrictionsInfo in EbuildsRestrictionsInfos:
+			restrictions.append(session.query(Restrictions).filter_by(RestrictionId = EbuildsRestrictionsInfo.RestrictionId).one())
+		return restrictions
+	return restrictions.append(session.query(Restrictions).filter_by(RestrictionId = EbuildsRestrictionsInfo.RestrictionId).one())
