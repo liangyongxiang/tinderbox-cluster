@@ -230,17 +230,16 @@ class tbc_package(object):
 			package_list_tree =self. _myportdb.cp_all(trees=mytree)
 			if cp in package_list_tree:
 				log_msg = "QA: Can't checksum the Manifest file. :%s:%s" % (cp, repo,)
-				add_zobcs_logs(self._session, log_msg, "error", self._config_id)
+				add_logs(self._session, log_msg, "error", self._config_id)
 				log_msg = "C %s:%s ... Fail." % (cp, repo)
-				add_zobcs_logs(self._session, log_msg, "error", self._config_id)
+				add_logs(self._session, log_msg, "error", self._config_id)
 			return "0"
 		fail_msg = digestcheck(self._mysettings, pkgdir)
 		if fail_msg:
 			log_msg = "QA: Manifest file has errors. :%s:%s" % (cp, repo,)
-			add_zobcs_logs(self._session, log_msg, "error", self._config_id)
-			add_zobcs_logs(self._session, fail_msg, "error", self._config_id)
+			add_logs(self._session, log_msg, "error", self._config_id)
 			log_msg = "C %s:%s ... Fail." % (cp, repo)
-			add_zobcs_logs(self._session, log_msg, "error", self._config_id)
+			add_logs(self._session, log_msg, "error", self._config_id)
 			return None
 		return manifest_checksum_tree
 
