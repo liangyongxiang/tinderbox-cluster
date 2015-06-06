@@ -6,6 +6,7 @@ import warnings
 import sys
 import codecs
 from portage import os, _encodings, _unicode_decode
+from portage.checksum import _hash_filter
 from portage.exception import DigestException, FileNotFound
 from portage.localization import _
 from portage.manifest import Manifest
@@ -122,14 +123,14 @@ def check_file_in_manifest(pkgdir, mysettings, portdb, cpv, build_use_flags_list
 		return "Ebuild file not found."
 	tree = portdb.getRepositoryPath(repo)
 	cpv_fetchmap = portdb.getFetchMap(cpv, useflags=build_use_flags_list, mytree=tree)
-	self._mysettings.unlock()
+	mysettings.unlock()
 	try:
 		portage.fetch(cpv_fetchmap, mysettings, listonly=0, fetchonly=0, locks_in_subdir='.locks', use_locks=1, try_mirrors=1)
 	except:
-		self._mysettings.lock()
+		mysettings.lock()
 		return "Can't fetch the file."
 	finally:
-		self._mysettings.lock()
+		mysettings.lock()
 	try:
 		my_manifest.checkCpvHashes(cpv, checkDistfiles=True, onlyDistfiles=False, checkMiscfiles=True)
 	except:

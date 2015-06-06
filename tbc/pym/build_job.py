@@ -66,6 +66,7 @@ class build_job_action(object):
 	def build_procces(self, buildqueru_cpv_dict, build_dict, settings, portdb):
 		build_cpv_list = []
 		depclean_fail = True
+		disable_test_features = False
 		for k, build_use_flags_list in buildqueru_cpv_dict.items():
 			build_cpv_list.append("=" + k)
 			if not build_use_flags_list == None:
@@ -79,16 +80,22 @@ class build_job_action(object):
 					f.write(filetext)
 					f.write('\n')
 					f.close
-				restrictions_dict = get_ebuild_restrictions(self._session, build_dict['ebuild_id'])
-				if restrictions_dict:
-					if "test" in restrictions_dict:
-						filetext = k + ' ' + 'notest.conf'
-						log_msg = "filetext: %s" % filetext
-						add_logs(self._session, log_msg, "info", self._config_id)
-						with open("/etc/portage/package.env", "a") as f:
-							f.write(filetext)
-							f.write('\n')
-							f.close
+		if not build_dict['build_useflags'] is None:
+			if "test" in build_dict['build_useflags'] and "test" in settings.features:
+				if build_dict['build_useflags']['test'] is False:
+					disable_test_features = True
+		restrictions_dict = get_ebuild_restrictions(self._session, build_dict['ebuild_id'])
+		if restrictions_dict:
+			if "test" in restrictions_dict:
+				disable_test_features = True
+		if disable_test_features:
+			filetext = k + ' ' + 'notest.conf'
+			log_msg = "filetext: %s" % filetext
+			add_logs(self._session, log_msg, "info", self._config_id)
+			with open("/etc/portage/package.env", "a") as f:
+				f.write(filetext)
+				f.write('\n')
+				f.close
 		log_msg = "build_cpv_list: %s" % (build_cpv_list,)
 		add_logs(self._session, log_msg, "info", self._config_id)
 
