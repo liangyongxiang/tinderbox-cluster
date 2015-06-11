@@ -24,7 +24,7 @@ def digestcheck(mysettings, pkgdir):
 	@rtype: int
 	@return: 1 on success and 0 on failure
 	"""
-
+	strict=False
 	myfiles = []
 	justmanifest = None
 	mf = None
