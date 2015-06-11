@@ -8,54 +8,30 @@ import errno
 import sys
 import time
 import re
-from pygit2 import Repository, GIT_MERGE_ANALYSIS_FASTFORWARD, GIT_MERGE_ANALYSIS_NORMAL, \
-        GIT_MERGE_ANALYSIS_UP_TO_DATE
+import git
 
 from tbc.sqlquerys import get_config_id, add_logs, get_config_all_info, get_configmetadata_info
 from tbc.readconf import read_config_settings
 
-def git_repos_list(session, myportdb):
-	# get repo tree from portage
+def git_repos_list(myportdb):
 	repo_trees_list = myportdb.porttrees
 	repo_dir_list = []
-	# append repo dirs to a list
 	for repo_dir in repo_trees_list:
 		repo_dir_list.append(repo_dir)
 	return repo_dir_list
 
-def git_fetch(session, git_repo, config_id):
-	# setup repo, fetch it and return repo 
-	repo = Repository(git_repo)
-	remote = repo.remotes["origin"]
-	remote.fetch()
-	return repo
+def git_fetch(repo):
+	repouptodate = True
+	remote = git.remote.Remote(repo, 'origin')
+	info_list = remote.fetch()
+	local_commit = repo.commit()
+	remote_commit = info_list[0].commit
+	if local_commit.hexsha != remote_commit.hexsha:
+		repouptodate = False
+	return info_list, repouptodate
 
-def git_merge(session, repo, config_id):
-	# check what of type merge we need to do and do it
-	remote_master_id = repo.lookup_reference('refs/remotes/origin/master').target
-	merge_result, _ = repo.merge_analysis(remote_master_id)
-	if merge_result & GIT_MERGE_ANALYSIS_UP_TO_DATE:
-		log_msg = "Repo is up to date"
-		add_zobcs_logs(session, log_msg, "info", config_id)
-	elif merge_result & GIT_MERGE_ANALYSIS_FASTFORWARD:
-		repo.checkout_tree(repo.get(remote_master_id))
-		master_ref = repo.lookup_reference('refs/heads/master')
-		master_ref.set_target(remote_master_id)
-		repo.head.set_target(remote_master_id)
-	elif merge_result & GIT_MERGE_ANALYSIS_NORMAL:
-		repo.merge(remote_master_id)
-		assert repo.index.conflicts is None, 'Conflicts, ahhhh!'
-		user = repo.default_signature
-		tree = repo.index.write_tree()
-		commit = repo.create_commit('HEAD',
-			user,
-			user,
-			'Merge!',
-			tree,
-			[repo.head.target, remote_master_id])
-		repo.state_cleanup()
-	else:
-		raise AssertionError('Unknown merge analysis result')
+def git_merge(repo, info):
+	repo.git.merge(info.commit)
 
 def git_sync_main(session):
 	tbc_settings_dict = read_config_settings()
@@ -93,18 +69,15 @@ def git_sync_main(session):
 	# check git diffs witch Manifests get updated and pass that to a dict
 	# fetch and merge the repo
 	repo_cp_dict = {}
-	for repo_dir in git_repos_list(session, myportdb):
+	for repo_dir in git_repos_list(myportdb):
+		reponame = myportdb.getRepositoryName(repo_dir)
 		attr = {}
-		repo = git_fetch(session, repo_dir, config_id)
-		remote_master_id = repo.lookup_reference('refs/remotes/origin/master').target
-		merge_result, _ = repo.merge_analysis(remote_master_id)
-		if not merge_result & GIT_MERGE_ANALYSIS_UP_TO_DATE:
-			git_merge(session, repo, config_id)
-			repo_diff = repo.diff('HEAD', 'HEAD^')
+		repo = git.Repo(repo_dir)
+		info_list, repouptodate = git_fetch(repo)
+		if not repouptodate:
 			cp_list = []
-			reponame = myportdb.getRepositoryName(repo_dir)
-			for diff_line in repo_diff.patch.splitlines():
-				if re.search("Manifest", diff_line) and re.search("^diff --git", diff_line):
+			for diff_line in repo.git.diff('HEAD^').splitlines():
+				if re.search("^diff --git.*/Manifest", diff_line):
 					diff_line2 = re.split(' b/', re.sub('diff --git', '', diff_line))
 					diff_line3 = re.sub(' a/', '', diff_line2[0])
 					if diff_line3 == diff_line2[1] or "Manifest" in diff_line3:
@@ -115,8 +88,9 @@ def git_sync_main(session):
 						cp_list.append(cp)
 			attr['cp_list'] = cp_list
 			repo_cp_dict[reponame] = attr
+			git_merge(repo, info_list[0])
 		else:
-			log_msg = "Repo is up to date"
+			log_msg = "Repo %s is up to date" % (reponame)
 			add_logs(session, log_msg, "info", config_id)
 	
 	# Need to add a clone of profiles/base for reading the tree
@@ -130,14 +104,15 @@ def git_sync_main(session):
 
 	log_msg = "Repo sync ... Done."
 	add_logs(session, log_msg, "info", config_id)
-	return  repo_cp_dict
+	return repo_cp_dict
 
-def git_pull(session, git_repo, config_id):
-	# do a gitt pull
+def git_pull(session, repo_dir, config_id):
 	log_msg = "Git pull"
 	add_logs(session, log_msg, "info", config_id)
-	repo = git_fetch(session, git_repo, config_id)
-	git_merge(session, repo, config_id)
+	repo = git.Repo(repo_dir)
+	info_list, repouptodate = git_fetch(repo)
+	if not repouptodate:
+		git_merge(repo, info_list[0])
 	log_msg = "Git pull ... Done"
 	add_logs(session, log_msg, "info", config_id)
 	return True
