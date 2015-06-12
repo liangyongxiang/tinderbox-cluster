@@ -56,7 +56,7 @@ class ConfigsMetaData(Base):
 	Updateing = Column('updateing', Boolean, default=False)
 	Status = Column('status', Enum('Stopped', 'Runing', 'Waiting'))
 	Auto = Column('auto', Boolean, default=False)
-	GitWww = Column('git_www', String(200))
+	RepoPath = Column('repo_path', String(200))
 	TimeStamp = Column('time_stamp', DateTime, nullable=False, default=datetime.datetime.utcnow)
 	__tablename__ = 'configs_metadata'
 
