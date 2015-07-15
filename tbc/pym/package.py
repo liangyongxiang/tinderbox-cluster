@@ -122,6 +122,7 @@ class tbc_package(object):
 		attDict['ebuild_version_metadata_tree'] = ebuild_version_metadata_tree
 		#attDict['ebuild_version_text_tree'] = ebuild_version_text_tree[0]
 		attDict['ebuild_version_revision_tree'] = ebuild_version_cvs_revision_tree
+		attDict['ebuild_version_descriptions_tree'] = ebuild_version_metadata_tree[7]
 		return attDict
 
 	def add_new_build_job_db(self, ebuild_id_list, packageDict, config_cpv_listDict):
@@ -182,6 +183,7 @@ class tbc_package(object):
 			log_msg = "Metadata file %s missing Email" % (pkgdir + "/metadata.xml")
 			add_logs(self._session, log_msg, "qa", self._config_id)
 			attDict['metadata_xml_email'] = False
+		attDict['metadata_xml_descriptions'] = pkg_md.descriptions()[0]
 		attDict['metadata_xml_checksum'] =  portage.checksum.sha256hash(pkgdir + "/metadata.xml")[0]
 		#attDict['metadata_xml_text'] =  metadata_xml_text_tree
 		package_metadataDict[package_id] = attDict
