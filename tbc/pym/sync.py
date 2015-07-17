@@ -10,7 +10,7 @@ import time
 import re
 import git
 
-from tbc.sqlquerys import get_config_id, add_logs, get_config_all_info, get_configmetadata_info
+from tbc.sqlquerys import get_config_id_fqdn, add_logs, get_config_all_info, get_configmetadata_info
 from tbc.readconf import read_config_settings
 
 def git_repos_list(myportdb):
@@ -34,12 +34,14 @@ def git_merge(repo, info):
 	repo.git.merge(info.commit)
 
 def git_sync_main(session):
-	tbc_settings_dict = read_config_settings()
-	_hostname = tbc_settings_dict['hostname']
-	_config = tbc_settings_dict['tbc_config']
-	config_id = get_config_id(session, _config, _hostname)
-	host_config = _hostname +"/" + _config
-	default_config_root = tbc_settings_dict['tbc_gitrepopath']  + "/" + host_config + "/"
+	tbc_settings = read_config_settings()
+	hostname = tbc_settings_dict['hostname']
+	config_id = get_config_id_fqdn(session, host)
+	ConfigsMetaDataInfo = get_configmetadata_info(session, config_id)
+	ConfigInfo = get_config_info(session, config_id)
+	SetupInfo = get_setup_info(session, ConfigInfo.SetupId)
+	host_config = ConfigInfo.Hostname +"/" + SetupInfo.Setup
+	default_config_root = ConfigsMetaDataInfo.RepoPath + "/" + host_config + "/"
 	mysettings = portage.config(config_root = default_config_root)
 	myportdb = portage.portdbapi(mysettings=mysettings)
 	GuestBusy = True
@@ -53,12 +55,12 @@ def git_sync_main(session):
 	while GuestBusy:
 		Status_list = []
 		for guest_id in guestid_list:
-			ConfigMetadata = get_configmetadata_info(session, guest_id)
-			Status_list.append(ConfigMetadata.Status)
+			ConfigMetadataGuest = get_configmetadata_info(session, guest_id)
+			Status_list.append(ConfigMetadataGuest.Status)
 		if not 'Runing' in Status_list:
 			GuestBusy = False
 		else:
-			time.sleep(30)
+			time.sleep(60)
 	#remove the needed base profile clone
 	try:
 		os.remove(mysettings['PORTDIR'] + "/profiles/config/parent")
@@ -76,6 +78,7 @@ def git_sync_main(session):
 		info_list, repouptodate = git_fetch(repo)
 		if not repouptodate:
 			cp_list = []
+			# FiXME We still miss files to update
 			for diff_line in repo.git.diff('HEAD^').splitlines():
 				if re.search("^diff --git.*/Manifest", diff_line):
 					diff_line2 = re.split(' b/', re.sub('diff --git', '', diff_line))

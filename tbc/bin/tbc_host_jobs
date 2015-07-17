@@ -5,22 +5,19 @@
 
 from __future__ import print_function
 
-from tbc.readconf import get_conf_settings
+from tbc.readconf import read_config_settings
 from tbc.jobs import jobs_main
 from tbc.ConnectionManager import NewConnection
-from tbc.sqlquerys import add_logs, get_config_id
+from tbc.sqlquerys import add_logs, get_config_id_fqdn
 from sqlalchemy.orm import sessionmaker
 import time
 
 def main():
 	# Main
-	reader = get_conf_settings()
-	tbc_settings_dict=reader.read_tbc_settings_all()
-	config = tbc_settings_dict['tbc_config']
-	hostname = tbc_settings_dict['hostname']
-	Session = sessionmaker(bind=NewConnection(tbc_settings_dict))
+	tbc_settings = read_config_settings()
+	Session = sessionmaker(bind=NewConnection(tbc_settings))
 	session = Session()
-	config_id = get_config_id(session, config, hostname)
+	config_id = get_config_id_fqdn(session, tbc_settings['hostname'])
 	add_logs(session, "Job deamon started", "info", config_id)
 	repeat = True
 	while repeat:

@@ -19,7 +19,7 @@ def build_mydepgraph(settings, trees, mtimedb, myopts, myparams, myaction, myfil
 	except portage.exception.PackageSetNotFound as e:
 		root_config = trees[settings["ROOT"]]["root_config"]
 		display_missing_pkg_set(root_config, e.value)
-		build_dict['type_fail'] = "depgraph fail"
+		build_dict['type_fail'] = "depgraph fail\n"
 		build_dict['check_fail'] = True
 	else:
 		if not success:
@@ -27,23 +27,23 @@ def build_mydepgraph(settings, trees, mtimedb, myopts, myparams, myaction, myfil
 			repeat_times = 0
 			while repeat:
 				if mydepgraph._dynamic_config._needed_p_mask_changes:
-					build_dict['type_fail'] = "Mask package or dep"
+					build_dict['type_fail'] = "Mask package or dep\n"
 					build_dict['check_fail'] = True
 				elif mydepgraph._dynamic_config._needed_use_config_changes:
 					mydepgraph._display_autounmask()
-					build_dict['type_fail'] = "Need use change"
+					build_dict['type_fail'] = "Need use change\n"
 					build_dict['check_fail'] = True
 				elif mydepgraph._dynamic_config._slot_conflict_handler:
-					build_dict['type_fail'] = "Slot blocking"
+					build_dict['type_fail'] = "Slot blocking\n"
 					build_dict['check_fail'] = True
 				elif mydepgraph._dynamic_config._circular_deps_for_display:
-					build_dict['type_fail'] = "Circular Deps"
+					build_dict['type_fail'] = "Circular Deps\n"
 					build_dict['check_fail'] = True
 				elif mydepgraph._dynamic_config._unsolvable_blockers:
-					build_dict['type_fail'] = "Blocking packages"
+					build_dict['type_fail'] = "Blocking packages\n"
 					build_dict['check_fail'] = True
 				else:
-					build_dict['type_fail'] = "Dep calc fail"
+					build_dict['type_fail'] = "Dep calc fail\n"
 					build_dict['check_fail'] = True
 				mydepgraph.display_problems()
 				if repeat_times is 2:

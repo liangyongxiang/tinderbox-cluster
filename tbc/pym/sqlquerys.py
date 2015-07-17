@@ -3,6 +3,7 @@
 
 from __future__ import print_function
 import datetime
+import sys
 from tbc.db_mapping import Configs, Logs, ConfigsMetaData, Jobs, BuildJobs, Packages, Ebuilds, Repos, Categories, \
 	Uses, ConfigsEmergeOptions, EmergeOptions, HiLight, BuildLogs, BuildLogsConfig, BuildJobsUse, BuildJobsRedo, \
 	HiLightCss, BuildLogsHiLight, BuildLogsEmergeOptions, BuildLogsErrors, ErrorsInfo, EmergeInfo, BuildLogsUse, \
@@ -15,6 +16,10 @@ from sqlalchemy import and_, or_
 def get_config_id(session, setup, host):
 	SetupInfo = session.query(Setups).filter_by(Setup = setup).one()
 	ConfigInfo = session.query(Configs).filter_by(SetupId = SetupInfo.SetupId).filter_by(Hostname = host).one()
+	return ConfigInfo.ConfigId
+
+def get_config_id_fqdn(session, host):
+	ConfigInfo = session.query(Configs).filter_by(Hostname = host).one()
 	return ConfigInfo.ConfigId
 
 def add_logs(session, log_msg, log_type, config_id):
@@ -224,10 +229,7 @@ def add_new_buildlog(session, build_dict, build_log_dict):
 		return None, False
 
 	def build_log_id_no_match(build_dict, build_log_dict):
-		if build_log_dict['summary_error_list'] == []:
-			NewBuildLog = BuildLogs(EbuildId = build_dict['ebuild_id'], Fail = False, SummeryText = build_log_dict['build_error'], LogHash = build_log_dict['log_hash'])
-		else:
-			NewBuildLog = BuildLogs(EbuildId = build_dict['ebuild_id'], Fail = True, SummeryText = build_log_dict['build_error'], LogHash = build_log_dict['log_hash'])
+		NewBuildLog = BuildLogs(EbuildId = build_dict['ebuild_id'], Fail = build_log_dict['fail'], RmQa = build_log_dict['rmqa'], Others = build_log_dict['others'], SummeryText = build_log_dict['build_error'], LogHash = build_log_dict['log_hash'])
 		session.add(NewBuildLog)
 		session.flush()
 		build_log_id = NewBuildLog.BuildLogId
@@ -274,16 +276,14 @@ def add_new_buildlog(session, build_dict, build_log_dict):
 def add_repoman_qa(session, build_log_dict, log_id):
 	repoman_error = ""
 	qa_error = ""
-	if build_log_dict['qa_error_list']:
-		for qa_text in build_log_dict['qa_error_list']:
-			qa_error = qa_error + build_log_dict['qa_error_list']
-		NewBuildLogQA = BuildLogsQA(BuildLogId = log_id, SummeryText = qa_error)
-		session.add(NewBuildLogQA)
-		session.commit()
 	if build_log_dict['repoman_error_list']:
 		for repoman_text in build_log_dict['repoman_error_list']:
 			repoman_error = repoman_error + repoman_text
-		NewBuildLogRepoman = BuildLogsRepoman(BuildLogId = log_id, SummeryText = repoman_error)
+	if build_log_dict['qa_error_list']:
+		for qa_text in build_log_dict['qa_error_list']:
+			qa_error = qa_error + qa_text
+		repoman_error = repoman_error + qa_error
+		NewBuildLogRepoman = BuildLogsRepomanQa(BuildLogId = log_id, SummeryText = repoman_error)
 		session.add(NewBuildLogRepoman)
 		session.commit()
 
@@ -391,12 +391,15 @@ def add_new_ebuild_sql(session, packageDict):
 		except (MultipleResultsFound) as e:
 			for x in session.query(Ebuilds).filter_by(Version = v['ebuild_version']).filter_by(Checksum = v['checksum']).\
 				filter_by(PackageId = v['package_id']).filter_by(Active = True).all():
-				print(x.EbuildId)
+				x.Checksum = 0
+				x.Active = False
+				session.commit()
+			try:
+				EbuildInfo = session.query(Ebuilds).filter_by(Version = v['ebuild_version']).filter_by(Checksum = v['checksum']).\
+					filter_by(PackageId = v['package_id']).filter_by(Active = True).one()
+			except (MultipleResultsFound) as e:
 				# FIXME
-				#x.Checksum = 0
-				#x.Active = False
-				#session.commit()
-			sys.exit()
+				sys.exit()
 		session.add(EbuildsMetadata(EbuildId = EbuildInfo.EbuildId, Revision = v['ebuild_version_revision_tree'], Descriptions = v['ebuild_version_descriptions_tree']))
 		session.commit()
 		ebuild_id_list.append(EbuildInfo.EbuildId)

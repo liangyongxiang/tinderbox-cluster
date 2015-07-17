@@ -3,9 +3,9 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: May 09, 2015 at 03:13 PM
+-- Generation Time: Jul 17, 2015 at 08:35 PM
 -- Server version: 10.0.15-MariaDB-log
--- PHP Version: 5.6.5-pl0-gentoo
+-- PHP Version: 5.6.10-pl0-gentoo
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
@@ -111,6 +111,8 @@ CREATE TABLE IF NOT EXISTS `build_logs` (
 `build_log_id` int(11) NOT NULL,
   `ebuild_id` int(11) NOT NULL,
   `fail` tinyint(1) NOT NULL DEFAULT '0',
+  `rmqa` tinyint(1) NOT NULL,
+  `others` tinyint(1) NOT NULL,
   `summery_text` longtext NOT NULL,
   `log_hash` varchar(100) NOT NULL,
   `bug_id` int(10) NOT NULL DEFAULT '0',
@@ -173,22 +175,10 @@ CREATE TABLE IF NOT EXISTS `build_logs_hilight` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `build_logs_qa`
+-- Table structure for table `build_logs_repoman_qa`
 --
 
-CREATE TABLE IF NOT EXISTS `build_logs_qa` (
-`id` int(11) NOT NULL,
-  `build_log_id` int(11) NOT NULL,
-  `summery_text` text NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `build_logs_repoman`
---
-
-CREATE TABLE IF NOT EXISTS `build_logs_repoman` (
+CREATE TABLE IF NOT EXISTS `build_logs_repoman_qa` (
 `id` int(11) NOT NULL,
   `build_log_id` int(11) NOT NULL,
   `summery_text` text NOT NULL
@@ -254,7 +244,6 @@ CREATE TABLE IF NOT EXISTS `configs_emerge_options` (
 CREATE TABLE IF NOT EXISTS `configs_metadata` (
 `id` int(11) NOT NULL,
   `config_id` int(11) NOT NULL,
-  `profile` varchar(50) NOT NULL,
   `keyword_id` int(11) NOT NULL,
   `make_conf_text` text NOT NULL,
   `checksum` varchar(100) NOT NULL,
@@ -264,7 +253,7 @@ CREATE TABLE IF NOT EXISTS `configs_metadata` (
   `updateing` tinyint(1) NOT NULL,
   `status` enum('Waiting','Runing','Stoped') NOT NULL,
   `auto` tinyint(1) NOT NULL,
-  `git_www` varchar(100) NOT NULL COMMENT 'git repo www wiev address',
+  `repo_path` varchar(100) NOT NULL COMMENT 'git repo path for etc/portage',
   `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Config Status';
 
@@ -318,7 +307,8 @@ CREATE TABLE IF NOT EXISTS `ebuilds_keywords` (
 CREATE TABLE IF NOT EXISTS `ebuilds_metadata` (
 `id` int(11) NOT NULL,
   `ebuild_id` int(11) NOT NULL,
-  `revision` varchar(10) NOT NULL COMMENT 'CVS revision'
+  `revision` varchar(10) NOT NULL COMMENT 'CVS revision',
+  `descriptions` varchar(200) NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -591,15 +581,9 @@ ALTER TABLE `build_logs_hilight`
  ADD PRIMARY KEY (`id`), ADD KEY `log_id` (`log_id`), ADD KEY `hilight_id` (`hilight_css_id`), ADD KEY `hilight_css_id` (`hilight_css_id`);
 
 --
--- Indexes for table `build_logs_qa`
+-- Indexes for table `build_logs_repoman_qa`
 --
-ALTER TABLE `build_logs_qa`
- ADD PRIMARY KEY (`id`), ADD KEY `build_log_id` (`build_log_id`);
-
---
--- Indexes for table `build_logs_repoman`
---
-ALTER TABLE `build_logs_repoman`
+ALTER TABLE `build_logs_repoman_qa`
  ADD PRIMARY KEY (`id`), ADD KEY `build_logs_id` (`build_log_id`);
 
 --
@@ -808,14 +792,9 @@ MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `build_logs_hilight`
 MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
--- AUTO_INCREMENT for table `build_logs_qa`
+-- AUTO_INCREMENT for table `build_logs_repoman_qa`
 --
-ALTER TABLE `build_logs_qa`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `build_logs_repoman`
---
-ALTER TABLE `build_logs_repoman`
+ALTER TABLE `build_logs_repoman_qa`
 MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `build_logs_use`

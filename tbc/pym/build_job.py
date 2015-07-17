@@ -149,11 +149,11 @@ class build_job_action(object):
 			log_msg = "build_job %s was not removed" % (build_dict['build_job_id'],)
 			add_logs(self._session, log_msg, "info", self._config_id)
 			print("qurery was not removed")
-			build_dict['type_fail'] = "Querey was not removed"
+			build_dict['type_fail'] = "Querey was not removed\n"
 			build_dict['check_fail'] = True
 			log_fail_queru(self._session, build_dict, settings)
 		if build_fail is True:
-			build_dict['type_fail'] = "Emerge faild"
+			build_dict['type_fail'] = "Emerge faild\n"
 			build_dict['check_fail'] = True
 			log_msg = "Emerge faild!"
 			add_logs(self._session, log_msg, "info", self._config_id)

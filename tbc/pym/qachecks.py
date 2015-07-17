@@ -57,7 +57,7 @@ def digestcheck(mysettings, pkgdir):
 	except FileNotFound as e:
 		return ("\n!!! A file listed in the Manifest could not be found: %s\n") % str(e)
 	except DigestException as e:
-		return ("!!! Digest verification failed: %s\nReason: %s\nGot: %s\nExpected: %s") \
+		return ("!!! Digest verification failed: %s\nReason: %s\nGot: %s\nExpected: %s\n") \
 				 % (e.value[0], e.value[1], e.value[2], e.value[3])
 	if mf.thin or mf.allow_missing:
 		# In this case we ignore any missing digests that
@@ -82,7 +82,7 @@ def digestcheck(mysettings, pkgdir):
 		except UnicodeDecodeError:
 			parent = _unicode_decode(parent,
 				encoding=_encodings['fs'], errors='replace')
-			return ("!!! Path contains invalid character(s) for encoding '%s': '%s'") % (_encodings['fs'], parent)
+			return ("!!! Path contains invalid character(s) for encoding '%s': '%s'\n") % (_encodings['fs'], parent)
 		for d in dirs:
 			d_bytes = d
 			try:
@@ -91,7 +91,7 @@ def digestcheck(mysettings, pkgdir):
 			except UnicodeDecodeError:
 				d = _unicode_decode(d,
 					encoding=_encodings['fs'], errors='replace')
-				return ("!!! Path contains invalid character(s) for encoding '%s': '%s'") % (_encodings['fs'], os.path.join(parent, d))
+				return ("!!! Path contains invalid character(s) for encoding '%s': '%s'\n") % (_encodings['fs'], os.path.join(parent, d))
 			if d.startswith(".") or d == "CVS":
 				dirs.remove(d_bytes)
 		for f in files:
@@ -104,7 +104,7 @@ def digestcheck(mysettings, pkgdir):
 				if f.startswith("."):
 					continue
 				f = os.path.join(parent, f)[len(filesdir) + 1:]
-				return ("!!! File name contains invalid character(s) for encoding '%s': '%s'") % (_encodings['fs'], f)
+				return ("!!! File name contains invalid character(s) for encoding '%s': '%s'\n") % (_encodings['fs'], f)
 			if f.startswith("."):
 				continue
 			f = os.path.join(parent, f)[len(filesdir) + 1:]
@@ -120,7 +120,7 @@ def check_file_in_manifest(pkgdir, mysettings, portdb, cpv, build_use_flags_list
 	ebuild_version = portage.versions.cpv_getversion(cpv)
 	package = portage.versions.cpv_getkey(cpv).split("/")[1]
 	if my_manifest.findFile(package + "-" + ebuild_version + ".ebuild") is None:
-		return "Ebuild file not found."
+		return "Ebuild file not found.\n"
 	tree = portdb.getRepositoryPath(repo)
 	cpv_fetchmap = portdb.getFetchMap(cpv, useflags=build_use_flags_list, mytree=tree)
 	mysettings.unlock()
@@ -128,17 +128,17 @@ def check_file_in_manifest(pkgdir, mysettings, portdb, cpv, build_use_flags_list
 		portage.fetch(cpv_fetchmap, mysettings, listonly=0, fetchonly=0, locks_in_subdir='.locks', use_locks=1, try_mirrors=1)
 	except:
 		mysettings.lock()
-		return "Can't fetch the file."
+		return "Can't fetch the file.\n"
 	finally:
 		mysettings.lock()
 	try:
 		my_manifest.checkCpvHashes(cpv, checkDistfiles=True, onlyDistfiles=False, checkMiscfiles=True)
 	except:
-		return "Can't fetch the file or the hash failed."
+		return "Can't fetch the file or the hash failed.\n"
 	try:
 		portdb.fetch_check(cpv, useflags=build_use_flags_list, mysettings=mysettings, all=False)
 	except:	
-		return "Fetch check failed."
+		return "Fetch check failed.\n"
 	return
 
 def check_repoman(mysettings, myportdb, cpv, repo):
@@ -167,7 +167,7 @@ def check_repoman(mysettings, myportdb, cpv, repo):
 			mode = 'r', encoding = _encodings['repo.content'])
 			try:
 				for check_name, e in run_checks(f, pkg):
-					fails.append(check_name + ": " + e)
+					fails.append(check_name + ": " + e + "\n")
 			finally:
 				f.close()
 		except UnicodeDecodeError:

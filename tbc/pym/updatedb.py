@@ -14,18 +14,21 @@ from tbc.sqlquerys import add_logs, get_package_info, update_repo_db, \
 	get_config_info
 from tbc.check_setup import check_make_conf
 from tbc.package import tbc_package
-# Get the options from the config file set in tbc.readconf
+# Get the options from the config file tbc.conf
 from tbc.readconf import  read_config_settings
 
-def init_portage_settings(session, config_id, tbc_settings_dict):
+def init_portage_settings(session, config_id):
 	# check config setup
-	check_make_conf(session, config_id, tbc_settings_dict)
+	check_make_conf(session, config_id)
 	log_msg = "Check configs done"
 	add_logs(session, log_msg, "info", config_id)
-	
-	# Get default config from the configs table  and default_config=1
-	host_config = tbc_settings_dict['hostname'] +"/" + tbc_settings_dict['tbc_config']
-	default_config_root = tbc_settings_dict['tbc_gitrepopath'] + "/" + host_config + "/"
+
+	# setup default root
+	ConfigsMetaDataInfo = get_configmetadata_info(session, config_id)
+	ConfigInfo = get_config_info(session, config_id)
+	SetupInfo = get_setup_info(session, ConfigInfo.SetupId)
+	host_config = ConfigInfo.Hostname +"/" + SetupInfo.Setup
+	default_config_root = ConfigsMetaDataInfo.RepoPath + "/" + host_config + "/"
 
 	# Set config_root (PORTAGE_CONFIGROOT)  to default_config_root
 	mysettings = portage.config(config_root = default_config_root)
@@ -33,11 +36,11 @@ def init_portage_settings(session, config_id, tbc_settings_dict):
 	add_logs(session, log_msg, "info", config_id)
 	return mysettings
 
-def update_cpv_db_pool(mysettings, myportdb, cp, repo, tbc_settings_dict, config_id):
-	session_factory = sessionmaker(bind=NewConnection(tbc_settings_dict))
+def update_cpv_db_pool(mysettings, myportdb, cp, repo, tbc_settings, config_id):
+	session_factory = sessionmaker(bind=NewConnection(tbc_settings))
 	Session = scoped_session(session_factory)
 	session2 = Session()
-	init_package = tbc_package(session2, mysettings, myportdb, config_id, tbc_settings_dict)
+	init_package = tbc_package(session2, mysettings, myportdb, config_id)
 
 	# split the cp to categories and package
 	element = cp.split('/')
@@ -55,9 +58,10 @@ def update_cpv_db_pool(mysettings, myportdb, cp, repo, tbc_settings_dict, config
 	else:
 		# Add new package with ebuilds
 		init_package.add_new_package_db(cp, repo)
+	session2.close
 	Session.remove()
 
-def update_cpv_db(session, config_id, tbc_settings_dict):
+def update_cpv_db(session, config_id, tbc_settings):
 	GuestBusy = True
 	log_msg = "Waiting for Guest to be idel"
 	add_logs(session, log_msg, "info", config_id)
@@ -79,7 +83,7 @@ def update_cpv_db(session, config_id, tbc_settings_dict):
 	new_build_jobs_list = []
 
 	# Setup settings, portdb and pool
-	mysettings =  init_portage_settings(session, config_id, tbc_settings_dict)
+	mysettings =  init_portage_settings(session, config_id)
 	myportdb = portage.portdbapi(mysettings=mysettings)
 	
 	# Use all cores when multiprocessing
@@ -107,9 +111,9 @@ def update_cpv_db(session, config_id, tbc_settings_dict):
 
 			# Run the update package for all package in the list and in a multiprocessing pool
 			for cp in sorted(package_list_tree):
-				pool.apply_async(update_cpv_db_pool, (mysettings, myportdb, cp, repo, zobcs_settings_dict, config_id,))
+				# pool.apply_async(update_cpv_db_pool, (mysettings, myportdb, cp, repo, tbc_settings, config_id,))
 				# use this when debuging
-				#update_cpv_db_pool(mysettings, myportdb, cp, repo, zobcs_settings_dict, config_id)
+				update_cpv_db_pool(mysettings, myportdb, cp, repo, tbc_settings, config_id)
 	else:
 		# Update needed repos and packages in the dict
 		for repo, v in repo_cp_dict.items():
@@ -120,14 +124,14 @@ def update_cpv_db(session, config_id, tbc_settings_dict):
 
 			# Run the update package for all package in the list and in a multiprocessing pool
 			for cp in v['cp_list']:
-				pool.apply_async(update_cpv_db_pool, (mysettings, myportdb, cp, repo, zobcs_settings_dict, config_id,))
+				# pool.apply_async(update_cpv_db_pool, (mysettings, myportdb, cp, repo, tbc_settings, config_id,))
 				# use this when debuging
-				#update_cpv_db_pool(mysettings, myportdb, cp, repo, zobcs_settings_dict, config_id)
+				update_cpv_db_pool(mysettings, myportdb, cp, repo, tbc_settings, config_id)
 
 
 	#close and join the multiprocessing pools
-	pool.close()
-	pool.join()
+	# pool.close()
+	# pool.join()
 	log_msg = "Checking categories, package and ebuilds ... done"
 	add_logs(session, log_msg, "info", config_id)
 
@@ -136,12 +140,12 @@ def update_db_main(session, repo_cp_dict, config_id):
 	if repo_cp_dict == {}:
 		return True
 	# Logging
-	tbc_settings_dict = reader. read_config_settings()
+	tbc_settings = read_config_settings()
 	log_msg = "Update db started."
 	add_logs(session, log_msg, "info", config_id)
 
 	# Update the cpv db
-	update_cpv_db(session, repo_cp_dict, config_id, tbc_settings_dict)
+	update_cpv_db(session, repo_cp_dict, config_id, tbc_settings)
 	log_msg = "Update db ... Done."
 	add_logs(session, log_msg, "info", config_id)
 	return True

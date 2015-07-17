@@ -18,36 +18,35 @@ from tbc.sqlquerys import add_logs, get_package_info, get_config_info, \
 
 class tbc_package(object):
 
-	def __init__(self, session, mysettings, myportdb, config_id, tbc_settings_dict):
+	def __init__(self, session, mysettings, myportdb, config_id):
 		self._session = session
 		self._mysettings = mysettings
 		self._myportdb = myportdb
 		self._config_id = config_id
-		self._tbc_settings_dict = tbc_settings_dict
 
-	def change_config(self, host_config):
+	def change_config(self, host_config, repopath):
 		# Change config_root  config_setup = table config
-		my_new_setup = tbc_settings_dict['tbc_gitrepopath'] + "/" + host_config + "/"
+		my_new_setup = repopath + "/" + host_config + "/"
 		mysettings_setup = portage.config(config_root = my_new_setup)
 		return mysettings_setup
 
 	def config_match_ebuild(self, cp, config_list):
-		config_cpv_listDict ={}
+		config_cpv_dict ={}
 		if config_list == []:
-			return config_cpv_listDict
+			return config_cpv_dict
 		for config_id in config_list:
 			ConfigInfo = get_config_info(self._session, config_id)
 			ConfigsMetaData = get_configmetadata_info(self._session, config_id)
-			if ConfigsMetaData.Auto and ConfigsMetaData.Active and ConfigsMetaData.Status != 'Stopped':
+			if ConfigsMetaData.Auto and ConfigsMetaData.Active and ConfigsMetaData.Status != 'Stopped' and not ConfigInfo.SetupId in config_cpv_dict:
 				SetupInfo = get_setup_info(self._session, config_id)
-				mysettings_setup = self.change_config(ConfigInfo.Hostname + "/" + SetupInfo.Setup)
+				mysettings_setup = self.change_config(ConfigInfo.Hostname + "/" + SetupInfo.Setup, ConfigsMetaData.RepoPath)
 				myportdb_setup = portage.portdbapi(mysettings=mysettings_setup)
 
 				# Get the latest cpv from portage with the config that we can build
 				build_cpv = myportdb_setup.xmatch('bestmatch-visible', cp)
 
 				# Check if could get cpv from portage and add it to the config_cpv_listDict.
-				if build_cpv != "" and not ConfigInfo.SetupId in config_cpv_listDict:
+				if build_cpv != "":
 
 					# Get the iuse and use flags for that config/setup and cpv
 					init_useflags = tbc_use_flags(mysettings_setup, myportdb_setup, build_cpv)
@@ -61,19 +60,19 @@ class tbc_package(object):
 					attDict['cpv'] = build_cpv
 					attDict['useflags'] = final_use_list
 					attDict['iuse'] = iuse_flags_list2
-					config_cpv_listDict[ConfigInfo.SetupId] = attDict
+					config_cpv_dict[ConfigInfo.SetupId] = attDict
 
 				# Clean some cache
 				myportdb_setup.close_caches()
 				portage.portdbapi.portdbapi_instances.remove(myportdb_setup)
-		return config_cpv_listDict
+		return config_cpv_dict
 
 	def get_ebuild_metadata(self, cpv, repo):
 		# Get the auxdbkeys infos for the ebuild
 		try:
 			ebuild_auxdb_list = self._myportdb.aux_get(cpv, portage.auxdbkeys, myrepo=repo)
 		except:
-			ebuild_auxdb_list = None
+			ebuild_auxdb_list = False
 		else:
 			for i in range(len(ebuild_auxdb_list)):
 				if ebuild_auxdb_list[i] == '':
@@ -106,7 +105,7 @@ class tbc_package(object):
 		# if there some error to get the metadata we add rubish to the
 		# ebuild_version_metadata_tree and set ebuild_version_checksum_tree to 0
 		# so it can be updated next time we update the db
-		if ebuild_version_metadata_tree  is None:
+		if ebuild_version_metadata_tree:
 			log_msg = " QA: %s have broken metadata on repo %s" % (cpv, repo)
 			add_logs(self._session, log_msg, "info", self._config_id)
 			ebuild_version_metadata_tree = ['','','','','','','','','','','','','','','','','','','','','','','','','']
@@ -183,7 +182,7 @@ class tbc_package(object):
 			log_msg = "Metadata file %s missing Email" % (pkgdir + "/metadata.xml")
 			add_logs(self._session, log_msg, "qa", self._config_id)
 			attDict['metadata_xml_email'] = False
-		attDict['metadata_xml_descriptions'] = pkg_md.descriptions()[0]
+		attDict['metadata_xml_descriptions'] = pkg_md.descriptions()
 		attDict['metadata_xml_checksum'] =  portage.checksum.sha256hash(pkgdir + "/metadata.xml")[0]
 		#attDict['metadata_xml_text'] =  metadata_xml_text_tree
 		package_metadataDict[package_id] = attDict
@@ -282,12 +281,12 @@ class tbc_package(object):
 		new_ebuild_id_list = []
 		old_ebuild_id_list = []
 		for cpv in sorted(ebuild_list_tree):
-			repoman_fail = check_repoman(self._mysettings, self._myportdb, cpv, repo)
-			if repoman_fail:
-				log_msg = "Repoman %s:%s ... Fail." % (cpv, repo)
-				add_logs(self._session, log_msg, "error", self._config_id)
 			packageDict[cpv] = self.get_packageDict(pkgdir, cpv, repo)
-
+			if packageDict[cpv]['checksum'] == "0":
+				repoman_fail = check_repoman(self._mysettings, self._myportdb, cpv, repo)
+				if repoman_fail:
+					log_msg = "Repoman %s:%s ... Fail." % (cpv, repo)
+					add_logs(self._session, log_msg, "error", self._config_id)
 		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_checksum_tree)
 		log_msg = "C %s:%s ... Done." % (cp, repo)
 		add_logs(self._session, log_msg, "info", self._config_id)
@@ -348,7 +347,8 @@ class tbc_package(object):
 
 				# Get the checksum of the ebuild in tree and db
 				ebuild_version_checksum_tree = packageDict[cpv]['checksum']
-				checksums_db, fail= get_ebuild_checksums(self._session, package_id, ebuild_version_tree)
+				checksums_db, fail = get_ebuild_checksums(self._session, package_id, ebuild_version_tree)
+
 				# check if we have dupes of the checksum from db
 				if checksums_db is None:
 					ebuild_version_manifest_checksum_db = None
@@ -365,11 +365,12 @@ class tbc_package(object):
 				else:
 					ebuild_version_manifest_checksum_db = checksums_db
 
-				if ebuild_version_manifest_checksum_db is None or ebuild_version_checksum_tree != ebuild_version_manifest_checksum_db:
+				# Check with repoman
+				if (ebuild_version_manifest_checksum_db is None or ebuild_version_checksum_tree != ebuild_version_manifest_checksum_db) and ebuild_version_checksum_tree != "0":
 					repoman_fail = check_repoman(self._mysettings, self._myportdb, cpv, repo)
 					if repoman_fail:
 						log_msg = "Repoman %s:%s ... Fail." % (cpv, repo)
-						add_logs(self._session, log_msg, "info", self._config_id)
+						add_logs(self._session, log_msg, "error", self._config_id)
 
 				# Check if the checksum have change
 				if ebuild_version_manifest_checksum_db is None:

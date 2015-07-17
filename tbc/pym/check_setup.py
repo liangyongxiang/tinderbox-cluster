@@ -11,17 +11,18 @@ from tbc.text import get_file_text
 from tbc.sqlquerys import get_config_all_info, add_logs, get_configmetadata_info, get_setup_info
 from tbc.sync import git_pull
 
-def check_make_conf(session, config_id, tbc_settings_dict):
+def check_make_conf(session, config_id):
 	log_msg = "Checking configs for changes and errors"
 	add_logs(session, log_msg, "info", config_id)
-	git_repo = tbc_settings_dict['tbc_gitrepopath'] + "/"
+	HostConfigsMetaDataInfo = get_configmetadata_info(session, config_id)
+	git_repo =  HostConfigsMetaDataInfo.RepoPath + "/"
 	git_pull(session, git_repo, config_id)
 	configsDict = {}
 	for ConfigInfo in get_config_all_info(session):
 		attDict={}
 		# Set the config dir
 		SetupInfo = get_setup_info(session, ConfigInfo.ConfigId)
-		check_config_dir = tbc_settings_dict['tbc_gitrepopath'] + "/" + ConfigInfo.Hostname +"/" + SetupInfo.Setup + "/"
+		check_config_dir = git_repo + ConfigInfo.Hostname +"/" + SetupInfo.Setup + "/"
 		make_conf_file = check_config_dir + "etc/portage/make.conf"
 		ConfigsMetaDataInfo = get_configmetadata_info(session, ConfigInfo.ConfigId)
 		# Check if we can take a checksum on it.
@@ -51,8 +52,9 @@ def check_make_conf(session, config_id, tbc_settings_dict):
 	log_msg = "Checking configs for changes and errors ... Done"
 	add_logs(session, log_msg, "info", config_id)
 
-def check_make_conf_guest(session, tbc_settings_dict, config_id):
-	git_repo = tbc_settings_dict['tbc_gitrepopath'] + "/"
+def check_configure_guest(session, config_id):
+	GuestConfigsMetaDataInfo = get_configmetadata_info(session, config_id)
+	git_repo =  GuestConfigsMetaDataInfo.RepoPath + "/"
 	git_pull(session, git_repo, config_id)
 	make_conf_file = "/etc/portage/make.conf"
 	# Check if we can open the file and close it
@@ -66,14 +68,6 @@ def check_make_conf_guest(session, tbc_settings_dict, config_id):
 		# With errors we return false
 	except Exception as e:
 		return False
-	ConfigsMetaDataInfo = get_configmetadata_info(session, config_id)
-	print('make_conf_checksum_tree', make_conf_checksum_tree)
-	print('make_conf_checksum_db', ConfigsMetaDataInfo.Checksum)
-	if make_conf_checksum_tree != ConfigsMetaDataInfo.Checksum:
+	if make_conf_checksum_tree != GuestConfigsMetaDataInfo.Checksum:
 		return False
 	return True
-
-def check_configure_guest(session, tbc_settings_dict, config_id):
-	pass_make_conf = check_make_conf_guest(session, tbc_settings_dict, config_id)
-	print(pass_make_conf)
-	return pass_make_conf

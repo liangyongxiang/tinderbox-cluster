@@ -175,6 +175,8 @@ class BuildLogs(Base):
 	BuildLogId = Column('build_log_id', Integer, primary_key=True)
 	EbuildId = Column('ebuild_id', Integer, ForeignKey('ebuilds.ebuild_id'))
 	Fail = Column('fail', Boolean, default=False)
+	RmQa = Column('rmqa', Boolean, default=False)
+	Others = Column('others', Boolean, default=False)
 	SummeryText = Column('summery_text', Text)
 	LogHash = Column('log_hash', String(100))
 	BugId = Column('bug_id', Integer, default=0)
@@ -216,17 +218,11 @@ class BuildLogsUse(Base):
 	Status = Column('status', Boolean, default=False)
 	__tablename__ = 'build_logs_use'
 
-class BuildLogsQA(Base):
+class BuildLogsRepomanQa(Base):
 	Id = Column('id', Integer, primary_key=True)
 	BuildLogId = Column('build_log_id', Integer, ForeignKey('build_logs.build_log_id'))
 	SummeryText = Column('summery_text', Text)
-	__tablename__ = 'build_logs_qa'
-
-class BuildLogsRepoman(Base):
-	Id = Column('id', Integer, primary_key=True)
-	BuildLogId = Column('build_log_id', Integer, ForeignKey('build_logs.build_log_id'))
-	SummeryText = Column('summery_text', Text)
-	__tablename__ = 'build_logs_repoman'
+	__tablename__ = 'build_logs_repoman_qa'
 
 class ErrorsInfo(Base):
 	ErrorId = Column('error_id', Integer, primary_key=True)
