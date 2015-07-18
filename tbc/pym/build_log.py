@@ -29,7 +29,7 @@ from tbc.ConnectionManager import NewConnection
 from tbc.sqlquerys import add_logs, get_config_id, get_ebuild_id_db, add_new_buildlog, \
 	get_package_info, get_build_job_id, get_use_id, get_config_info, get_hilight_info, get_error_info_list, \
 	add_e_info, get_fail_times, add_fail_times, update_fail_times, del_old_build_jobs, add_old_ebuild, \
-	update_buildjobs_status, update_manifest_sql, add_repoman_qa, get_config_id_fqdn
+	update_buildjobs_status, update_manifest_sql, add_repoman_qa, get_config_id_fqdn, get_setup_info
 from sqlalchemy.orm import sessionmaker
 
 def get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg):
@@ -77,7 +77,7 @@ def get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg):
 			log_msg = "%s:%s Don't have any ebuild_id!" % (pkg.cpv, repo,)
 			add_logs(session, log_msg, "info", config_id)
 			update_manifest_sql(session, build_dict['package_id'], "0")
-			init_package = tbc_package(session, settings, myportdb, config_id, tbc_settings_dict)
+			init_package = tbc_package(session, settings, myportdb, config_id)
 			init_package.update_package_db(build_dict['package_id'])
 			ebuild_id_list, status = get_ebuild_id_db(session, build_dict['checksum'], build_dict['package_id'])
 			if status and ebuild_id_list is None:
@@ -206,8 +206,10 @@ def get_buildlog_info(session, settings, pkg, build_dict):
 
 	# Run repoman check_repoman()
 	repoman_error_list = check_repoman(settings, myportdb, build_dict['cpv'], pkg.repo)
-	build_log_dict['rmqa'] = False
+	build_log_dict = {}
 	build_log_dict['fail'] = False
+	build_log_dict['rmqa'] = False
+	build_log_dict['others'] = False
 	if repoman_error_list:
 		sum_build_log_list.append("1") # repoman = 1
 		build_log_dict['rmqa'] = True
@@ -223,7 +225,6 @@ def get_buildlog_info(session, settings, pkg, build_dict):
 			for error_info in error_info_list:
 				if re.search(error_info.ErrorSearch, error_log_line):
 					sum_build_log_list.append(error_info.ErrorId)
-	build_log_dict = {}
 	build_log_dict['repoman_error_list'] = repoman_error_list
 	build_log_dict['qa_error_list'] = qa_error_list
 	build_log_dict['error_log_list'] = error_log_list
@@ -243,21 +244,18 @@ def add_buildlog_main(settings, pkg, trees):
 	tbc_settings = read_config_settings()
 	Session = sessionmaker(bind=NewConnection(tbc_settings))
 	session = Session()
-	hostname = tbc_settings['hostname']
-	config_id = get_config_id_fqdn(session, host)
-	ConfigsMetaDataInfo = get_configmetadata_info(session, config_id)
+	config_id = get_config_id_fqdn(session, tbc_settings['hostname'])
 	ConfigInfo = get_config_info(session, config_id)
 	SetupInfo = get_setup_info(session, ConfigInfo.SetupId)
 	host_config = ConfigInfo.Hostname +"/" + SetupInfo.Setup
 	if pkg.type_name == "binary":
 		build_dict = None
 	else:
-		build_dict = get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg)
+		build_dict = get_build_dict_db(session, config_id, settings, tbc_settings, pkg)
 	if build_dict is None:
 		log_msg = "Package %s:%s is NOT logged." % (pkg.cpv, pkg.repo,)
 		add_logs(session, log_msg, "info", config_id)
 		session.close
-		Session.remove()
 		return
 	build_log_dict = {}
 	build_log_dict = get_buildlog_info(session, settings, pkg, build_dict)
@@ -287,7 +285,6 @@ def add_buildlog_main(settings, pkg, trees):
 		add_logs(session, log_msg, "info", config_id)
 		print("\n>>> Logging %s:%s\n" % (pkg.cpv, pkg.repo,))
 	session.close
-	Session.remove()
 
 def log_fail_queru(session, build_dict, settings):
 	config_id = build_dict['config_id']
@@ -327,7 +324,7 @@ def log_fail_queru(session, build_dict, settings):
 				useflagsdict[use_id] = v
 				build_dict['build_useflags'] = useflagsdict
 		else:
-			build_dict['build_useflags'] = None			
+			build_dict['build_useflags'] = None
 		if settings.get("PORTAGE_LOG_FILE") is not None:
 			ConfigInfo= get_config_info(session, config_id)
 			host_config = ConfigInfo.Hostname +"/" + ConfigInfo.Config
@@ -339,5 +336,7 @@ def log_fail_queru(session, build_dict, settings):
 		settings2, trees, tmp = load_emerge_config()
 		build_log_dict['emerge_info'] = get_emerge_info_id(settings2, trees, session, config_id)
 		build_log_dict['others'] = True
+		build_log_dict['rmqa'] = False
+		build_log_dict['fail'] = False
 		log_id = add_new_buildlog(session, build_dict, build_log_dict)
 		del_old_build_jobs(session, build_dict['build_job_id'])

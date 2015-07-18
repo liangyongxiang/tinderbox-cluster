@@ -1,4 +1,4 @@
-2015-04-18  Magnus Granberg  <zorry@gentoo.org>
+2015-07-18  Magnus Granberg  <zorry@gentoo.org>
 
 	* tbc/pym/actions.py
 	Use the patched Scheduler and add build_dict so it can be ust.
@@ -20,7 +20,7 @@
  from _emerge.ProgressHandler import ProgressHandler
  from _emerge.RootConfig import RootConfig
 -from _emerge.Scheduler import Scheduler
-+from zobcs.Scheduler import Scheduler
++from tbc.Scheduler import Scheduler
  from _emerge.search import search
  from _emerge.SetArg import SetArg
  from _emerge.show_invalid_depstring_notice import show_invalid_depstring_notice
@@ -28,7 +28,7 @@
  from _emerge.UseFlagDisplay import pkg_use_display
  from _emerge.userquery import userquery
  
-+from zobcs.build_depgraph import build_mydepgraph
++from tbc.build_depgraph import build_mydepgraph
 +
  if sys.hexversion >= 0x3000000:
  	long = int
@@ -187,7 +187,7 @@
  	'portage.util:writemsg_level',
  	'textwrap',
 -	'_emerge.actions:load_emerge_config,run_action,' + \
-+	'zobcs.actions:load_emerge_config,run_action,' + \
++	'tbc.actions:load_emerge_config,run_action,' + \
  		'validate_ebuild_environment',
  	'_emerge.help:help@emerge_help',
  )
@@ -228,7 +228,7 @@
  from _emerge.PollScheduler import PollScheduler
  from _emerge.SequentialTaskQueue import SequentialTaskQueue
  
-+from zobcs.build_log import add_buildlog_main
++from tbc.build_log import add_buildlog_main
 +
  if sys.hexversion >= 0x3000000:
  	basestring = str

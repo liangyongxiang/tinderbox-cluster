@@ -61,7 +61,7 @@ def update_cpv_db_pool(mysettings, myportdb, cp, repo, tbc_settings, config_id):
 	session2.close
 	Session.remove()
 
-def update_cpv_db(session, repo_cp_dic, config_id, tbc_settings):
+def update_cpv_db(session, repo_cp_dict, config_id, tbc_settings):
 	GuestBusy = True
 	log_msg = "Waiting for Guest to be idel"
 	add_logs(session, log_msg, "info", config_id)

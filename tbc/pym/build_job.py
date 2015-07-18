@@ -24,7 +24,7 @@ class build_job_action(object):
 
 	def __init__(self, config_id, session):
 		self._config_id = config_id
-		self._session = session 
+		self._session = session
 
 	def make_build_list(self, build_dict, settings, portdb):
 		cp = build_dict['cp']
@@ -126,7 +126,7 @@ class build_job_action(object):
 		print("Emerge options: %s" % argscmd)
 		log_msg = "argscmd: %s" % (argscmd,)
 		add_logs(self._session, log_msg, "info", self._config_id)
-		
+
 		# Call main_emerge to build the package in build_cpv_list
 		print("Build: %s" % build_dict)
 		update_buildjobs_status(self._session, build_dict['build_job_id'], 'Building', self._config_id)

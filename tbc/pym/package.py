@@ -38,7 +38,7 @@ class tbc_package(object):
 			ConfigsMetaData = get_configmetadata_info(self._session, config_id)
 			if ConfigsMetaData.Auto and ConfigsMetaData.Active and ConfigsMetaData.Status != 'Stopped' and not ConfigInfo.SetupId in config_cpv_dict:
 				SetupInfo = get_setup_info(self._session, config_id)
-				mysettings_setup = self.change_config(ConfigInfo.Hostname + "/" + SetupInfo.Setup, ConfigsMetaData.RepoPath)
+				mysettings_setup = self.change_config(ConfigInfo.Hostname + "/" + SetupInfo.Setup, repopath)
 				myportdb_setup = portage.portdbapi(mysettings=mysettings_setup)
 
 				# Get the latest cpv from portage with the config that we can build
@@ -104,7 +104,7 @@ class tbc_package(object):
 		# if there some error to get the metadata we add rubish to the
 		# ebuild_version_metadata_tree and set ebuild_version_checksum_tree to 0
 		# so it can be updated next time we update the db
-		if ebuild_version_metadata_tree:
+		if not ebuild_version_metadata_tree:
 			log_msg = " QA: %s have broken metadata on repo %s" % (cpv, repo)
 			add_logs(self._session, log_msg, "info", self._config_id)
 			ebuild_version_metadata_tree = ['','','','','','','','','','','','','','','','','','','','','','','','','']
