@@ -10,7 +10,8 @@ import time
 import re
 import git
 
-from tbc.sqlquerys import get_config_id_fqdn, add_logs, get_config_all_info, get_configmetadata_info
+from tbc.sqlquerys import get_config_id_fqdn, add_logs, get_config_all_info, \
+	get_configmetadata_info, get_config_info, get_setup_info
 from tbc.readconf import read_config_settings
 
 def git_repos_list(myportdb):
@@ -35,8 +36,7 @@ def git_merge(repo, info):
 
 def git_sync_main(session):
 	tbc_settings = read_config_settings()
-	hostname = tbc_settings_dict['hostname']
-	config_id = get_config_id_fqdn(session, host)
+	config_id = get_config_id_fqdn(session, tbc_settings['hostname'])
 	ConfigsMetaDataInfo = get_configmetadata_info(session, config_id)
 	ConfigInfo = get_config_info(session, config_id)
 	SetupInfo = get_setup_info(session, ConfigInfo.SetupId)

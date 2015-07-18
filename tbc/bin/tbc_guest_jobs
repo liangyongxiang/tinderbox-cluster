@@ -23,10 +23,10 @@ def main():
 	session = Session()
 	config_id = get_config_id_fqdn(session, tbc_settings['hostname'])
 	add_logs(session, "Job and build deamon started.", "info", config_id)
-	update_deamon_status(session, 'Runing', config_id)
+	update_deamon_status(session, 'Waiting', config_id)
 	init_build_job = build_job_action(config_id, session)
 	while repeat:
-		jobs_main(session, config)
+		jobs_main(session, config_id)
 		if not check_configure_guest(session, config_id) or check_host_updatedb(session):
 			time.sleep(60)
 			continue

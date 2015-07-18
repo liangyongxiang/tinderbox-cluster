@@ -5,7 +5,6 @@ from __future__ import print_function
 import portage
 from portage.xml.metadata import MetaDataXML
 from tbc.flags import tbc_use_flags
-from tbc.manifest import tbc_manifest
 from tbc.text import get_ebuild_cvs_revision
 from tbc.flags import tbc_use_flags
 from tbc.qachecks import digestcheck, check_repoman
@@ -30,7 +29,7 @@ class tbc_package(object):
 		mysettings_setup = portage.config(config_root = my_new_setup)
 		return mysettings_setup
 
-	def config_match_ebuild(self, cp, config_list):
+	def config_match_ebuild(self, cp, config_list, repopath):
 		config_cpv_dict ={}
 		if config_list == []:
 			return config_cpv_dict
@@ -220,7 +219,8 @@ class tbc_package(object):
 		for config in get_config_all_info(self._session):
 			if config.Host is False:
 				config_list.append(config.ConfigId)
-		config_cpv_listDict = self.config_match_ebuild(cp, config_list)
+		ConfigsMetaData = get_configmetadata_info(self._session, self._config_id)
+		config_cpv_listDict = self.config_match_ebuild(cp, config_list, ConfigsMetaData.RepoPath)
 
 		# Add the ebuild to the build jobs table if needed
 		self.add_new_build_job_db(ebuild_id_list, packageDict, config_cpv_listDict)
@@ -326,7 +326,7 @@ class tbc_package(object):
 						# R =  remove ebuild
 						log_msg = "R %s:%s" % (cpv, repo,)
 						add_logs(self._session, log_msg, "info", self._config_id)
-					add_old_ebuild(session, old_ebuild_id_list)
+					add_old_ebuild(self._session, old_ebuild_id_list)
 					log_msg = "C %s:%s ... Done." % (cp, repo)
 					add_logs(self._session, log_msg, "info", self._config_id)
 				else:

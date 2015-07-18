@@ -14,7 +14,7 @@ from portage.versions import cpv_getkey
 from portage.dep import check_required_use
 from tbc.depclean import do_depclean
 from tbc.flags import tbc_use_flags
-from tbc.qacheck import check_file_in_manifest
+from tbc.qachecks import check_file_in_manifest
 from tbc.main import emerge_main
 from tbc.build_log import log_fail_queru
 from tbc.actions import load_emerge_config

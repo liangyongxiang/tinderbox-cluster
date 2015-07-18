@@ -11,7 +11,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from tbc.ConnectionManager import NewConnection
 from tbc.sqlquerys import add_logs, get_package_info, update_repo_db, \
 	update_categories_db, get_configmetadata_info, get_config_all_info, add_new_build_job, \
-	get_config_info
+	get_config_info, get_setup_info
 from tbc.check_setup import check_make_conf
 from tbc.package import tbc_package
 # Get the options from the config file tbc.conf
@@ -61,7 +61,7 @@ def update_cpv_db_pool(mysettings, myportdb, cp, repo, tbc_settings, config_id):
 	session2.close
 	Session.remove()
 
-def update_cpv_db(session, config_id, tbc_settings):
+def update_cpv_db(session, repo_cp_dic, config_id, tbc_settings):
 	GuestBusy = True
 	log_msg = "Waiting for Guest to be idel"
 	add_logs(session, log_msg, "info", config_id)

@@ -8,7 +8,7 @@ from tbc.db_mapping import Configs, Logs, ConfigsMetaData, Jobs, BuildJobs, Pack
 	Uses, ConfigsEmergeOptions, EmergeOptions, HiLight, BuildLogs, BuildLogsConfig, BuildJobsUse, BuildJobsRedo, \
 	HiLightCss, BuildLogsHiLight, BuildLogsEmergeOptions, BuildLogsErrors, ErrorsInfo, EmergeInfo, BuildLogsUse, \
 	BuildJobsEmergeOptions, EbuildsMetadata, EbuildsIUse, Restrictions, EbuildsRestrictions, EbuildsKeywords, \
-	Keywords, PackagesMetadata, Emails, PackagesEmails, Setups, BuildLogsQA,  BuildLogsRepoman
+	Keywords, PackagesMetadata, Emails, PackagesEmails, Setups, BuildLogsRepomanQa
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy import and_, or_
 
