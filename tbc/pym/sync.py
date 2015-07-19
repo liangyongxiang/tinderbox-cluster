@@ -73,13 +73,13 @@ def git_sync_main(session):
 	repo_cp_dict = {}
 	for repo_dir in git_repos_list(myportdb):
 		reponame = myportdb.getRepositoryName(repo_dir)
-		attr = {}
 		repo = git.Repo(repo_dir)
 		info_list, repouptodate = git_fetch(repo)
 		if not repouptodate:
 			cp_list = []
-			# FiXME We still miss files to update
-			for diff_line in repo.git.diff('HEAD^').splitlines():
+			attr = {}
+			# We check for Manifest changes and add the package to a list
+			for diff_line in repo.git.diff('origin').splitlines():
 				if re.search("^diff --git.*/Manifest", diff_line):
 					diff_line2 = re.split(' b/', re.sub('diff --git', '', diff_line))
 					diff_line3 = re.sub(' a/', '', diff_line2[0])
