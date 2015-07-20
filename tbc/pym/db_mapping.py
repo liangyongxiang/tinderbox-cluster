@@ -67,6 +67,13 @@ class Categories(Base):
 	TimeStamp = Column('time_stamp', DateTime, nullable=False, default=datetime.datetime.utcnow)
 	__tablename__ = 'categories'
 
+class CategoriesMetadata(Base):
+	Id = Column('id', Integer, primary_key=True)
+	CategoryId = Column('category_id', Integer, ForeignKey('categories.category_id'))
+	Checksum = Column('checksum', String(100))
+	Descriptions = Column('descriptions', Text)
+	__tablename__ = 'categories_metadata'
+
 class Repos(Base):
 	RepoId = Column('repo_id', Integer, primary_key=True)
 	Repo = Column('repo', String(100))

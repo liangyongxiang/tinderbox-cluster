@@ -8,7 +8,7 @@ from tbc.db_mapping import Configs, Logs, ConfigsMetaData, Jobs, BuildJobs, Pack
 	Uses, ConfigsEmergeOptions, EmergeOptions, HiLight, BuildLogs, BuildLogsConfig, BuildJobsUse, BuildJobsRedo, \
 	HiLightCss, BuildLogsHiLight, BuildLogsEmergeOptions, BuildLogsErrors, ErrorsInfo, EmergeInfo, BuildLogsUse, \
 	BuildJobsEmergeOptions, EbuildsMetadata, EbuildsIUse, Restrictions, EbuildsRestrictions, EbuildsKeywords, \
-	Keywords, PackagesMetadata, Emails, PackagesEmails, Setups, BuildLogsRepomanQa
+	Keywords, PackagesMetadata, Emails, PackagesEmails, Setups, BuildLogsRepomanQa, CategoriesMetadata
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy import and_, or_
 
@@ -323,9 +323,22 @@ def update_repo_db(session, repo_list):
 			session.add(Repos(Repo = repo))
 			session.commit()
 
-def update_categories_db(session, category):
-	if not get_category_info(session, category):
+def update_categories_db(session, category, categories_metadataDict):
+	CategoryInfo = get_category_info(session, category)
+	if not CategoryInfo:
 		session.add(Categories(Category = category))
+		session.commit()
+		CategoryInfo = get_category_info(session, category)
+	try:
+		CategoriesMetadataInfo = session.query(CategoriesMetadata).filter_by(CategoryId = CategoryInfo.CategoryId).one()
+	except NoResultFound as e:
+		NewCategoriesMetadata = CategoriesMetadata(CategoryId = CategoryInfo.CategoryId, Checksum = categories_metadataDict['metadata_xml_checksum'], Descriptions = categories_metadataDict['metadata_xml_descriptions'])
+		session.add(NewCategoriesMetadata)
+		session.commit()
+		return
+	if CategoriesMetadataInfo.Checksum != categories_metadataDict['metadata_xml_checksum']:
+		CategoriesMetadataInfo.Checksum = categories_metadataDict['metadata_xml_checksum']
+		CategoriesMetadataInfo.Descriptions = categories_metadataDict['metadata_xml_descriptions']
 		session.commit()
 
 def get_keyword_id(session, keyword):

@@ -7,6 +7,7 @@ import os
 import multiprocessing
 import time
 import portage
+from portage.xml.metadata import MetaDataXML
 from sqlalchemy.orm import scoped_session, sessionmaker
 from tbc.ConnectionManager import NewConnection
 from tbc.sqlquerys import add_logs, get_package_info, update_repo_db, \
@@ -36,6 +37,15 @@ def init_portage_settings(session, config_id):
 	add_logs(session, log_msg, "info", config_id)
 	return mysettings
 
+def get_categories_metadataDict(pkgdir):
+		# Make categories_metadataDict
+		categories_metadataDict = {}
+		pkg_md = MetaDataXML(pkgdir + "/metadata.xml", None)
+		metadata_xml_descriptions_tree = re.sub('\t', '', pkg_md.descriptions()[0])
+        categories_metadataDict['metadata_xml_descriptions'] = re.sub('\n', '', metadata_xml_descriptions_tree)
+		categories_metadataDict['metadata_xml_checksum'] =  portage.checksum.sha256hash(pkgdir + "/metadata.xml")[0]
+		return categories_metadataDict
+
 def update_cpv_db_pool(mysettings, myportdb, cp, repo, tbc_settings, config_id):
 	session_factory = sessionmaker(bind=NewConnection(tbc_settings))
 	Session = scoped_session(session_factory)
@@ -48,7 +58,10 @@ def update_cpv_db_pool(mysettings, myportdb, cp, repo, tbc_settings, config_id):
 	package = element[1]
 
 	# update the categories table
-	update_categories_db(session2, categories)
+	repodir = self._myportdb.getRepositoryPath('gentoo')
+	pkgdir = repodir + "/" + categories
+	categories_metadataDict = get_categories_metadataDict(pkgdir)
+	update_categories_db(session2, categories, categories_metadataDict)
 
 	# Check if we have the cp in the package table
 	PackagesInfo = get_package_info(session2, categories, package, repo)
