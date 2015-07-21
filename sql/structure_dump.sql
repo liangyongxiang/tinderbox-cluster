@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jul 17, 2015 at 08:35 PM
+-- Generation Time: Jul 21, 2015 at 03:29 PM
 -- Server version: 10.0.15-MariaDB-log
 -- PHP Version: 5.6.10-pl0-gentoo
 
@@ -208,6 +208,19 @@ CREATE TABLE IF NOT EXISTS `categories` (
   `category` varchar(50) NOT NULL,
   `active` tinyint(1) NOT NULL DEFAULT '0',
   `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Categories main table (C)';
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `categories_metadata`
+--
+
+CREATE TABLE IF NOT EXISTS `categories_metadata` (
+`id` int(11) NOT NULL,
+  `category_id` int(11) NOT NULL,
+  `checksum` varchar(100) NOT NULL,
+  `descriptions` text NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Categories main table (C)';
 
 -- --------------------------------------------------------
@@ -474,7 +487,9 @@ CREATE TABLE IF NOT EXISTS `packages_emails` (
 CREATE TABLE IF NOT EXISTS `packages_metadata` (
 `id` int(11) NOT NULL,
   `package_id` int(11) NOT NULL,
-  `checksum` varchar(100) NOT NULL
+  `checksum` varchar(100) NOT NULL,
+  `checksum_chlog` varchar(100) NOT NULL,
+  `changlog` text NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -597,6 +612,12 @@ ALTER TABLE `build_logs_use`
 --
 ALTER TABLE `categories`
  ADD PRIMARY KEY (`category_id`);
+
+--
+-- Indexes for table `categories_metadata`
+--
+ALTER TABLE `categories_metadata`
+ ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `configs`
@@ -807,6 +828,11 @@ MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `categories`
 MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT;
 --
+-- AUTO_INCREMENT for table `categories_metadata`
+--
+ALTER TABLE `categories_metadata`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+--
 -- AUTO_INCREMENT for table `configs`
 --
 ALTER TABLE `configs`
@@ -930,7 +956,7 @@ DELIMITER $$
 --
 -- Events
 --
-CREATE DEFINER=`tbc`@`localhost` EVENT `add_esync_jobs` ON SCHEDULE EVERY 1 HOUR STARTS '2012-12-23 17:15:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
+CREATE DEFINER=`tbc`@`localhost` EVENT `add_esync_jobs` ON SCHEDULE EVERY 30 MINUTE STARTS '2012-12-23 17:15:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
   CALL add_jobs_esync();
 END$$
 

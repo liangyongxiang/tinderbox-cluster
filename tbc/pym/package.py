@@ -2,10 +2,11 @@
 # Distributed under the terms of the GNU General Public License v2
 
 from __future__ import print_function
+import re
 import portage
 from portage.xml.metadata import MetaDataXML
 from tbc.flags import tbc_use_flags
-from tbc.text import get_ebuild_cvs_revision
+from tbc.text import get_ebuild_cvs_revision, get_log_text_dict
 from tbc.flags import tbc_use_flags
 from tbc.qachecks import digestcheck, check_repoman
 from tbc.sqlquerys import add_logs, get_package_info, get_config_info, \
@@ -156,19 +157,37 @@ class tbc_package(object):
 						log_msg = "B %s:%s USE: %s Setup: %s" % (k, v['repo'], use_flagsDict, setup_id,)
 						add_logs(self._session, log_msg, "info", self._config_id)
 					i = i +1
+	def get_changelog_text(self,pkgdir):
+		changelog_text_dict, max_text_lines = get_log_text_dict(pkgdir + "/ChangeLog")
+		spec = 3
+		spec_tmp = 1
+		changelog_text_tree = ''
+		for index, text_line inchangelog_text_dict.items():
+			if re.search('^#', text_line)
+				changelog_text_tree = changelog_text_tree + text_line
+			elif re.search('^\n', text_line) and re.search('^\*', changelog_text_dict[index + 1])
+				changelog_text_tree = changelog_text_tree + text_line
+				spec_tmp = spec_tmp + 1
+				spec = spec + 1
+			elif re.search('^\n', text_line) and not re.search('^\*', changelog_text_dict[index + 1])
+				if spec_tmp == spec:
+					break
+				else
+					spec_tmp = spec_tmp + 1
+					changelog_text_tree = changelog_text_tree + text_line
+			else:
+				changelog_text_tree = changelog_text_tree + text_line
+		return changelog_text_tree
 
 	def get_package_metadataDict(self, pkgdir, package_id):
 		# Make package_metadataDict
 		attDict = {}
 		package_metadataDict = {}
 		md_email_list = []
-		# changelog_checksum_tree = portage.checksum.sha256hash(pkgdir + "/ChangeLog")
-		# changelog_text_tree = get_file_text(pkgdir + "/ChangeLog")
 		herd = None
 		pkg_md = MetaDataXML(pkgdir + "/metadata.xml", herd)
-		#metadata_xml_text_tree = get_file_text(pkgdir + "/metadata.xml")
-		# attDict['changelog_checksum'] =  changelog_checksum_tree[0]
-		# attDict['changelog_text'] =  changelog_text_tree
+		attDict['changelog_checksum'] =   portage.checksum.sha256hash(pkgdir + "/ChangeLog")[0]
+		attDict['changelog_text'] =  self.get_changelog_text(pkgdir)
 		tmp_herds = pkg_md.herds()
 		if tmp_herds != ():
 			attDict['metadata_xml_herds'] = tmp_herds[0]
@@ -181,7 +200,8 @@ class tbc_package(object):
 			log_msg = "Metadata file %s missing Email" % (pkgdir + "/metadata.xml")
 			add_logs(self._session, log_msg, "qa", self._config_id)
 			attDict['metadata_xml_email'] = False
-		attDict['metadata_xml_descriptions'] = pkg_md.descriptions()
+		metadata_xml_descriptions_tree = re.sub('\t', '', pkg_md.descriptions()[0])
+        attDict['metadata_xml_descriptions'] = re.sub('\n', '', metadata_xml_descriptions_tree)
 		attDict['metadata_xml_checksum'] =  portage.checksum.sha256hash(pkgdir + "/metadata.xml")[0]
 		#attDict['metadata_xml_text'] =  metadata_xml_text_tree
 		package_metadataDict[package_id] = attDict

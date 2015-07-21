@@ -490,10 +490,12 @@ def update_package_metadata(session, package_metadataDict):
 		try:
 			PackagesMetadataInfo = session.query(PackagesMetadata).filter_by(PackageId = k).one()
 		except NoResultFound as e:
-			session.add(PackagesMetadata(PackageId = k, Checksum = v['metadata_xml_checksum']))
+			session.add(PackagesMetadata(PackageId = k, Checksum = v['metadata_xml_checksum'], ChecksumChanglog = v['changelog_checksum'], Changlog = v['changelog_text']))
 			session.commit()
 		else:
 			PackagesMetadataInfo.Checksum = v['metadata_xml_checksum']
+			PackagesMetadataInfo.ChecksumChanglog = v['changelog_checksum']
+			PackagesMetadataInfo.Changlog = v['changelog_text']
 			session.commit()
 		if v['metadata_xml_email']:
 			for email in v['metadata_xml_email']:
