@@ -186,7 +186,6 @@ class tbc_package(object):
 		md_email_list = []
 		herd = None
 		pkg_md = MetaDataXML(pkgdir + "/metadata.xml", herd)
-		attDict['changelog_checksum'] =   portage.checksum.sha256hash(pkgdir + "/ChangeLog")[0]
 		attDict['changelog_text'] =  self.get_changelog_text(pkgdir)
 		tmp_herds = pkg_md.herds()
 		if tmp_herds != ():
@@ -202,8 +201,6 @@ class tbc_package(object):
 			attDict['metadata_xml_email'] = False
 		metadata_xml_descriptions_tree = re.sub('\t', '', pkg_md.descriptions()[0])
         attDict['metadata_xml_descriptions'] = re.sub('\n', '', metadata_xml_descriptions_tree)
-		attDict['metadata_xml_checksum'] =  portage.checksum.sha256hash(pkgdir + "/metadata.xml")[0]
-		#attDict['metadata_xml_text'] =  metadata_xml_text_tree
 		package_metadataDict[package_id] = attDict
 		return package_metadataDict
 

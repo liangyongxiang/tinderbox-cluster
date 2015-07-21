@@ -103,9 +103,8 @@ class PackagesEmails(Base):
 class PackagesMetadata(Base):
 	Id = Column('id', Integer, primary_key=True)
 	PackageId = Column('package_id', Integer, ForeignKey('packages.package_id'))
-	Checksum = Column('checksum', String(100))
-	ChecksumChanglog = Column('checksum_chlog', String(100))
 	Changlog = Column('changlog', Text)
+	Descriptions = Column('descriptions', Text)
 	__tablename__ = 'packages_metadata'
 
 class Ebuilds(Base):
