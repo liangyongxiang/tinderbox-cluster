@@ -199,8 +199,6 @@ class tbc_package(object):
 			log_msg = "Metadata file %s missing Email" % (pkgdir + "/metadata.xml")
 			add_logs(self._session, log_msg, "qa", self._config_id)
 			attDict['metadata_xml_email'] = False
-		metadata_xml_descriptions_tree = re.sub('\t', '', pkg_md.descriptions()[0])
-        attDict['metadata_xml_descriptions'] = re.sub('\n', '', metadata_xml_descriptions_tree)
 		package_metadataDict[package_id] = attDict
 		return package_metadataDict
 
@@ -217,13 +215,9 @@ class tbc_package(object):
 					old_ebuild_id_list.append(ebuild_id)
 		if not old_ebuild_id_list == []:
 			add_old_ebuild(self._session, old_ebuild_id_list)
-		PackagesMetadataInfo = get_package_metadata_sql(self._session, package_id)
-		if PackagesMetadataInfo:
-			package_metadata_checksum_sql = PackagesMetadataInfo.Checksum
-		else:
-			package_metadata_checksum_sql = None
-		if package_metadata_checksum_sql is None or package_metadata_checksum_sql != package_metadataDict[package_id]['metadata_xml_checksum']:
-			update_package_metadata(self._session, package_metadataDict)
+
+		# update package metadata
+		update_package_metadata(self._session, package_metadataDict)
 
 		# update the cp manifest checksum
 		update_manifest_sql(self._session, package_id, manifest_checksum_tree)
@@ -299,7 +293,11 @@ class tbc_package(object):
 		old_ebuild_id_list = []
 		for cpv in sorted(ebuild_list_tree):
 			packageDict[cpv] = self.get_packageDict(pkgdir, cpv, repo)
-			if packageDict[cpv]['checksum'] == "0":
+			
+			# take package descriptions from the ebuilds
+			if package_metadataDict[package_id]['metadata_xml_descriptions'] != packageDict[cpv]['ebuild_version_descriptions_tree']:
+				package_metadataDict[package_id]['metadata_xml_descriptions'] = packageDict[cpv]['ebuild_version_descriptions_tree']
+			if packageDict[cpv]['checksum'] != "0":
 				repoman_fail = check_repoman(self._mysettings, self._myportdb, cpv, repo)
 				if repoman_fail:
 					log_msg = "Repoman %s:%s ... Fail." % (cpv, repo)
@@ -335,7 +333,7 @@ class tbc_package(object):
 			old_ebuild_id_list = []
 			ebuild_list_tree = self._myportdb.cp_list(cp, use_cache=1, mytree=mytree)
 			if ebuild_list_tree == []:
-				if manifest_checksum_tree == "0":
+				if manifest_checksum_tree != "0":
 					old_ebuild_id_list = get_ebuild_id_list(self._session, package_id)
 					for ebuild_id in old_ebuild_id_list:
 						EbuildInfo = get_ebuild_info_ebuild_id(self._session, ebuild_id)
@@ -352,6 +350,7 @@ class tbc_package(object):
 					log_msg = "C %s:%s ... Fail." % (cp, repo)
 					add_logs(self._session, log_msg, "info", self._config_id)
 				return
+			package_metadataDict = self.get_package_metadataDict(pkgdir, package_id)
 			packageDict ={}
 			new_ebuild_id_list = []
 			for cpv in sorted(ebuild_list_tree):
@@ -361,7 +360,11 @@ class tbc_package(object):
 				
 				# Get packageDict for cpv
 				packageDict[cpv] = self.get_packageDict(pkgdir, cpv, repo)
-
+				
+				# take package descriptions from the ebuilds
+				if package_metadataDict[package_id]['metadata_xml_descriptions'] != packageDict[cpv]['ebuild_version_descriptions_tree']:
+					package_metadataDict[package_id]['metadata_xml_descriptions'] = packageDict[cpv]['ebuild_version_descriptions_tree']
+					
 				# Get the checksum of the ebuild in tree and db
 				ebuild_version_checksum_tree = packageDict[cpv]['checksum']
 				checksums_db, fail = get_ebuild_checksums(self._session, package_id, ebuild_version_tree)
@@ -403,7 +406,6 @@ class tbc_package(object):
 					del packageDict[cpv]
 					ebuild_id , status = get_ebuild_id_db(self._session, ebuild_version_checksum_tree, package_id)
 					new_ebuild_id_list.append(ebuild_id)
-			package_metadataDict = self.get_package_metadataDict(pkgdir, package_id)
 			self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_checksum_tree)
 
 		log_msg = "C %s:%s ... Done." % (cp, repo)
