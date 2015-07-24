@@ -229,7 +229,7 @@ def add_new_buildlog(session, build_dict, build_log_dict):
 		return None, False
 
 	def build_log_id_no_match(build_dict, build_log_dict):
-		NewBuildLog = BuildLogs(EbuildId = build_dict['ebuild_id'], Fail = build_log_dict['fail'], RmQa = build_log_dict['rmqa'], Others = build_log_dict['others'], SummeryText = build_log_dict['build_error'], LogHash = build_log_dict['log_hash'])
+		NewBuildLog = BuildLogs(EbuildId = build_dict['ebuild_id'], Fail = build_log_dict['fail'], SummeryText = build_log_dict['build_error'], LogHash = build_log_dict['log_hash'])
 		session.add(NewBuildLog)
 		session.flush()
 		build_log_id = NewBuildLog.BuildLogId
@@ -276,12 +276,17 @@ def add_new_buildlog(session, build_dict, build_log_dict):
 def add_repoman_qa(session, build_log_dict, log_id):
 	repoman_error = ""
 	qa_error = ""
+	error = False
 	if build_log_dict['repoman_error_list']:
 		for repoman_text in build_log_dict['repoman_error_list']:
 			repoman_error = repoman_error + repoman_text
+		error = True
 	if build_log_dict['qa_error_list']:
 		for qa_text in build_log_dict['qa_error_list']:
 			qa_error = qa_error + qa_text
+		error = True
+	repoman_error = repoman_error + qa_error
+	if error:
 		repoman_error = repoman_error + qa_error
 		NewBuildLogRepoman = BuildLogsRepomanQa(BuildLogId = log_id, SummeryText = repoman_error)
 		session.add(NewBuildLogRepoman)

@@ -183,8 +183,6 @@ class BuildLogs(Base):
 	BuildLogId = Column('build_log_id', Integer, primary_key=True)
 	EbuildId = Column('ebuild_id', Integer, ForeignKey('ebuilds.ebuild_id'))
 	Fail = Column('fail', Boolean, default=False)
-	RmQa = Column('rmqa', Boolean, default=False)
-	Others = Column('others', Boolean, default=False)
 	SummeryText = Column('summery_text', Text)
 	LogHash = Column('log_hash', String(100))
 	BugId = Column('bug_id', Integer, default=0)

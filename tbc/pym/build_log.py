@@ -193,14 +193,14 @@ def get_buildlog_info(session, settings, pkg, build_dict):
 	error_info_list = get_error_info_list(session)
 	for k, v in sorted(hilight_dict.items()):
 		if v['startline'] == v['endline']:
-			error_log_list.append(logfile_text_dict[k ])
-			if v['hilight_css_id'] == "3" or v['hilight_css_id'] == "4": # qa = 3 and 4
+			error_log_list.append(logfile_text_dict[k])
+			if v['hilight_css_id'] == 3: # qa = 3 and 4
 				qa_error_list.append(logfile_text_dict[k])
 		else:
 			i = k
 			while i != (v['endline'] + 1):
 				error_log_list.append(logfile_text_dict[i])
-				if v['hilight_css_id'] == "3" or v['hilight_css_id'] == "4": # qa = 3 and 4
+				if v['hilight_css_id'] == 3: # qa = 3 and 4
 					qa_error_list.append(logfile_text_dict[i])
 				i = i +1
 
@@ -208,14 +208,12 @@ def get_buildlog_info(session, settings, pkg, build_dict):
 	repoman_error_list = check_repoman(settings, myportdb, build_dict['cpv'], pkg.repo)
 	build_log_dict = {}
 	build_log_dict['fail'] = False
-	build_log_dict['rmqa'] = False
-	build_log_dict['others'] = False
 	if repoman_error_list:
-		sum_build_log_list.append("1") # repoman = 1
-		build_log_dict['rmqa'] = True
+		sum_build_log_list.append(1) # repoman = 1
+		build_log_dict['fail'] = True
 	if qa_error_list != []:
-		sum_build_log_list.append("2") # qa = 2
-		build_log_dict['rmqa'] = True
+		sum_build_log_list.append(2) # qa = 2
+		build_log_dict['fail'] = True
 	else:
 		qa_error_list = False
 	error_search_line = "^ \\* ERROR: "
@@ -299,7 +297,7 @@ def log_fail_queru(session, build_dict, settings):
 		build_log_dict = {}
 		error_log_list = []
 		sum_build_log_list = []
-		sum_build_log_list.append("2")
+		sum_build_log_list.append(3) # Others errors
 		error_log_list.append(build_dict['type_fail'])
 		build_log_dict['summary_error_list'] = sum_build_log_list
 		if build_dict['type_fail'] == 'merge fail':
@@ -335,8 +333,6 @@ def log_fail_queru(session, build_dict, settings):
 			build_log_dict['hilight_dict'] = {}
 		settings2, trees, tmp = load_emerge_config()
 		build_log_dict['emerge_info'] = get_emerge_info_id(settings2, trees, session, config_id)
-		build_log_dict['others'] = True
-		build_log_dict['rmqa'] = False
-		build_log_dict['fail'] = False
+		build_log_dict['fail'] = True
 		log_id = add_new_buildlog(session, build_dict, build_log_dict)
 		del_old_build_jobs(session, build_dict['build_job_id'])

@@ -157,7 +157,7 @@ class tbc_package(object):
 						log_msg = "B %s:%s USE: %s Setup: %s" % (k, v['repo'], use_flagsDict, setup_id,)
 						add_logs(self._session, log_msg, "info", self._config_id)
 					i = i +1
-	def get_changelog_text(self,pkgdir):
+	def get_changelog_text(self, pkgdir):
 		changelog_text_dict, max_text_lines = get_log_text_dict(pkgdir + "/ChangeLog")
 		spec = 3
 		spec_tmp = 1
