@@ -199,6 +199,7 @@ class tbc_package(object):
 			log_msg = "Metadata file %s missing Email" % (pkgdir + "/metadata.xml")
 			add_logs(self._session, log_msg, "qa", self._config_id)
 			attDict['metadata_xml_email'] = False
+		attDict['metadata_xml_descriptions'] = ''
 		package_metadataDict[package_id] = attDict
 		return package_metadataDict
 
