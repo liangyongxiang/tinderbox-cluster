@@ -311,9 +311,6 @@ def log_fail_queru(session, build_dict, settings):
 				build_error = build_error + log_line
 		build_log_dict['build_error'] = build_error
 		summary_error = ""
-		if sum_build_log_list != []:
-			for sum_log_line in sum_build_log_list:
-				summary_error = summary_error + " " + sum_log_line
 		build_log_dict['log_hash'] = '0'
 		useflagsdict = {}
 		if build_dict['build_useflags'] == {}:
@@ -335,4 +332,5 @@ def log_fail_queru(session, build_dict, settings):
 		build_log_dict['emerge_info'] = get_emerge_info_id(settings2, trees, session, config_id)
 		build_log_dict['fail'] = True
 		log_id = add_new_buildlog(session, build_dict, build_log_dict)
+		
 		del_old_build_jobs(session, build_dict['build_job_id'])
