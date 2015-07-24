@@ -162,17 +162,17 @@ class tbc_package(object):
 		spec = 3
 		spec_tmp = 1
 		changelog_text_tree = ''
-		for index, text_line inchangelog_text_dict.items():
-			if re.search('^#', text_line)
+		for index, text_line in changelog_text_dict.items():
+			if re.search('^#', text_line):
 				changelog_text_tree = changelog_text_tree + text_line
-			elif re.search('^\n', text_line) and re.search('^\*', changelog_text_dict[index + 1])
+			elif re.search('^\n', text_line) and re.search('^\*', changelog_text_dict[index + 1]):
 				changelog_text_tree = changelog_text_tree + text_line
 				spec_tmp = spec_tmp + 1
 				spec = spec + 1
-			elif re.search('^\n', text_line) and not re.search('^\*', changelog_text_dict[index + 1])
+			elif re.search('^\n', text_line) and not re.search('^\*', changelog_text_dict[index + 1]):
 				if spec_tmp == spec:
 					break
-				else
+				else:
 					spec_tmp = spec_tmp + 1
 					changelog_text_tree = changelog_text_tree + text_line
 			else:

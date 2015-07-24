@@ -42,7 +42,7 @@ def get_categories_metadataDict(pkgdir):
 		categories_metadataDict = {}
 		pkg_md = MetaDataXML(pkgdir + "/metadata.xml", None)
 		metadata_xml_descriptions_tree = re.sub('\t', '', pkg_md.descriptions()[0])
-        categories_metadataDict['metadata_xml_descriptions'] = re.sub('\n', '', metadata_xml_descriptions_tree)
+		categories_metadataDict['metadata_xml_descriptions'] = re.sub('\n', '', metadata_xml_descriptions_tree)
 		categories_metadataDict['metadata_xml_checksum'] =  portage.checksum.sha256hash(pkgdir + "/metadata.xml")[0]
 		return categories_metadataDict
 
