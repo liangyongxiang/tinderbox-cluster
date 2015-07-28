@@ -6,6 +6,7 @@ import sys
 import os
 import multiprocessing
 import time
+import re
 import portage
 from portage.xml.metadata import MetaDataXML
 from sqlalchemy.orm import scoped_session, sessionmaker
@@ -58,7 +59,7 @@ def update_cpv_db_pool(mysettings, myportdb, cp, repo, tbc_settings, config_id):
 	package = element[1]
 
 	# update the categories table
-	repodir = self._myportdb.getRepositoryPath('gentoo')
+	repodir = myportdb.getRepositoryPath('gentoo')
 	pkgdir = repodir + "/" + categories
 	categories_metadataDict = get_categories_metadataDict(pkgdir)
 	update_categories_db(session2, categories, categories_metadataDict)
