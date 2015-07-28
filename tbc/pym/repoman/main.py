@@ -1044,12 +1044,12 @@ def repoman_main(argv):
 				myunadded = f.readlines()
 			myunadded = ["./" + elem.rstrip() for elem in myunadded]
 
-				# Mercurial doesn't handle manually deleted files as removed from
-				# the repository, so the user need to remove them before commit,
-				# using "hg remove [FILES]"
-				with repoman_popen("hg status --no-status --deleted .") as f:
-					mydeleted = f.readlines()
-				mydeleted = ["./" + elem.rstrip() for elem in mydeleted]
+			# Mercurial doesn't handle manually deleted files as removed from
+			# the repository, so the user need to remove them before commit,
+			# using "hg remove [FILES]"
+			with repoman_popen("hg status --no-status --deleted .") as f:
+				mydeleted = f.readlines()
+			mydeleted = ["./" + elem.rstrip() for elem in mydeleted]
 
 		myautoadd = []
 		if myunadded:
