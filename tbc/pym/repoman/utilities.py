@@ -240,7 +240,7 @@ def get_commit_message_with_stdin():
 	return commitmessage
 
 
-def FindPortdir(settings):
+def FindPortdir(settings, pkdir):
 	""" Try to figure out what repo we are in and whether we are in a regular
 	tree or an overlay.
 
@@ -276,6 +276,8 @@ def FindPortdir(settings):
 		# the current working directory (from the shell).
 		location = pwd
 
+	if not pkdir is None:
+		location = pkgdir
 	location = normalize_path(location)
 
 	path_ids = {}

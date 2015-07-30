@@ -1,5 +1,4 @@
-#!/usr/bin/python -bO
-# Copyright 1999-2014 Gentoo Foundation
+# Copyright 1999-2015 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 from __future__ import print_function, unicode_literals
@@ -165,113 +164,16 @@ def need_signature(filename):
 				return False
 			raise
 
-def repoman_main(argv):
-	# Repoman sets it's own ACCEPT_KEYWORDS and we don't want it to
-	# behave incrementally.
-	repoman_incrementals = tuple(
-		x for x in portage.const.INCREMENTALS if x != 'ACCEPT_KEYWORDS')
-	config_root = os.environ.get("PORTAGE_CONFIGROOT")
-	repoman_settings = portage.config(config_root=config_root, local_config=False)
+def repoman_scan(repoman_settings, repo_settings, vcs_settings, options, repolevel):
 
-	if repoman_settings.get("NOCOLOR", "").lower() in ("yes", "true") or \
-		repoman_settings.get('TERM') == 'dumb' or \
-		not sys.stdout.isatty():
-		nocolor()
+	if options.mode == "manifest":
+		pass
+	elif options.pretend:
+		print(green("\nRepoMan does a once-over of the neighborhood..."))
+	else:
+		print(green("\nRepoMan scours the neighborhood..."))
 
-	options, arguments = parse_args(
-		argv, qahelp, repoman_settings.get("REPOMAN_DEFAULT_OPTS", ""))
-
-	if options.version:
-		print("Portage", portage.VERSION)
-		sys.exit(0)
-
-	if options.experimental_inherit == 'y':
-		# This is experimental, so it's non-fatal.
-		qawarnings.add("inherit.missing")
-		checks_init(experimental_inherit=True)
-
-	# Set this to False when an extraordinary issue (generally
-	# something other than a QA issue) makes it impossible to
-	# commit (like if Manifest generation fails).
-	can_force = True
-
-	portdir, portdir_overlay, mydir = utilities.FindPortdir(repoman_settings)
-	if portdir is None:
-		sys.exit(1)
-
-	myreporoot = os.path.basename(portdir_overlay)
-	myreporoot += mydir[len(portdir_overlay):]
-	##################
-
-	vcs_settings = VCSSettings(options, repoman_settings)
-
-	##################
-
-	repo_settings = RepoSettings(
-		config_root, portdir, portdir_overlay,
-		repoman_settings, vcs_settings, options, qawarnings)
-
-	repoman_settings = repo_settings.repoman_settings
-
-	portdb = repo_settings.portdb
-	##################
-
-	if options.echangelog is None and repo_settings.repo_config.update_changelog:
-		options.echangelog = 'y'
-
-	if vcs_settings.vcs is None:
-		options.echangelog = 'n'
-
-	# The --echangelog option causes automatic ChangeLog generation,
-	# which invalidates changelog.ebuildadded and changelog.missing
-	# checks.
-	# Note: Some don't use ChangeLogs in distributed SCMs.
-	# It will be generated on server side from scm log,
-	# before package moves to the rsync server.
-	# This is needed because they try to avoid merge collisions.
-	# Gentoo's Council decided to always use the ChangeLog file.
-	# TODO: shouldn't this just be switched on the repo, iso the VCS?
-	is_echangelog_enabled = options.echangelog in ('y', 'force')
-	vcs_settings.vcs_is_cvs_or_svn = vcs_settings.vcs in ('cvs', 'svn')
-	check_changelog = not is_echangelog_enabled and vcs_settings.vcs_is_cvs_or_svn
-
-	if 'digest' in repoman_settings.features and options.digest != 'n':
-		options.digest = 'y'
-
-	logging.debug("vcs: %s" % (vcs_settings.vcs,))
-	logging.debug("repo config: %s" % (repo_settings.repo_config,))
-	logging.debug("options: %s" % (options,))
-
-	# It's confusing if these warnings are displayed without the user
-	# being told which profile they come from, so disable them.
-	env = os.environ.copy()
-	env['FEATURES'] = env.get('FEATURES', '') + ' -unknown-features-warn'
-
-	categories = []
-	for path in repo_settings.repo_config.eclass_db.porttrees:
-		categories.extend(portage.util.grabfile(
-			os.path.join(path, 'profiles', 'categories')))
-	repoman_settings.categories = frozenset(
-		portage.util.stack_lists([categories], incremental=1))
-	categories = repoman_settings.categories
-
-	portdb.settings = repoman_settings
-	# We really only need to cache the metadata that's necessary for visibility
-	# filtering. Anything else can be discarded to reduce memory consumption.
-	portdb._aux_cache_keys.clear()
-	portdb._aux_cache_keys.update(
-		["EAPI", "IUSE", "KEYWORDS", "repository", "SLOT"])
-
-	reposplit = myreporoot.split(os.path.sep)
-	repolevel = len(reposplit)
-
-	###################
-
-	if options.mode == 'commit':
-		repochecks.commit_check(repolevel, reposplit)
-		repochecks.conflict_check(vcs_settings, options)
-
-	###################
+	qatracker = QATracker()
 
 	# Make startdir relative to the canonical repodir, so that we can pass
 	# it to digestgen and it won't have to be canonicalized again.
@@ -281,7 +183,9 @@ def repoman_main(argv):
 		startdir = normalize_path(mydir)
 		startdir = os.path.join(
 			repo_settings.repodir, *startdir.split(os.sep)[-2 - repolevel + 3:])
-	###################
+
+	have_pmasked = False
+	have_dev_keywords = False
 
 	# get lists of valid keywords, licenses, and use
 	new_data = repo_metadata(repo_settings.portdb, repoman_settings)
@@ -305,28 +209,12 @@ def repoman_main(argv):
 
 	####################
 
-	dev_keywords = dev_keywords(profiles)
+	dev_keyword = dev_keywords(profiles)
 
-	qatracker = QATracker()
-
-
-	if options.mode == "manifest":
-		pass
-	elif options.pretend:
-		print(green("\nRepoMan does a once-over of the neighborhood..."))
-	else:
-		print(green("\nRepoMan scours the neighborhood..."))
-
-	#####################
-
-	changed = Changes(options)
-	changed.scan(vcs_settings)
-
-	######################
-
-	have_pmasked = False
-	have_dev_keywords = False
-	dofail = 0
+	# Disable the "ebuild.notadded" check when not in commit mode and
+	# running `svn status` in every package dir will be too expensive.
+	check_ebuild_notadded = not \
+		(vcs_settings.vcs == "svn" and repolevel < 3 and options.mode != "commit")
 
 	# NOTE: match-all caches are not shared due to potential
 	# differences between profiles in _get_implicit_iuse.
@@ -339,19 +227,6 @@ def repoman_main(argv):
 		include_arches = set()
 		include_arches.update(*[x.split() for x in options.include_arches])
 
-	# Disable the "ebuild.notadded" check when not in commit mode and
-	# running `svn status` in every package dir will be too expensive.
-
-	check_ebuild_notadded = not \
-		(vcs_settings.vcs == "svn" and repolevel < 3 and options.mode != "commit")
-
-	effective_scanlist = scanlist
-	if options.if_modified == "y":
-		effective_scanlist = sorted(vcs_files_to_cps(
-			chain(changed.changed, changed.new, changed.removed),
-			repolevel, reposplit, categories))
-
-	######################
 	# initialize our checks classes here before the big xpkg loop
 	manifester = Manifests(options, qatracker, repoman_settings)
 	is_ebuild = IsEbuild(repoman_settings, repo_settings, portdb, qatracker)
@@ -814,7 +689,7 @@ def repoman_main(argv):
 
 					if not have_dev_keywords:
 						have_dev_keywords = \
-							bool(dev_keywords.intersection(keywords))
+							bool(dev_keyword.intersection(keywords))
 
 					if prof.status == "dev":
 						suffix = suffix + "indev"
@@ -890,6 +765,123 @@ def repoman_main(argv):
 					"metadata.warning",
 					"%s/metadata.xml: unused local USE-description: '%s'"
 					% (xpkg, myflag))
+	return qatracker
+
+def repoman_main(argv, config_root=None, pkgdir=None):
+	# Repoman sets it's own ACCEPT_KEYWORDS and we don't want it to
+	# behave incrementally.
+	repoman_incrementals = tuple(
+		x for x in portage.const.INCREMENTALS if x != 'ACCEPT_KEYWORDS')
+	if config_root is None:
+		config_root = os.environ.get("PORTAGE_CONFIGROOT")
+	repoman_settings = portage.config(config_root=config_root, local_config=False)
+
+	if repoman_settings.get("NOCOLOR", "").lower() in ("yes", "true") or \
+		repoman_settings.get('TERM') == 'dumb' or \
+		not sys.stdout.isatty():
+		nocolor()
+
+	options, arguments = parse_args(
+		argv, qahelp, repoman_settings.get("REPOMAN_DEFAULT_OPTS", ""))
+
+	if options.version:
+		print("Portage", portage.VERSION)
+		sys.exit(0)
+
+	if options.experimental_inherit == 'y':
+		# This is experimental, so it's non-fatal.
+		qawarnings.add("inherit.missing")
+		checks_init(experimental_inherit=True)
+
+	# Set this to False when an extraordinary issue (generally
+	# something other than a QA issue) makes it impossible to
+	# commit (like if Manifest generation fails).
+	can_force = True
+
+	portdir, portdir_overlay, mydir = utilities.FindPortdir(repoman_settings, pkgdir)
+	if portdir is None:
+		sys.exit(1)
+
+	myreporoot = os.path.basename(portdir_overlay)
+	myreporoot += mydir[len(portdir_overlay):]
+	##################
+
+	vcs_settings = VCSSettings(options, repoman_settings)
+
+	##################
+
+	repo_settings = RepoSettings(
+		config_root, portdir, portdir_overlay,
+		repoman_settings, vcs_settings, options, qawarnings)
+
+	repoman_settings = repo_settings.repoman_settings
+
+	portdb = repo_settings.portdb
+	##################
+
+	if options.echangelog is None and repo_settings.repo_config.update_changelog:
+		options.echangelog = 'y'
+
+	if vcs_settings.vcs is None:
+		options.echangelog = 'n'
+
+	# The --echangelog option causes automatic ChangeLog generation,
+	# which invalidates changelog.ebuildadded and changelog.missing
+	# checks.
+	# Note: Some don't use ChangeLogs in distributed SCMs.
+	# It will be generated on server side from scm log,
+	# before package moves to the rsync server.
+	# This is needed because they try to avoid merge collisions.
+	# Gentoo's Council decided to always use the ChangeLog file.
+	# TODO: shouldn't this just be switched on the repo, iso the VCS?
+	is_echangelog_enabled = options.echangelog in ('y', 'force')
+	vcs_settings.vcs_is_cvs_or_svn = vcs_settings.vcs in ('cvs', 'svn')
+	check_changelog = not is_echangelog_enabled and vcs_settings.vcs_is_cvs_or_svn
+
+	if 'digest' in repoman_settings.features and options.digest != 'n':
+		options.digest = 'y'
+
+	logging.debug("vcs: %s" % (vcs_settings.vcs,))
+	logging.debug("repo config: %s" % (repo_settings.repo_config,))
+	logging.debug("options: %s" % (options,))
+
+	# It's confusing if these warnings are displayed without the user
+	# being told which profile they come from, so disable them.
+	env = os.environ.copy()
+	env['FEATURES'] = env.get('FEATURES', '') + ' -unknown-features-warn'
+
+	categories = []
+	for path in repo_settings.repo_config.eclass_db.porttrees:
+		categories.extend(portage.util.grabfile(
+			os.path.join(path, 'profiles', 'categories')))
+	repoman_settings.categories = frozenset(
+		portage.util.stack_lists([categories], incremental=1))
+	categories = repoman_settings.categories
+
+	portdb.settings = repoman_settings
+	# We really only need to cache the metadata that's necessary for visibility
+	# filtering. Anything else can be discarded to reduce memory consumption.
+	portdb._aux_cache_keys.clear()
+	portdb._aux_cache_keys.update(
+		["EAPI", "IUSE", "KEYWORDS", "repository", "SLOT"])
+
+	reposplit = myreporoot.split(os.path.sep)
+	repolevel = len(reposplit)
+
+	if options.mode == 'commit':
+		repochecks.commit_check(repolevel, reposplit)
+		repochecks.conflict_check(vcs_settings, options)
+
+	changed = Changes(options)
+	changed.scan(vcs_settings)
+
+	effective_scanlist = scanlist
+	if options.if_modified == "y":
+		effective_scanlist = sorted(vcs_files_to_cps(
+			chain(changed.changed, changed.new, changed.removed),
+			repolevel, reposplit, categories))
+
+	qatracker = repoman_scan(repoman_settings, repo_settings, vcs_settings, options, repolevel)
 
 	if options.if_modified == "y" and len(effective_scanlist) < 1:
 		logging.warn("--if-modified is enabled, but no modified packages were found!")

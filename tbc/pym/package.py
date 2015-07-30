@@ -8,7 +8,7 @@ from portage.xml.metadata import MetaDataXML
 from tbc.flags import tbc_use_flags
 from tbc.text import get_ebuild_cvs_revision, get_log_text_dict
 from tbc.flags import tbc_use_flags
-from tbc.qachecks import digestcheck, check_repoman
+from tbc.qachecks import digestcheck, check_repoman, repoman_full
 from tbc.sqlquerys import add_logs, get_package_info, get_config_info, \
 	add_new_build_job, add_new_ebuild_sql, get_ebuild_id_list, add_old_ebuild, \
 	get_package_metadata_sql, update_package_metadata, update_manifest_sql, \
@@ -282,6 +282,10 @@ class tbc_package(object):
 		manifest_checksum_tree = self.get_manifest_checksum_tree(pkgdir, cp, repo, mytree)
 		if manifest_checksum_tree is None:
 			return
+
+		# Check cp with repoman repoman full
+		repoman_full(self._session, pkgdir, self._config_id)
+
 		package_id = add_new_package_sql(self._session, cp, repo)
 		
 		package_metadataDict = self.get_package_metadataDict(pkgdir, package_id)
@@ -335,6 +339,9 @@ class tbc_package(object):
 			# U = Update
 			log_msg = "U %s:%s" % (cp, repo)
 			add_logs(self._session, log_msg, "info", self._config_id)
+
+			# Check cp with repoman repoman full
+			repoman_full(self._session, pkgdir, self._config_id)
 
 			# Get the ebuild list for cp
 			old_ebuild_id_list = []
