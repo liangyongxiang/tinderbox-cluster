@@ -164,7 +164,12 @@ def need_signature(filename):
 				return False
 			raise
 
-def repoman_scan(repoman_settings, repo_settings, vcs_settings, options, repolevel):
+def repoman_scan(repoman_settings, repo_settings, vcs_settings, portdb, options, myreporoot, mydir, check_changelog, config_root, env):
+
+	# Repoman sets it's own ACCEPT_KEYWORDS and we don't want it to
+	# behave incrementally.
+	repoman_incrementals = tuple(
+		x for x in portage.const.INCREMENTALS if x != 'ACCEPT_KEYWORDS')
 
 	if options.mode == "manifest":
 		pass
@@ -175,6 +180,18 @@ def repoman_scan(repoman_settings, repo_settings, vcs_settings, options, repolev
 
 	qatracker = QATracker()
 
+	reposplit = myreporoot.split(os.path.sep)
+	repolevel = len(reposplit)
+
+	if options.mode == 'commit':
+		repochecks.commit_check(repolevel, reposplit)
+		repochecks.conflict_check(vcs_settings, options)
+
+	changed = Changes(options)
+	changed.scan(vcs_settings)
+
+	categories = repoman_settings.categories
+	
 	# Make startdir relative to the canonical repodir, so that we can pass
 	# it to digestgen and it won't have to be canonicalized again.
 	if repolevel == 1:
@@ -206,7 +223,14 @@ def repoman_scan(repoman_settings, repo_settings, vcs_settings, options, repolev
 	####################
 
 	scanlist = scan(repolevel, reposplit, startdir, categories, repo_settings)
-
+	effective_scanlist = scanlist
+	if options.if_modified == "y":
+		effective_scanlist = sorted(vcs_files_to_cps(
+			chain(changed.changed, changed.new, changed.removed),
+			repolevel, reposplit, categories))
+	if options.if_modified == "y" and len(effective_scanlist) < 1:
+		logging.warn("--if-modified is enabled, but no modified packages were found!")
+        
 	####################
 
 	dev_keyword = dev_keywords(profiles)
@@ -765,13 +789,29 @@ def repoman_scan(repoman_settings, repo_settings, vcs_settings, options, repolev
 					"metadata.warning",
 					"%s/metadata.xml: unused local USE-description: '%s'"
 					% (xpkg, myflag))
+
+	if have_pmasked and not (options.without_mask or options.ignore_masked):
+		suggest_ignore_masked = True
+	if have_dev_keywords and not options.include_dev:
+		suggest_include_dev = True
+
+	if suggest_ignore_masked or suggest_include_dev:
+		print()
+		if suggest_ignore_masked:
+			print(bold(
+				"Note: use --without-mask to check "
+				"KEYWORDS on dependencies of masked packages"))
+
+		if suggest_include_dev:
+			print(bold(
+				"Note: use --include-dev (-d) to check "
+				"dependencies for 'dev' profiles"))
+		print()
+
 	return qatracker
 
 def repoman_main(argv, config_root=None, pkgdir=None):
-	# Repoman sets it's own ACCEPT_KEYWORDS and we don't want it to
-	# behave incrementally.
-	repoman_incrementals = tuple(
-		x for x in portage.const.INCREMENTALS if x != 'ACCEPT_KEYWORDS')
+
 	if config_root is None:
 		config_root = os.environ.get("PORTAGE_CONFIGROOT")
 	repoman_settings = portage.config(config_root=config_root, local_config=False)
@@ -856,7 +896,6 @@ def repoman_main(argv, config_root=None, pkgdir=None):
 			os.path.join(path, 'profiles', 'categories')))
 	repoman_settings.categories = frozenset(
 		portage.util.stack_lists([categories], incremental=1))
-	categories = repoman_settings.categories
 
 	portdb.settings = repoman_settings
 	# We really only need to cache the metadata that's necessary for visibility
@@ -865,26 +904,7 @@ def repoman_main(argv, config_root=None, pkgdir=None):
 	portdb._aux_cache_keys.update(
 		["EAPI", "IUSE", "KEYWORDS", "repository", "SLOT"])
 
-	reposplit = myreporoot.split(os.path.sep)
-	repolevel = len(reposplit)
-
-	if options.mode == 'commit':
-		repochecks.commit_check(repolevel, reposplit)
-		repochecks.conflict_check(vcs_settings, options)
-
-	changed = Changes(options)
-	changed.scan(vcs_settings)
-
-	effective_scanlist = scanlist
-	if options.if_modified == "y":
-		effective_scanlist = sorted(vcs_files_to_cps(
-			chain(changed.changed, changed.new, changed.removed),
-			repolevel, reposplit, categories))
-
-	qatracker = repoman_scan(repoman_settings, repo_settings, vcs_settings, options, repolevel)
-
-	if options.if_modified == "y" and len(effective_scanlist) < 1:
-		logging.warn("--if-modified is enabled, but no modified packages were found!")
+	qatracker = repoman_scan(repoman_settings, repo_settings, vcs_settings, portdb, options, myreporoot, mydir, check_changelog, config_root, env)
 
 	if options.mode == "manifest":
 		sys.exit(dofail)
@@ -937,24 +957,6 @@ def repoman_main(argv, config_root=None, pkgdir=None):
 
 	suggest_ignore_masked = False
 	suggest_include_dev = False
-
-	if have_pmasked and not (options.without_mask or options.ignore_masked):
-		suggest_ignore_masked = True
-	if have_dev_keywords and not options.include_dev:
-		suggest_include_dev = True
-
-	if suggest_ignore_masked or suggest_include_dev:
-		print()
-		if suggest_ignore_masked:
-			print(bold(
-				"Note: use --without-mask to check "
-				"KEYWORDS on dependencies of masked packages"))
-
-		if suggest_include_dev:
-			print(bold(
-				"Note: use --include-dev (-d) to check "
-				"dependencies for 'dev' profiles"))
-		print()
 
 	if options.mode != 'commit':
 		if dofull:
