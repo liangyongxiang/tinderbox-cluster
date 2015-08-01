@@ -20,17 +20,37 @@ portage.proxy.lazyimport.lazyimport(globals(),
 	'tbc.actions:action_info,load_emerge_config',
 )
 
-from tbc.qachecks import check_repoman
+from tbc.qachecks import check_repoman, repoman_full
 from tbc.text import get_log_text_dict
-from tbc.package import tbc_package
 from tbc.readconf import read_config_settings
 from tbc.flags import tbc_use_flags
 from tbc.ConnectionManager import NewConnection
 from tbc.sqlquerys import add_logs, get_config_id, get_ebuild_id_db, add_new_buildlog, \
 	get_package_info, get_build_job_id, get_use_id, get_config_info, get_hilight_info, get_error_info_list, \
 	add_e_info, get_fail_times, add_fail_times, update_fail_times, del_old_build_jobs, add_old_ebuild, \
-	update_buildjobs_status, update_manifest_sql, add_repoman_qa, get_config_id_fqdn, get_setup_info
+	update_buildjobs_status, update_manifest_sql, add_repoman_qa, get_config_id_fqdn, get_setup_info, \
+	add_repoman_log
 from sqlalchemy.orm import sessionmaker
+
+def repoman_check_full(session, pkgdir, package_id, config_id):
+	# Check cp with repoman repoman full
+	status = repoman_full(session, pkgdir, config_id)
+	repoman_hash = hashlib.sha256()
+	repoman_log = ""
+	if status:
+		for k, v in status.items():
+			repoman_line = k + '/n'
+			repoman_hash.update(repoman_line.encode('utf-8'))
+			repoman_log = repoman_log + repoman_line
+			for line in v:
+				repoman_line = line + '/n'
+				repoman_hash.update(repoman_line.encode('utf-8'))
+				repoman_log = repoman_log + repoman_line
+		add_repoman_log(session, package_id, repoman_log, repoman_hash.hexdigest())
+		return repoman_log
+	else:
+		return status
+
 
 def get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg):
 	myportdb = portage.portdbapi(mysettings=settings)
@@ -48,6 +68,7 @@ def get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg):
 	build_dict['cpv'] = pkg.cpv
 	build_dict['categories'] = categories
 	build_dict['package'] = package
+	build_dict['repo'] = repo
 	build_dict['config_id'] = config_id
 	init_useflags = tbc_use_flags(settings, myportdb, pkg.cpv)
 	iuse_flags_list, final_use_list = init_useflags.get_flags_pkg(pkg, settings)
@@ -77,12 +98,6 @@ def get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg):
 			log_msg = "%s:%s Don't have any ebuild_id!" % (pkg.cpv, repo,)
 			add_logs(session, log_msg, "info", config_id)
 			update_manifest_sql(session, build_dict['package_id'], "0")
-			init_package = tbc_package(session, settings, myportdb, config_id)
-			init_package.update_package_db(build_dict['package_id'])
-			ebuild_id_list, status = get_ebuild_id_db(session, build_dict['checksum'], build_dict['package_id'])
-			if status and ebuild_id_list is None:
-				log_msg = "%s:%s Don't have any ebuild_id!" % (pkg.cpv, repo,)
-				add_logs(session, log_msg, "error", config_id)
 		else:
 			old_ebuild_id_list = []
 			for ebuild_id in ebuild_id_list:
@@ -204,8 +219,12 @@ def get_buildlog_info(session, settings, pkg, build_dict):
 					qa_error_list.append(logfile_text_dict[i])
 				i = i +1
 
-	# Run repoman check_repoman()
-	repoman_error_list = check_repoman(settings, myportdb, build_dict['cpv'], pkg.repo)
+	# Run repoman full
+	element = portage.versions.cpv_getkey(build_dict['cpv']).split('/')
+	categories = element[0]
+	package = element[1]
+	pkgdir = myportdb.getRepositoryPath(build_dict['repo']) + "/" + categories + "/" + package
+	repoman_error_list = repoman_check_full(session, pkgdir, build_dict['package_id'], config_id)
 	build_log_dict = {}
 	build_log_dict['fail'] = False
 	if repoman_error_list:

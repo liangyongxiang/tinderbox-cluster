@@ -789,7 +789,9 @@ def repoman_scan(repoman_settings, repo_settings, vcs_settings, portdb, options,
 					"metadata.warning",
 					"%s/metadata.xml: unused local USE-description: '%s'"
 					% (xpkg, myflag))
-
+	
+	suggest_ignore_masked = False
+	suggest_include_dev = False
 	if have_pmasked and not (options.without_mask or options.ignore_masked):
 		suggest_ignore_masked = True
 	if have_dev_keywords and not options.include_dev:
@@ -973,7 +975,7 @@ def repoman_main(argv, config_root=None, pkgdir=None):
 			utilities.repoman_sez(
 				"\"Make your QA payment on time"
 				" and you'll never see the likes of me.\"\n")
-			sys.exit(1)
+			return qatracker, qawarnings
 	else:
 		if dofail and can_force and options.force and not options.pretend:
 			utilities.repoman_sez(
@@ -988,7 +990,7 @@ def repoman_main(argv, config_root=None, pkgdir=None):
 			utilities.repoman_sez(
 				"\"Make your QA payment on time"
 				" and you'll never see the likes of me.\"\n")
-			sys.exit(1)
+			return qatracker, qawarnings
 
 		if options.pretend:
 			utilities.repoman_sez(
@@ -1627,4 +1629,4 @@ def repoman_main(argv, config_root=None, pkgdir=None):
 				" that he forgot to commit anything")
 		utilities.repoman_sez(
 			"\"If everyone were like you, I'd be out of business!\"\n")
-	sys.exit(0)
+	return qatracker, qawarnings

@@ -8,7 +8,8 @@ from tbc.db_mapping import Configs, Logs, ConfigsMetaData, Jobs, BuildJobs, Pack
 	Uses, ConfigsEmergeOptions, EmergeOptions, HiLight, BuildLogs, BuildLogsConfig, BuildJobsUse, BuildJobsRedo, \
 	HiLightCss, BuildLogsHiLight, BuildLogsEmergeOptions, BuildLogsErrors, ErrorsInfo, EmergeInfo, BuildLogsUse, \
 	BuildJobsEmergeOptions, EbuildsMetadata, EbuildsIUse, Restrictions, EbuildsRestrictions, EbuildsKeywords, \
-	Keywords, PackagesMetadata, Emails, PackagesEmails, Setups, BuildLogsRepomanQa, CategoriesMetadata
+	Keywords, PackagesMetadata, Emails, PackagesEmails, Setups, BuildLogsRepomanQa, CategoriesMetadata, \
+	PackagesRepoman
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy import and_, or_
 
@@ -566,3 +567,15 @@ def get_ebuild_restrictions(session, ebuild_id):
 			restrictions.append(session.query(Restrictions).filter_by(RestrictionId = EbuildsRestrictionsInfo.RestrictionId).one())
 		return restrictions
 	return restrictions.append(session.query(Restrictions).filter_by(RestrictionId = EbuildsRestrictionsInfo.RestrictionId).one())
+
+def add_repoman_log(session, package_id, repoman_log, repoman_hash):
+	try:
+		PackagesRepomanInfo = session.query(PackagesRepoman).filter_by(PackageId = package_id).one()
+	except NoResultFound as e:
+		session.add(PackagesRepoman(PackageId = package_id, RepomanText = repoman_log, RepomanHash = repoman_hash))
+		session.commit()
+	else:
+		if PackagesRepomanInfo.RepomanHash != repoman_hash:
+			PackagesRepomanInfo.RepomanHash = repoman_hash
+			PackagesRepomanInfo.RepomanText = repoman_log
+			session.commit()

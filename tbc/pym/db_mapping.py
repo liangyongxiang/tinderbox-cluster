@@ -230,6 +230,14 @@ class BuildLogsRepomanQa(Base):
 	SummeryText = Column('summery_text', Text)
 	__tablename__ = 'build_logs_repoman_qa'
 
+class PackagesRepoman(Base):
+	Id = Column('id', Integer, primary_key=True)
+	PackageId = Column('package_id', Integer, ForeignKey('packages.package_id'))
+	RepomanText = Column('repoman_text', Text)
+	RepomanHash = Column('repoman_hash', String(100))
+	TimeStamp = Column('time_stamp', DateTime, nullable=False, default=datetime.datetime.utcnow)
+	__tablename__ = 'packages_repoman'
+
 class ErrorsInfo(Base):
 	ErrorId = Column('error_id', Integer, primary_key=True)
 	ErrorName = Column('error_name', String)

@@ -3,12 +3,14 @@
 
 from __future__ import print_function
 import re
+import hashlib
 import portage
 from portage.xml.metadata import MetaDataXML
 from tbc.flags import tbc_use_flags
 from tbc.text import get_ebuild_cvs_revision, get_log_text_dict
 from tbc.flags import tbc_use_flags
-from tbc.qachecks import digestcheck, check_repoman, repoman_full
+from tbc.qachecks import digestcheck, check_repoman
+from tbc.build_log import check_repoman_full
 from tbc.sqlquerys import add_logs, get_package_info, get_config_info, \
 	add_new_build_job, add_new_ebuild_sql, get_ebuild_id_list, add_old_ebuild, \
 	get_package_metadata_sql, update_package_metadata, update_manifest_sql, \
@@ -283,11 +285,13 @@ class tbc_package(object):
 		if manifest_checksum_tree is None:
 			return
 
-		# Check cp with repoman repoman full
-		repoman_full(self._session, pkgdir, self._config_id)
-
 		package_id = add_new_package_sql(self._session, cp, repo)
 		
+		# Check cp with repoman full
+		status = check_repoman_full(self._session, pkgdir, package_id, self._config_id)
+		if status:
+					log_msg = "Repoman %s:%s ... Fail." % (cpv, repo)
+					add_logs(self._session, log_msg, "error", self._config_id)
 		package_metadataDict = self.get_package_metadataDict(pkgdir, package_id)
 		# Get the ebuild list for cp
 		ebuild_list_tree = self._myportdb.cp_list(cp, use_cache=1, mytree=mytree)
@@ -308,11 +312,7 @@ class tbc_package(object):
 			# take package descriptions from the ebuilds
 			if package_metadataDict[package_id]['metadata_xml_descriptions'] != packageDict[cpv]['ebuild_version_descriptions_tree']:
 				package_metadataDict[package_id]['metadata_xml_descriptions'] = packageDict[cpv]['ebuild_version_descriptions_tree']
-			if packageDict[cpv]['checksum'] != "0":
-				repoman_fail = check_repoman(self._mysettings, self._myportdb, cpv, repo)
-				if repoman_fail:
-					log_msg = "Repoman %s:%s ... Fail." % (cpv, repo)
-					add_logs(self._session, log_msg, "error", self._config_id)
+
 		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_checksum_tree)
 		log_msg = "C %s:%s ... Done." % (cp, repo)
 		add_logs(self._session, log_msg, "info", self._config_id)
@@ -340,8 +340,11 @@ class tbc_package(object):
 			log_msg = "U %s:%s" % (cp, repo)
 			add_logs(self._session, log_msg, "info", self._config_id)
 
-			# Check cp with repoman repoman full
-			repoman_full(self._session, pkgdir, self._config_id)
+			# Check cp with repoman full
+			status = check_repoman_full(self._session, pkgdir, package_id, self._config_id)
+			if status:
+					log_msg = "Repoman %s:%s ... Fail." % (cpv, repo)
+					add_logs(self._session, log_msg, "error", self._config_id)
 
 			# Get the ebuild list for cp
 			old_ebuild_id_list = []
@@ -398,13 +401,6 @@ class tbc_package(object):
 					ebuild_version_manifest_checksum_db = None
 				else:
 					ebuild_version_manifest_checksum_db = checksums_db
-
-				# Check with repoman
-				if (ebuild_version_manifest_checksum_db is None or ebuild_version_checksum_tree != ebuild_version_manifest_checksum_db) and ebuild_version_checksum_tree != "0":
-					repoman_fail = check_repoman(self._mysettings, self._myportdb, cpv, repo)
-					if repoman_fail:
-						log_msg = "Repoman %s:%s ... Fail." % (cpv, repo)
-						add_logs(self._session, log_msg, "error", self._config_id)
 
 				# Check if the checksum have change
 				if ebuild_version_manifest_checksum_db is None:

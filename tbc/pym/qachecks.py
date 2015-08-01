@@ -186,5 +186,16 @@ def repoman_full(session, pkgdir, config_id):
 	SetupInfo = get_setup_info(session, config_id)
 	config_root = ConfigsMetaData.RepoPath + '/' + ConfigInfo.Hostname + "/" + SetupInfo.Setup
 	argscmd = []
+	argscmd.append('--xmlparse')
 	argscmd.append('full')
-	repoman_main(argscmd, config_root=config_root, pkgdir=pkgdir)
+	qatracker, qawarnings = repoman_main(argscmd, config_root=config_root, pkgdir=pkgdir)
+	adict = {}
+	for key in qatracker.fails.items():
+		alist = []
+		for foo in key[1]:
+			alist.append(foo)
+			adict[key[0]] = alist
+	if adict == {}:
+		return False
+	return adict
+
