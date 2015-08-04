@@ -8,21 +8,19 @@ except ImportError:
 	use_setuptools()
 	from setuptools import setup
 
-version = os.path.split(os.path.abspath(__file__))[-2].split('-')[-1]
-
-packages = ['tbc']
-
-package_dir = {'tbc': 'tbc/pym'}
-
+def find_packages():
+        for dirpath, dirnames, filenames in os.walk('tbc/pym'):
+                if '__init__.py' in filenames:
+                        yield os.path.relpath(dirpath, 'tbc/pym')
 setup(
-	name="tbc",
-	version=version,
-	author='Zorry',
-	author_email='tinderbox-cluster@gentoo.org',
-	url='https://anongit.gentoo.org/git/proj/tinderbox-cluster.git',
-	description='Tinderbox cluster',
-	platforms=["any"],
-	license="GPL2",
-	packages=packages,
-	package_dir=package_dir,
+        version = os.path.split(os.path.abspath(__file__))[-2].split('-')[-1],
+        packages = list(find_packages()),
+        package_dir = {'': 'tbc/pym'},
+        name="tbc",
+        author='Zorry',
+        author_email='tinderbox-cluster@gentoo.org',
+        url='https://anongit.gentoo.org/git/proj/tinderbox-cluster.git',
+        description='Tinderbox cluster',
+        platforms=["any"],
+        license="GPL2",
 )
