@@ -13,8 +13,8 @@
 	Fix so we can use add_buildlog_main()
 	We use add_buildlog_main() for loging.
 
---- a/tbc/pym/actions.py	2013-03-22 17:57:23.000000000 +0100
-+++ b/tbc/pym/actions.py	2013-03-22 19:00:43.265582143 +0100
+--- a/pym/tbc/actions.py	2013-03-22 17:57:23.000000000 +0100
++++ b/pym/tbc/actions.py	2013-03-22 19:00:43.265582143 +0100
 @@ -72,7 +72,7 @@ from _emerge.MetadataRegen import Metada
  from _emerge.Package import Package
  from _emerge.ProgressHandler import ProgressHandler
@@ -180,8 +180,8 @@
  		post_emerge(emerge_config.action, emerge_config.opts,
  			emerge_config.args, emerge_config.target_config.root,
  			emerge_config.trees, emerge_config.target_config.mtimedb, retval)
---- a/tbc/pym/main.py	2013-03-22 17:57:23.000000000 +0100
-+++ b/tbc/pym/main.py	2012-12-06 03:32:56.104889716 +0100
+--- a/pym/tbc/main.py	2013-03-22 17:57:23.000000000 +0100
++++ b/pym/tbc/main.py	2012-12-06 03:32:56.104889716 +0100
 @@ -11,7 +11,7 @@ portage.proxy.lazyimport.lazyimport(glob
  	'logging',
  	'portage.util:writemsg_level',
@@ -222,8 +222,8 @@
  	finally:
  		# Call destructors for our portdbapi instances.
  		for x in emerge_config.trees.values():
---- a/tbc/pym/Scheduler.py	2013-03-22 17:57:23.000000000 +0100
-+++ b/tbc/pym/Scheduler.py	2012-12-21 02:09:28.082301168 +0100
+--- a/pym/tbc/Scheduler.py	2013-03-22 17:57:23.000000000 +0100
++++ b/pym/tbc/Scheduler.py	2012-12-21 02:09:28.082301168 +0100
 @@ -62,6 +62,8 @@ from _emerge.PackageMerge import Package
  from _emerge.PollScheduler import PollScheduler
  from _emerge.SequentialTaskQueue import SequentialTaskQueue

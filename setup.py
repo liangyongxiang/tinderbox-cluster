@@ -14,14 +14,14 @@ def find_packages():
 			yield os.path.relpath(dirpath, 'pym')
 
 setup(
-        version = os.path.split(os.path.abspath(__file__))[-2].split('-')[-1],
-        packages = list(find_packages()),
-        package_dir = {'tbc': 'pym'},
-        name="tbc",
-        author='Zorry',
-        author_email='tinderbox-cluster@gentoo.org',
-        url='https://anongit.gentoo.org/git/proj/tinderbox-cluster.git',
-        description='Tinderbox cluster',
-        platforms=["any"],
-        license="GPL2",
+	version = os.path.split(os.path.abspath(__file__))[-2].split('-')[-1],
+	packages = list(find_packages()),
+	package_dir = {'': 'pym'},
+	name="tbc",
+	author='Zorry',
+	author_email='tinderbox-cluster@gentoo.org',
+	url='https://anongit.gentoo.org/git/proj/tinderbox-cluster.git',
+	description='Tinderbox cluster',
+	platforms=["any"],
+	license="GPL2",
 )
