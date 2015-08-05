@@ -453,6 +453,11 @@ def add_old_ebuild(session, old_ebuild_list):
 			for build_job in build_job_id_list:
 				del_old_build_jobs(session, build_job.BuildJobId)
 
+def add_old_package(session, package_id):
+	PackagesInfo = session.query(Packages).filter_by(PackageId = package_id).one()
+	PackagesInfo.Active = False
+	session.commit()
+
 def add_new_package_sql(session, cp, repo):
 	element = cp.split('/')
 	categories = element[0]

@@ -32,7 +32,7 @@ from tbc.sqlquerys import add_logs, get_config_id, get_ebuild_id_db, add_new_bui
 	add_repoman_log
 from sqlalchemy.orm import sessionmaker
 
-def repoman_check_full(session, pkgdir, package_id, config_id):
+def check_repoman_full(session, pkgdir, package_id, config_id):
 	# Check cp with repoman repoman full
 	status = repoman_full(session, pkgdir, config_id)
 	repoman_hash = hashlib.sha256()
@@ -224,7 +224,7 @@ def get_buildlog_info(session, settings, pkg, build_dict):
 	categories = element[0]
 	package = element[1]
 	pkgdir = myportdb.getRepositoryPath(build_dict['repo']) + "/" + categories + "/" + package
-	repoman_error_list = repoman_check_full(session, pkgdir, build_dict['package_id'], config_id)
+	repoman_error_list = check_repoman_full(session, pkgdir, build_dict['package_id'], config_id)
 	build_log_dict = {}
 	build_log_dict['fail'] = False
 	if repoman_error_list:
