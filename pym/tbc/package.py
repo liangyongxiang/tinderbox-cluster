@@ -4,6 +4,7 @@
 from __future__ import print_function
 import re
 import hashlib
+import os
 import portage
 from portage.xml.metadata import MetaDataXML
 from tbc.flags import tbc_use_flags

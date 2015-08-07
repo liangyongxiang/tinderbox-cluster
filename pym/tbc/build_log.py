@@ -197,7 +197,7 @@ def search_buildlog(session, logfile_text_dict, max_text_lines):
 			new_hilight_dict[adict3['startline']] = adict3
 	return new_hilight_dict
 
-def get_buildlog_info(session, settings, pkg, build_dict):
+def get_buildlog_info(session, settings, pkg, build_dict, config_id):
 	myportdb = portage.portdbapi(mysettings=settings)
 	logfile_text_dict, max_text_lines = get_log_text_dict(settings.get("PORTAGE_LOG_FILE"))
 	hilight_dict = search_buildlog(session, logfile_text_dict, max_text_lines)
@@ -275,7 +275,7 @@ def add_buildlog_main(settings, pkg, trees):
 		session.close
 		return
 	build_log_dict = {}
-	build_log_dict = get_buildlog_info(session, settings, pkg, build_dict)
+	build_log_dict = get_buildlog_info(session, settings, pkg, build_dict, config_id)
 	error_log_list = build_log_dict['error_log_list']
 	build_error = ""
 	log_hash = hashlib.sha256()
