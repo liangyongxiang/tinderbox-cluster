@@ -3,14 +3,14 @@ import sys
 import xml
 
 # import our initialized portage instance
-from tbc.repoman._portage import portage
+from repoman._portage import portage
 
 from portage import os
 from portage.output import red
 from portage.process import find_binary
 
-from tbc.repoman.metadata import fetch_metadata_dtd
-from tbc.repoman._subprocess import repoman_getstatusoutput
+from repoman.metadata import fetch_metadata_dtd
+from repoman._subprocess import repoman_getstatusoutput
 
 
 class _XMLParser(xml.etree.ElementTree.XMLParser):

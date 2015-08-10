@@ -7,11 +7,12 @@ Perform KEYWORDS related checks
 class KeywordChecks(object):
 	'''Perform checks on the KEYWORDS of an ebuild'''
 
-	def __init__(self, qatracker):
+	def __init__(self, qatracker, options):
 		'''
 		@param qatracker: QATracker instance
 		'''
 		self.qatracker = qatracker
+		self.options = options
 		self.slot_keywords = {}
 
 	def prepare(self):
@@ -35,8 +36,9 @@ class KeywordChecks(object):
 		@param kwlist: A list of all global keywords.
 		@param profiles: A list of all profiles.
 		'''
-		self._checkAddedWithStableKeywords(
-			package, ebuild, y_ebuild, keywords, changed)
+		if not self.options.straight_to_stable:
+			self._checkAddedWithStableKeywords(
+				package, ebuild, y_ebuild, keywords, changed)
 
 		self._checkForDroppedKeywords(
 			pkg, ebuild, ebuild_archs, live_ebuild)

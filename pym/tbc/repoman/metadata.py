@@ -12,11 +12,14 @@ except ImportError:
 
 
 # import our initialized portage instance
-from tbc.repoman._portage import portage
+from repoman._portage import portage
 
 from portage import exception
 from portage import os
 from portage.output import green
+
+if sys.hexversion >= 0x3000000:
+	basestring = str
 
 if sys.hexversion >= 0x3000000:
 	basestring = str

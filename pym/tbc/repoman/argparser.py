@@ -8,7 +8,7 @@ import logging
 import sys
 
 # import our initialized portage instance
-from tbc.repoman._portage import portage
+from repoman._portage import portage
 
 from portage import util
 from portage.util._argparse import ArgumentParser
@@ -97,6 +97,11 @@ def parse_args(argv, qahelp, repoman_default_opts):
 		help='Commit with QA violations')
 
 	parser.add_argument(
+		'-S', '--straight-to-stable', dest='straight_to_stable',
+		default=False, action='store_true',
+		help='Allow committing straight to stable')
+
+	parser.add_argument(
 		'--vcs', dest='vcs',
 		help='Force using specific VCS instead of autodetection')
 
@@ -110,7 +115,8 @@ def parse_args(argv, qahelp, repoman_default_opts):
 
 	parser.add_argument(
 		'-x', '--xmlparse', dest='xml_parse', action='store_true',
-		default=False, help='forces the metadata.xml parse check to be carried out')
+		default=False,
+		help='forces the metadata.xml parse check to be carried out')
 
 	parser.add_argument(
 		'--if-modified', choices=('y', 'n'), default='n',
@@ -119,7 +125,8 @@ def parse_args(argv, qahelp, repoman_default_opts):
 
 	parser.add_argument(
 		'-i', '--ignore-arches', dest='ignore_arches', action='store_true',
-		default=False, help='ignore arch-specific failures (where arch != host)')
+		default=False,
+		help='ignore arch-specific failures (where arch != host)')
 
 	parser.add_argument(
 		"--ignore-default-opts",
@@ -128,7 +135,8 @@ def parse_args(argv, qahelp, repoman_default_opts):
 
 	parser.add_argument(
 		'-I', '--ignore-masked', dest='ignore_masked', action='store_true',
-		default=False, help='ignore masked packages (not allowed with commit mode)')
+		default=False,
+		help='ignore masked packages (not allowed with commit mode)')
 
 	parser.add_argument(
 		'--include-arches',

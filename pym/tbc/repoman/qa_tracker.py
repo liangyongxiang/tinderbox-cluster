@@ -2,7 +2,7 @@
 import logging
 import sys
 
-from tbc.repoman.qa_data import qacats, qawarnings
+from repoman.qa_data import qacats, qawarnings
 
 
 class QATracker(object):

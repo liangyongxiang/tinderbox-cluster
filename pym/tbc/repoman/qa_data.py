@@ -4,7 +4,7 @@ import logging
 from _emerge.Package import Package
 
 # import our initialized portage instance
-from tbc.repoman._portage import portage
+from repoman._portage import portage
 
 # 14 is the length of DESCRIPTION=""
 max_desc_len = 100
@@ -45,6 +45,9 @@ qahelp = {
 	"dependency.badtilde": (
 		"Uses the ~ dep operator with a non-zero revision part,"
 		" which is useless (the revision is ignored)"),
+	"dependency.missingslot": (
+		"RDEPEND matches more than one SLOT but does not specify a "
+		"slot and/or use the := or :* slot operator"),
 	"dependency.perlcore": (
 		"This ebuild directly depends on a package in perl-core;"
 		" it should use the corresponding virtual instead."),
@@ -237,6 +240,7 @@ qawarnings = set((
 	"dependency.badindev",
 	"dependency.badmaskedindev",
 	"dependency.badtilde",
+	"dependency.missingslot",
 	"dependency.perlcore",
 	"DESCRIPTION.toolong",
 	"EAPI.deprecated",
@@ -278,7 +282,7 @@ allvars = sorted(allvars)
 for x in missingvars:
 	x += ".missing"
 	if x not in qacats:
-		logging.warn('* missingvars values need to be added to qahelp ("%s")' % x)
+		logging.warning('* missingvars values need to be added to qahelp ("%s")' % x)
 		qacats.append(x)
 		qawarnings.add(x)
 

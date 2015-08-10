@@ -3,7 +3,7 @@
 Perform checks on the DESCRIPTION variable.
 '''
 
-from tbc.repoman.qa_data import max_desc_len
+from repoman.qa_data import max_desc_len
 
 
 class DescriptionChecks(object):

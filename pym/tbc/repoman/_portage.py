@@ -9,7 +9,7 @@ and not listed in those subsequent portage imports.
 
 All modules should import portage from this one
 
-from tbc.repoman._portage import portage
+from repoman._portage import portage
 
 Then continue to import the remaining portage modules needed
 '''

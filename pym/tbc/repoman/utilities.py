@@ -32,7 +32,7 @@ import difflib
 from tempfile import mkstemp
 
 # import our initialized portage instance
-from tbc.repoman._portage import portage
+from repoman._portage import portage
 
 from portage import os
 from portage import shutil
@@ -44,7 +44,7 @@ from portage.localization import _
 from portage.process import find_binary
 from portage.output import green
 
-from tbc.repoman.copyrights import update_copyright, update_copyright_year
+from repoman.copyrights import update_copyright, update_copyright_year
 
 
 normalize_path = util.normalize_path
@@ -172,7 +172,7 @@ def editor_is_executable(editor):
 	return os.access(filename, os.X_OK) and os.path.isfile(filename)
 
 
-def get_commit_message_with_editor(editor, message=None):
+def get_commit_message_with_editor(editor, message=None, prefix=""):
 	"""
 	Execute editor with a temporary file as it's argument
 	and return the file content afterwards.
@@ -181,6 +181,8 @@ def get_commit_message_with_editor(editor, message=None):
 	@type: string
 	@param message: An iterable of lines to show in the editor.
 	@type: iterable
+	@param prefix: Suggested prefix for the commit message summary line.
+	@type: string
 	@rtype: string or None
 	@return: A string on success or None if an error occurs.
 	"""
@@ -188,7 +190,8 @@ def get_commit_message_with_editor(editor, message=None):
 	try:
 		os.write(
 			fd, _unicode_encode(_(
-				"\n# Please enter the commit message "
+				prefix +
+				"\n\n# Please enter the commit message "
 				"for your changes.\n# (Comment lines starting "
 				"with '#' will not be included)\n"),
 				encoding=_encodings['content'], errors='backslashreplace'))
@@ -240,7 +243,7 @@ def get_commit_message_with_stdin():
 	return commitmessage
 
 
-def FindPortdir(settings, pkgdir):
+def FindPortdir(settings):
 	""" Try to figure out what repo we are in and whether we are in a regular
 	tree or an overlay.
 
@@ -276,8 +279,6 @@ def FindPortdir(settings, pkgdir):
 		# the current working directory (from the shell).
 		location = pwd
 
-	if not pkgdir is None:
-		location = pkgdir
 	location = normalize_path(location)
 
 	path_ids = {}

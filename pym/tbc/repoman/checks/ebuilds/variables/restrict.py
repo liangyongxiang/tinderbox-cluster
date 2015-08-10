@@ -4,9 +4,9 @@ Perform checks on the RESTRICT variable.
 '''
 
 # import our initialized portage instance
-from tbc.repoman._portage import portage
+from repoman._portage import portage
 
-from tbc.repoman.qa_data import valid_restrict
+from repoman.qa_data import valid_restrict
 
 
 class RestrictChecks(object):

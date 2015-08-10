@@ -3,7 +3,7 @@
 Performs Ruby eclass checks
 '''
 
-from tbc.repoman.qa_data import ruby_deprecated
+from repoman.qa_data import ruby_deprecated
 
 
 class RubyEclassChecks(object):
