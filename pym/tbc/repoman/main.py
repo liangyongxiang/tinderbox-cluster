@@ -221,8 +221,6 @@ def repoman_scan(repoman_settings, repo_settings, vcs_settings, portdb, options,
 
 	####################
 
-	dev_keywords = dev_keywords(profiles)
-
 	qatracker = QATracker()
 
 	if options.mode == "manifest":
@@ -733,8 +731,9 @@ def repoman_scan(repoman_settings, repo_settings, vcs_settings, portdb, options,
 						matchmode = "minimum-visible"
 
 					if not have_dev_keywords:
+						dev_keyword = dev_keywords(profiles)
 						have_dev_keywords = \
-							bool(dev_keywords.intersection(keywords))
+							bool(dev_keyword.intersection(keywords))
 
 					if prof.status == "dev":
 						suffix = suffix + "indev"
@@ -834,7 +833,7 @@ def repoman_scan(repoman_settings, repo_settings, vcs_settings, portdb, options,
 				"Note: use --include-dev (-d) to check "
 				"dependencies for 'dev' profiles"))
 		print()
-
+	return qatracker
 def repoman_main(argv):
 
 	config_root = os.environ.get("PORTAGE_CONFIGROOT")
