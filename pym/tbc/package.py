@@ -5,12 +5,13 @@ from __future__ import print_function
 import re
 import hashlib
 import os
+import git
 import portage
 from portage.xml.metadata import MetaDataXML
 from tbc.flags import tbc_use_flags
 from tbc.text import get_ebuild_cvs_revision, get_log_text_dict
 from tbc.flags import tbc_use_flags
-from tbc.qachecks import digestcheck, check_repoman
+from tbc.qachecks import check_repoman
 from tbc.build_log import check_repoman_full
 from tbc.sqlquerys import add_logs, get_package_info, get_config_info, \
 	add_new_build_job, add_new_ebuild_sql, get_ebuild_id_list, add_old_ebuild, \
@@ -99,9 +100,10 @@ class tbc_package(object):
 			add_logs(self._session, log_msg, "info", self._config_id)
 			log_msg = "C %s:%s ... Fail." % (cpv, repo)
 			add_logs(self._session, log_msg, "info", self._config_id)
-			ebuild_version_cvs_revision_tree = '0'
+			git_commit = '0'
 		else:
-			ebuild_version_cvs_revision_tree = get_ebuild_cvs_revision(pkgdir + "/" + package + "-" + ebuild_version_tree + ".ebuild")
+			git_commit = '0'
+		#FIXME The git commit need to be fixed or when $ID get fixed
 
 		# Get the ebuild metadata
 		ebuild_version_metadata_tree = self.get_ebuild_metadata(cpv, repo)
@@ -123,7 +125,8 @@ class tbc_package(object):
 		attDict['checksum']= ebuild_version_checksum_tree
 		attDict['ebuild_version_metadata_tree'] = ebuild_version_metadata_tree
 		#attDict['ebuild_version_text_tree'] = ebuild_version_text_tree[0]
-		attDict['ebuild_version_revision_tree'] = ebuild_version_cvs_revision_tree
+		attDict['git_commit'] = git_commit
+		attDict['New'] = False
 		attDict['ebuild_version_descriptions_tree'] = ebuild_version_metadata_tree[7]
 		return attDict
 
@@ -161,33 +164,12 @@ class tbc_package(object):
 						add_logs(self._session, log_msg, "info", self._config_id)
 					i = i +1
 
-	def get_changelog_text(self, pkgdir):
-		changelog_text_dict, max_text_lines = get_log_text_dict(pkgdir + "/ChangeLog")
-		spec = 3
-		spec_tmp = 1
-		changelog_text_tree = ''
-		for index, text_line in changelog_text_dict.items():
-			if index == max_text_lines:
-				if not re.search('^\n', text_line):
-					changelog_text_tree = changelog_text_tree + text_line
-				break
-			elif re.search('^#', text_line):
-				pass
-			elif re.search('^\n', text_line) and re.search('^#', changelog_text_dict[index - 1]):
-				pass
-			elif re.search('^\n', text_line) and re.search('^\*', changelog_text_dict[index + 1]):
-				changelog_text_tree = changelog_text_tree + text_line
-				spec_tmp = spec_tmp + 1
-				spec = spec + 1
-			elif re.search('^\n', text_line) and not re.search('^\*', changelog_text_dict[index + 1]):
-				if spec_tmp == spec:
-					break
-				else:
-					spec_tmp = spec_tmp + 1
-					changelog_text_tree = changelog_text_tree + text_line
-			else:
-				changelog_text_tree = changelog_text_tree + text_line
-		return changelog_text_tree
+	def get_git_log_pkg_text(self, repodir, cp):
+		n = '5'
+		git_log_pkg = ''
+		g = git.Git(repodir)
+		git_log_pkg = g.log('-n ' + n, '--grep=' + cp)
+		return git_log_pkg
 
 	def get_package_metadataDict(self, pkgdir, package_id):
 		# Make package_metadataDict
@@ -195,20 +177,26 @@ class tbc_package(object):
 		package_metadataDict = {}
 		md_email_list = []
 		herd = None
-		pkg_md = MetaDataXML(pkgdir + "/metadata.xml", herd)
-		attDict['changelog_text'] =  self.get_changelog_text(pkgdir)
-		tmp_herds = pkg_md.herds()
-		if tmp_herds != ():
-			attDict['metadata_xml_herds'] = tmp_herds[0]
-			md_email_list.append(attDict['metadata_xml_herds'] + '@gentoo.org')
-		for maint in pkg_md.maintainers():
-			md_email_list.append(maint.email)
-		if md_email_list != []:
-			attDict['metadata_xml_email'] = md_email_list
-		else:
-			log_msg = "Metadata file %s missing Email" % (pkgdir + "/metadata.xml")
+		try:
+			pkg_md = MetaDataXML(pkgdir + "/metadata.xml", herd)
+		except:
+			log_msg = "Metadata file %s is missing or has errors" % (pkgdir + "/metadata.xml")
 			add_logs(self._session, log_msg, "qa", self._config_id)
 			attDict['metadata_xml_email'] = False
+		else:
+			attDict['git_log_pkg_text'] = self.get_git_log_pkg_text(repodir, cp)
+			tmp_herds = pkg_md.herds()
+			if tmp_herds != ():
+				attDict['metadata_xml_herds'] = tmp_herds[0]
+				md_email_list.append(attDict['metadata_xml_herds'] + '@gentoo.org')
+			for maint in pkg_md.maintainers():
+				md_email_list.append(maint.email)
+			if md_email_list != []:
+				attDict['metadata_xml_email'] = md_email_list
+			else:
+				log_msg = "Metadata file %s missing Email" % (pkgdir + "/metadata.xml")
+				add_logs(self._session, log_msg, "qa", self._config_id)
+				attDict['metadata_xml_email'] = False
 		attDict['metadata_xml_descriptions'] = ''
 		package_metadataDict[package_id] = attDict
 		return package_metadataDict
@@ -248,7 +236,6 @@ class tbc_package(object):
 		self.add_new_build_job_db(ebuild_id_list, packageDict, config_cpv_listDict)
 
 	def get_manifest_checksum_tree(self, pkgdir, cp, repo, mytree):
-
 		# Get the cp manifest file checksum.
 		try:
 			manifest_checksum_tree = portage.checksum.sha256hash(pkgdir + "/Manifest")[0]
@@ -261,13 +248,6 @@ class tbc_package(object):
 				log_msg = "C %s:%s ... Fail." % (cp, repo)
 				add_logs(self._session, log_msg, "error", self._config_id)
 			return "0"
-		fail_msg = digestcheck(self._mysettings, pkgdir)
-		if fail_msg:
-			log_msg = "QA: Manifest file has errors. :%s:%s" % (cp, repo,)
-			add_logs(self._session, log_msg, "error", self._config_id)
-			log_msg = "C %s:%s ... Fail." % (cp, repo)
-			add_logs(self._session, log_msg, "error", self._config_id)
-			return None
 		return manifest_checksum_tree
 
 	def add_new_package_db(self, cp, repo):
@@ -282,10 +262,7 @@ class tbc_package(object):
 		mytree = []
 		mytree.append(repodir)
 		pkgdir = repodir + "/" + cp # Get RepoDIR + cp
-
 		manifest_checksum_tree = self.get_manifest_checksum_tree(pkgdir, cp, repo, mytree)
-		if manifest_checksum_tree is None:
-			return
 
 		package_id = add_new_package_sql(self._session, cp, repo)
 
@@ -316,6 +293,7 @@ class tbc_package(object):
 			if package_metadataDict[package_id]['metadata_xml_descriptions'] != packageDict[cpv]['ebuild_version_descriptions_tree']:
 				package_metadataDict[package_id]['metadata_xml_descriptions'] = packageDict[cpv]['ebuild_version_descriptions_tree']
 
+		packageDict[cpv]['new'] = True
 		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_checksum_tree)
 		log_msg = "C %s:%s ... Done." % (cp, repo)
 		add_logs(self._session, log_msg, "info", self._config_id)
@@ -332,10 +310,7 @@ class tbc_package(object):
 		pkgdir = repodir + "/" + cp # Get RepoDIR + cp
 		mytree = []
 		mytree.append(repodir)
-
 		manifest_checksum_tree = self.get_manifest_checksum_tree(pkgdir, cp, repo, mytree)
-		if manifest_checksum_tree is None:
-			return
 
 		# if we NOT have the same checksum in the db update the package
 		if manifest_checksum_tree != PackageInfo.Checksum:
@@ -361,7 +336,6 @@ class tbc_package(object):
 					add_old_ebuild(self._session, old_ebuild_id_list)
 					log_msg = "C %s:%s ... Done." % (cp, repo)
 					add_logs(self._session, log_msg, "info", self._config_id)
-
 				else:
 					log_msg = "QA: Can't get the ebuilds list. %s:%s" % (cp, repo,)
 					add_logs(self._session, log_msg, "info", self._config_id)
@@ -414,6 +388,7 @@ class tbc_package(object):
 					# N = New ebuild
 					log_msg = "N %s:%s" % (cpv, repo,)
 					add_logs(self._session, log_msg, "info", self._config_id)
+					packageDict[cpv]['new'] = True
 				elif  ebuild_version_checksum_tree != ebuild_version_manifest_checksum_db:
 					# U = Updated ebuild
 					log_msg = "U %s:%s" % (cpv, repo,)

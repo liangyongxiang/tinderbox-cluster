@@ -103,7 +103,7 @@ class PackagesEmails(Base):
 class PackagesMetadata(Base):
 	Id = Column('id', Integer, primary_key=True)
 	PackageId = Column('package_id', Integer, ForeignKey('packages.package_id'))
-	Changlog = Column('changlog', Text)
+	Gitlog = Column('gitlog', Text)
 	Descriptions = Column('descriptions', Text)
 	__tablename__ = 'packages_metadata'
 
@@ -278,6 +278,7 @@ class EbuildsKeywords(Base):
 class EbuildsMetadata(Base):
 	Id =  Column('id', Integer, primary_key=True)
 	EbuildId = Column('ebuild_id', ForeignKey('ebuilds.ebuild_id'))
-	Revision = Column('revision', String(30))
-	Descriptions = Column('descriptions', String(200))
+	Commit = Column('commit', String(100))
+	New = Column('new', Boolean, default=False)
+	Descriptions = Column('descriptions', Text)
 	__tablename__ = 'ebuilds_metadata'

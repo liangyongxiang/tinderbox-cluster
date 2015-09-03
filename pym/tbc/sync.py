@@ -74,20 +74,16 @@ def git_sync_main(session):
 	for repo_dir in git_repos_list(myportdb):
 		reponame = myportdb.getRepositoryName(repo_dir)
 		repo = git.Repo(repo_dir)
+		log_msg = "Checking repo %s" % (reponame)
+		add_logs(session, log_msg, "info", config_id)
 		info_list, repouptodate = git_fetch(repo)
 		if not repouptodate:
 			cp_list = []
 			attr = {}
 			# We check for Manifest changes and add the package to a list
-			for diff_line in repo.git.diff('origin').splitlines():
-				if re.search("^diff --git.*/Manifest", diff_line):
-					diff_line2 = re.split(' b/', re.sub('diff --git', '', diff_line))
-					diff_line3 = re.sub(' a/', '', diff_line2[0])
-					if diff_line3 == diff_line2[1] or "Manifest" in diff_line3:
-						cp = re.sub('/Manifest', '', diff_line3)
-						cp_list.append(cp)
-					else:
-						cp = re.sub('/Manifest', '', diff_line2[1])
+			for diff_line in repo.git.diff('origin', '--name-only').splitlines():
+				if re.search("Manifest$", diff_line):
+						cp = re.sub('/Manifest', '', diff_line)
 						cp_list.append(cp)
 			attr['cp_list'] = cp_list
 			repo_cp_dict[reponame] = attr
@@ -95,7 +91,8 @@ def git_sync_main(session):
 		else:
 			log_msg = "Repo %s is up to date" % (reponame)
 			add_logs(session, log_msg, "info", config_id)
-	
+		log_msg = "Checking repo %s Done" % (reponame)
+		add_logs(session, log_msg, "info", config_id)
 	# Need to add a clone of profiles/base for reading the tree
 	try:
 		os.mkdir(mysettings['PORTDIR'] + "/profiles/config", 0o777)
