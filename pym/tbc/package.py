@@ -82,6 +82,13 @@ class tbc_package(object):
 				if ebuild_auxdb_list[i] == '':
 					ebuild_auxdb_list[i] = ''
 			return ebuild_auxdb_list
+	def get_git_log_ebuild(self, repodir, ebuild_file):
+		git_log_ebuild = ''
+		g = git.Git(repodir)
+		for line in g.log('-n 1', ebuild_file).splitlines():
+			if re.search('^commit', line):
+				git_log_ebuild = re.sub('commit', '', line)
+		return git_log_ebuild
 
 	def get_packageDict(self, pkgdir, cpv, repo):
 
@@ -90,10 +97,10 @@ class tbc_package(object):
 		element = portage.versions.cpv_getkey(cpv).split('/')
 		categories = element[0]
 		package = element[1]
-
+		ebuild_file = pkgdir + "/" + package + "-" + ebuild_version_tree + ".ebuild"
 		# Make a checksum of the ebuild
 		try:
-			ebuild_version_checksum_tree = portage.checksum.sha256hash(pkgdir + "/" + package + "-" + ebuild_version_tree + ".ebuild")[0]
+			ebuild_version_checksum_tree = portage.checksum.sha256hash(ebuild_file)[0]
 		except:
 			ebuild_version_checksum_tree = "0"
 			log_msg = "QA: Can't checksum the ebuild file. %s on repo %s" % (cpv, repo,)
@@ -102,8 +109,7 @@ class tbc_package(object):
 			add_logs(self._session, log_msg, "info", self._config_id)
 			git_commit = '0'
 		else:
-			git_commit = '0'
-		#FIXME The git commit need to be fixed or when $ID get fixed
+			git_commit = self.get_git_log_ebuild(repodir, ebuild_file):
 
 		# Get the ebuild metadata
 		ebuild_version_metadata_tree = self.get_ebuild_metadata(cpv, repo)
@@ -177,14 +183,13 @@ class tbc_package(object):
 		package_metadataDict = {}
 		md_email_list = []
 		herd = None
+		attDict['metadata_xml_email'] = False
 		try:
 			pkg_md = MetaDataXML(pkgdir + "/metadata.xml", herd)
 		except:
 			log_msg = "Metadata file %s is missing or has errors" % (pkgdir + "/metadata.xml")
 			add_logs(self._session, log_msg, "qa", self._config_id)
-			attDict['metadata_xml_email'] = False
 		else:
-			attDict['git_log_pkg_text'] = self.get_git_log_pkg_text(repodir, cp)
 			tmp_herds = pkg_md.herds()
 			if tmp_herds != ():
 				attDict['metadata_xml_herds'] = tmp_herds[0]
@@ -196,7 +201,7 @@ class tbc_package(object):
 			else:
 				log_msg = "Metadata file %s missing Email" % (pkgdir + "/metadata.xml")
 				add_logs(self._session, log_msg, "qa", self._config_id)
-				attDict['metadata_xml_email'] = False
+		attDict['git_log_pkg_text'] = self.get_git_log_pkg_text(repodir, cp)
 		attDict['metadata_xml_descriptions'] = ''
 		package_metadataDict[package_id] = attDict
 		return package_metadataDict
