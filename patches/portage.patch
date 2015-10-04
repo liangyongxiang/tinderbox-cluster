@@ -288,7 +288,7 @@
  		self._status_display.running = self._jobs
  		self._schedule()
 --- a/pym/tbc/repoman/main.py	2015-09-22 02:20:41.000000000 +0200
-+++ b/pym//tbc/repoman/main.py	2015-10-04 20:21:57.586494104 +0200
++++ b/pym/tbc/repoman/main.py	2015-10-04 20:21:57.586494104 +0200
 @@ -45,8 +45,9 @@ bad = create_color_func("BAD")
  os.umask(0o22)
  
