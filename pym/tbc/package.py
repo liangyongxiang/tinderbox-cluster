@@ -109,7 +109,7 @@ class tbc_package(object):
 			add_logs(self._session, log_msg, "info", self._config_id)
 			git_commit = '0'
 		else:
-			git_commit = self.get_git_log_ebuild(repodir, ebuild_file):
+			git_commit = self.get_git_log_ebuild(repodir, ebuild_file)
 
 		# Get the ebuild metadata
 		ebuild_version_metadata_tree = self.get_ebuild_metadata(cpv, repo)
