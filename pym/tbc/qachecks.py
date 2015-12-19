@@ -15,7 +15,7 @@ from portage.exception import DigestException, FileNotFound, ParseError, Permiss
 from _emerge.Package import Package
 from _emerge.RootConfig import RootConfig
 from repoman.checks.ebuilds.checks import run_checks
-from tbc.repoman.main import repoman_main
+from tbc.repoman import repoman_main
 from tbc.sqlquerys import get_configmetadata_info, get_config_info, get_setup_info
 import portage
 

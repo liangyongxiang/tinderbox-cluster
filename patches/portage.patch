@@ -12,7 +12,7 @@
 	We copy Scheduler.py from portage and patch it.
 	Fix so we can use add_buildlog_main()
 	We use add_buildlog_main() for loging.
-	* tbc/pym/repoman/main.py
+	* tbc/pym/repoman.py
 	We add config_root pkdir and remove action
 
 --- a/pym/tbc/actions.py	2013-03-22 17:57:23.000000000 +0100
@@ -209,7 +209,7 @@
  		args = sys.argv[1:]
  
  	args = portage._decode_argv(args)
-+	
++
 +	if build_dict is None:
 +		build_dict = {}
  
@@ -287,8 +287,8 @@
  		self._jobs -= 1
  		self._status_display.running = self._jobs
  		self._schedule()
---- a/pym/tbc/repoman/main.py	2015-09-22 02:20:41.000000000 +0200
-+++ b/pym/tbc/repoman/main.py	2015-10-04 20:21:57.586494104 +0200
+--- a/pym/tbc/repoman.py	2015-09-22 02:20:41.000000000 +0200
++++ b/pym/tbc/repoman.py	2015-10-04 20:21:57.586494104 +0200
 @@ -45,8 +45,9 @@ bad = create_color_func("BAD")
  os.umask(0o22)
  
