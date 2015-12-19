@@ -295,7 +295,7 @@
  
 -def repoman_main(argv):
 -	config_root = os.environ.get("PORTAGE_CONFIGROOT")
-+def repoman_main:(argv, config_root=None, pkgdir=None):
++def repoman_main(argv, config_root=None, pkgdir=None):
 +	if config_root is None:
 +		config_root = os.environ.get("PORTAGE_CONFIGROOT")
  	repoman_settings = portage.config(config_root=config_root, local_config=False)
