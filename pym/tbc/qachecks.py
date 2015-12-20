@@ -22,10 +22,6 @@ import portage
 def check_file_in_manifest(pkgdir, mysettings, portdb, cpv, build_use_flags_list, repo):
 	myfetchlistdict = portage.FetchlistDict(pkgdir, mysettings, portdb)
 	my_manifest = portage.Manifest(pkgdir, mysettings['DISTDIR'], fetchlist_dict=myfetchlistdict, manifest1_compat=False, from_scratch=False)
-	ebuild_version = portage.versions.cpv_getversion(cpv)
-	package = portage.versions.cpv_getkey(cpv).split("/")[1]
-	if my_manifest.findFile(package + "-" + ebuild_version + ".ebuild") is None:
-		return "Ebuild file not found.\n"
 	tree = portdb.getRepositoryPath(repo)
 	cpv_fetchmap = portdb.getFetchMap(cpv, useflags=build_use_flags_list, mytree=tree)
 	mysettings.unlock()
@@ -37,12 +33,12 @@ def check_file_in_manifest(pkgdir, mysettings, portdb, cpv, build_use_flags_list
 	finally:
 		mysettings.lock()
 	try:
-		my_manifest.checkCpvHashes(cpv, checkDistfiles=True, onlyDistfiles=False, checkMiscfiles=True)
+		my_manifest.checkCpvHashes(cpv, checkDistfiles=True, onlyDistfiles=True, checkMiscfiles=False)
 	except:
 		return "Can't fetch the file or the hash failed.\n"
 	try:
 		portdb.fetch_check(cpv, useflags=build_use_flags_list, mysettings=mysettings, all=False)
-	except:	
+	except:
 		return "Fetch check failed.\n"
 	return
 
