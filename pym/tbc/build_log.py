@@ -19,7 +19,7 @@ from _emerge.main import parse_opts
 portage.proxy.lazyimport.lazyimport(globals(),
 	'tbc.actions:action_info,load_emerge_config',
 )
-
+from tbc.irk import send_irk
 from tbc.qachecks import check_repoman, repoman_full
 from tbc.text import get_log_text_dict
 from tbc.readconf import read_config_settings
@@ -301,6 +301,11 @@ def add_buildlog_main(settings, pkg, trees):
 		log_msg = "Package: %s:%s is logged." % (pkg.cpv, pkg.repo,)
 		add_logs(session, log_msg, "info", config_id)
 		print("\n>>> Logging %s:%s\n" % (pkg.cpv, pkg.repo,))
+		if build_log_dict['fail']:
+			msg = "Package: %s Repo: %s FAILD Weblink http://foo.gg.oo/buildpackage/%s\n" % (pkg.cpv, pkg.repo, log_id,)
+		else:
+			msg = "Package: %s Repo: %s PASS Weblink http://foo.gg.oo/buildpackage/%s\n" % (pkg.cpv, pkg.repo, log_id,)
+		send_irk(msg)
 	session.close
 
 def log_fail_queru(session, build_dict, settings):
