@@ -3,9 +3,9 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jul 21, 2015 at 03:29 PM
--- Server version: 10.0.15-MariaDB-log
--- PHP Version: 5.6.10-pl0-gentoo
+-- Generation Time: Dec 27, 2015 at 10:25 PM
+-- Server version: 10.0.22-MariaDB-log
+-- PHP Version: 5.6.16-pl0-gentoo
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
@@ -31,9 +31,9 @@ BEGIN
   DECLARE in_job_id INT;
   SET in_config_id = (SELECT config_id
     FROM configs WHERE default_config = True);
-  SET in_job_id = (SELECT job_id FROM jobs 
+  SET in_job_id = (SELECT job_id FROM jobs
     WHERE job_type = 'esync'
-    AND config_id = in_config_id 
+    AND config_id = in_config_id
     AND status = 'Done'
     LIMIT 1);
   IF in_job_id >= 1 THEN
@@ -111,8 +111,6 @@ CREATE TABLE IF NOT EXISTS `build_logs` (
 `build_log_id` int(11) NOT NULL,
   `ebuild_id` int(11) NOT NULL,
   `fail` tinyint(1) NOT NULL DEFAULT '0',
-  `rmqa` tinyint(1) NOT NULL,
-  `others` tinyint(1) NOT NULL,
   `summery_text` longtext NOT NULL,
   `log_hash` varchar(100) NOT NULL,
   `bug_id` int(10) NOT NULL DEFAULT '0',
@@ -320,7 +318,8 @@ CREATE TABLE IF NOT EXISTS `ebuilds_keywords` (
 CREATE TABLE IF NOT EXISTS `ebuilds_metadata` (
 `id` int(11) NOT NULL,
   `ebuild_id` int(11) NOT NULL,
-  `revision` varchar(10) NOT NULL COMMENT 'CVS revision',
+  `commit` varchar(100) NOT NULL COMMENT 'Git commit',
+  `New` tinyint(1) NOT NULL,
   `descriptions` varchar(200) NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
@@ -487,9 +486,22 @@ CREATE TABLE IF NOT EXISTS `packages_emails` (
 CREATE TABLE IF NOT EXISTS `packages_metadata` (
 `id` int(11) NOT NULL,
   `package_id` int(11) NOT NULL,
-  `checksum` varchar(100) NOT NULL,
-  `checksum_chlog` varchar(100) NOT NULL,
-  `changlog` text NOT NULL
+  `gitlog` text NOT NULL,
+  `descriptions` text NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `packages_repoman`
+--
+
+CREATE TABLE IF NOT EXISTS `packages_repoman` (
+`id` int(11) NOT NULL,
+  `package_id` int(11) NOT NULL,
+  `repoman_hash` varchar(100) NOT NULL,
+  `repoman_text` text NOT NULL,
+  `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -665,7 +677,7 @@ ALTER TABLE `ebuilds_metadata`
 -- Indexes for table `ebuilds_restrictions`
 --
 ALTER TABLE `ebuilds_restrictions`
- ADD PRIMARY KEY (`id`), ADD KEY `ebuild_id` (`ebuild_id`), ADD KEY `restriction_id` (`restriction_id`);
+ ADD PRIMARY KEY (`id`), ADD KEY `restriction_id` (`restriction_id`), ADD KEY `ebuild_id` (`ebuild_id`);
 
 --
 -- Indexes for table `emails`
@@ -738,6 +750,12 @@ ALTER TABLE `packages_emails`
 --
 ALTER TABLE `packages_metadata`
  ADD PRIMARY KEY (`id`), ADD KEY `package_id` (`package_id`);
+
+--
+-- Indexes for table `packages_repoman`
+--
+ALTER TABLE `packages_repoman`
+ ADD PRIMARY KEY (`id`);
 
 --
 -- Indexes for table `repos`
@@ -933,6 +951,11 @@ MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `packages_metadata`
 MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
+-- AUTO_INCREMENT for table `packages_repoman`
+--
+ALTER TABLE `packages_repoman`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+--
 -- AUTO_INCREMENT for table `repos`
 --
 ALTER TABLE `repos`
@@ -956,7 +979,8 @@ DELIMITER $$
 --
 -- Events
 --
-CREATE DEFINER=`tbc`@`localhost` EVENT `add_esync_jobs` ON SCHEDULE EVERY 30 MINUTE STARTS '2012-12-23 17:15:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
+CREATE DEFINER=`tbc`@`localhost` EVENT `add_esync_jobs` ON SCHEDULE EVERY 30 MINUTE STARTS '2012-12-23 17:15:13' ON COMPLETION NOT PRESERVE ENABLE DO
+BEGIN
   CALL add_jobs_esync();
 END$$
 
