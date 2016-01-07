@@ -32,25 +32,35 @@ from tbc.sqlquerys import add_logs, get_config_id, get_ebuild_id_db, add_new_bui
 	add_repoman_log
 from sqlalchemy.orm import sessionmaker
 
-def check_repoman_full(session, pkgdir, package_id, config_id):
+def check_repoman_full(session, pkgdir, package_id, config_id, cpv=False):
 	# Check cp with repoman repoman full
 	status = repoman_full(session, pkgdir, config_id)
 	repoman_hash = hashlib.sha256()
-	repoman_log = ""
+	if cpv:
+		element = cpv.split('/')
+		pv = element[1]
 	if status:
+		repoman_dict = {}
 		for k, v in status.items():
-			repoman_line = k + '/n'
-			repoman_hash.update(repoman_line.encode('utf-8'))
-			repoman_log = repoman_log + repoman_line
+			repoman_log2 = []
 			for line in v:
-				repoman_line = line + '/n'
-				repoman_hash.update(repoman_line.encode('utf-8'))
-				repoman_log = repoman_log + repoman_line
-		add_repoman_log(session, package_id, repoman_log, repoman_hash.hexdigest())
-		return repoman_log
-	else:
-		return status
-
+				if not cpv:
+					repoman_log2.append(line)
+				elif cpv and re.search(pv + '.ebuild', line):
+					repoman_log2.append(line)
+			if not repoman_log2 == []:
+				repoman_dict[k] = repoman_log2
+		if not repoman_dict == {}:
+			repoman_log = ""
+			for k, v in repoman_dict.items():
+				repoman_log = repoman_log + k + "\n"
+				repoman_hash.update(k.encode('utf-8'))
+				for line in v:
+					repoman_log = repoman_log + line + "\n"
+					repoman_hash.update(line.encode('utf-8'))
+			add_repoman_log(session, package_id, repoman_log, repoman_hash.hexdigest())
+			return repoman_log
+	return False
 
 def get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg):
 	myportdb = portage.portdbapi(mysettings=settings)
@@ -224,7 +234,7 @@ def get_buildlog_info(session, settings, pkg, build_dict, config_id):
 	categories = element[0]
 	package = element[1]
 	pkgdir = myportdb.getRepositoryPath(build_dict['repo']) + "/" + categories + "/" + package
-	repoman_error_list = check_repoman_full(session, pkgdir, build_dict['package_id'], config_id)
+	repoman_error_list = check_repoman_full(session, pkgdir, build_dict['package_id'], config_id, build_dict['cpv'])
 	build_log_dict = {}
 	build_log_dict['fail'] = False
 	if repoman_error_list:
@@ -301,10 +311,18 @@ def add_buildlog_main(settings, pkg, trees):
 		log_msg = "Package: %s:%s is logged." % (pkg.cpv, pkg.repo,)
 		add_logs(session, log_msg, "info", config_id)
 		print("\n>>> Logging %s:%s\n" % (pkg.cpv, pkg.repo,))
+		build_msg = "BUILD: PASS"
+		qa_msg = "QA: PASS"
+		repoman_msg = "REPOMAN: PASS"
 		if build_log_dict['fail']:
-			msg = "Package: %s Repo: %s FAILD Weblink http://foo.gg.oo/buildpackage/%s\n" % (pkg.cpv, pkg.repo, log_id,)
-		else:
-			msg = "Package: %s Repo: %s PASS Weblink http://foo.gg.oo/buildpackage/%s\n" % (pkg.cpv, pkg.repo, log_id,)
+			for error_id in build_log_dict['summary_error_list']:
+				if error_id == 1:
+					repoman_msg = "REPOMAN: FAILD"
+				elif error_id ==2:
+					qa_msg = "QA: FAILD"
+				else:
+					build_msg = "BUILD: FAILD"
+		msg = "Package: %s Repo: %s %s %s %s Weblink http://foo.gg.oo/buildpackage/%s\n" % (pkg.cpv, pkg.repo, build_msg, repoman_msg, qa_msg, log_id,)
 		send_irk(msg)
 	session.close
 
