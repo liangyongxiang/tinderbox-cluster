@@ -466,7 +466,7 @@ def add_new_package_sql(session, cp, repo):
 	repo_id = RepoInfo.RepoId
 	CategoriesInfo = get_category_info(session, categories)
 	category_id = CategoriesInfo.CategoryId
-	session.add(Packages(Package = package, CategoryId = category_id, RepoId = repo_id, Checksum = '0', Active = True))
+	session.add(Packages(Package = package, CategoryId = category_id, RepoId = repo_id, Active = True))
 	session.commit()
 	PackageInfo = get_package_info(session, categories, package, repo)
 	return PackageInfo.PackageId
@@ -512,9 +512,9 @@ def update_package_metadata(session, package_metadataDict):
 				EmailInfo = update_email_info(session, email)
 				PackagesEmailInfo = update_package_email_info(session, EmailInfo.EmailId, k)
 
-def update_manifest_sql(session, package_id, manifest_checksum_tree):
+def update_mtime_sql(session, package_id, manifest_mtime_tree):
 	PackagesInfo = session.query(Packages).filter_by(PackageId = package_id).one()
-	PackagesInfo.Checksum = manifest_checksum_tree
+	PackagesInfo.Mtime = manifest_mtime_tree
 	session.commit()
 
 def get_package_info_from_package_id(session, package_id):

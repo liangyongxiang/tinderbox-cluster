@@ -84,7 +84,7 @@ class Packages(Base):
 	CategoryId = Column('category_id', Integer, ForeignKey('categories.category_id'))
 	Package = Column('package',String(150))
 	RepoId = Column('repo_id', Integer, ForeignKey('repos.repo_id'))
-	Checksum = Column('checksum', String(100))
+	Mtime = Column('mtime', DateTime, default=0)
 	Active = Column('active', Boolean, default=False)
 	TimeStamp = Column('time_stamp', DateTime, nullable=False, default=datetime.datetime.utcnow)
 	__tablename__ = 'packages'

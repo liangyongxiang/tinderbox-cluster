@@ -15,7 +15,7 @@ from tbc.qachecks import check_repoman
 from tbc.build_log import check_repoman_full
 from tbc.sqlquerys import add_logs, get_package_info, get_config_info, \
 	add_new_build_job, add_new_ebuild_sql, get_ebuild_id_list, add_old_ebuild, \
-	get_package_metadata_sql, update_package_metadata, update_manifest_sql, \
+	get_package_metadata_sql, update_package_metadata, update_mtime_sql, \
 	get_package_info_from_package_id, get_config_all_info, add_new_package_sql, \
 	get_ebuild_checksums, get_ebuild_id_db, get_configmetadata_info, get_setup_info, \
 	get_ebuild_info_ebuild_id, get_ebuild_restrictions, add_old_package
@@ -206,7 +206,7 @@ class tbc_package(object):
 		package_metadataDict[package_id] = attDict
 		return package_metadataDict
 
-	def add_package(self, packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_checksum_tree):
+	def add_package(self, packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_mtime_tree):
 		# Use packageDict to update the db
 		ebuild_id_list = add_new_ebuild_sql(self._session, packageDict)
 
@@ -224,7 +224,7 @@ class tbc_package(object):
 		update_package_metadata(self._session, package_metadataDict)
 
 		# update the cp manifest checksum
-		update_manifest_sql(self._session, package_id, manifest_checksum_tree)
+		update_mtime_sql(self._session, package_id, manifest_mtime_tree)
 
 		# Get the best cpv for the configs and add it to config_cpv_listDict
 		PackageInfo, CategoryInfo, RepoInfo = get_package_info_from_package_id(self._session, package_id)
@@ -240,20 +240,17 @@ class tbc_package(object):
 		# Add the ebuild to the build jobs table if needed
 		self.add_new_build_job_db(ebuild_id_list, packageDict, config_cpv_listDict)
 
-	def get_manifest_checksum_tree(self, pkgdir, cp, repo, mytree):
-		# Get the cp manifest file checksum.
+	def get_manifest_mtime_tree(self, pkgdir, cp, repo, mytree):
+		# Get the cp manifest file mtime.
 		try:
-			manifest_checksum_tree = portage.checksum.sha256hash(pkgdir + "/Manifest")[0]
+			mtime = os.path.getmtime(pkgdir + "/Manifest")
 		except:
-			# Get the package list from the repo
-			package_list_tree =self. _myportdb.cp_all(trees=mytree)
-			if cp in package_list_tree:
-				log_msg = "QA: Can't checksum the Manifest file. :%s:%s" % (cp, repo,)
-				add_logs(self._session, log_msg, "error", self._config_id)
-				log_msg = "C %s:%s ... Fail." % (cp, repo)
-				add_logs(self._session, log_msg, "error", self._config_id)
-			return "0"
-		return manifest_checksum_tree
+			log_msg = "QA: Can't checksum the Manifest file. :%s:%s" % (cp, repo,)
+			add_logs(self._session, log_msg, "error", self._config_id)
+			log_msg = "C %s:%s ... Fail." % (cp, repo)
+			add_logs(self._session, log_msg, "error", self._config_id)
+			return False
+		return datetime.datetime.fromtimestamp(mtime).replace(microsecond=0)
 
 	def add_new_package_db(self, cp, repo):
 		# Add new categories package ebuild to tables package and ebuilds
@@ -267,8 +264,10 @@ class tbc_package(object):
 		mytree = []
 		mytree.append(repodir)
 		pkgdir = repodir + "/" + cp # Get RepoDIR + cp
-		manifest_checksum_tree = self.get_manifest_checksum_tree(pkgdir, cp, repo, mytree)
-
+		manifest_mtime_tree = self.get_manifest_mtime_tree(pkgdir, cp, repo, mytree)
+		if not manifest_mtime_tree:
+			return None
+		
 		package_id = add_new_package_sql(self._session, cp, repo)
 
 		# Check cp with repoman full
@@ -299,7 +298,7 @@ class tbc_package(object):
 				package_metadataDict[package_id]['metadata_xml_descriptions'] = packageDict[cpv]['ebuild_version_descriptions_tree']
 
 		packageDict[cpv]['new'] = True
-		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_checksum_tree)
+		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_mtime_tree)
 		log_msg = "C %s:%s ... Done." % (cp, repo)
 		add_logs(self._session, log_msg, "info", self._config_id)
 
@@ -313,12 +312,28 @@ class tbc_package(object):
 		add_logs(self._session, log_msg, "info", self._config_id)
 		repodir = self._myportdb.getRepositoryPath(repo)
 		pkgdir = repodir + "/" + cp # Get RepoDIR + cp
+		if not os.path.isdir(pkgdir):
+			old_ebuild_id_list = get_ebuild_id_list(self._session, package_id)
+			for ebuild_id in old_ebuild_id_list:
+				EbuildInfo = get_ebuild_info_ebuild_id(self._session, ebuild_id)
+				cpv = cp + "-" + EbuildInfo.Version
+				# R =  remove ebuild
+				log_msg = "R %s:%s" % (cpv, repo,)
+				add_logs(self._session, log_msg, "info", self._config_id)
+			add_old_ebuild(self._session, old_ebuild_id_list)
+			add_old_package(self._session, package_id)
+			log_msg = "C %s:%s ... Done." % (cp, repo)
+			add_logs(self._session, log_msg, "info", self._config_id)
+			return None
+		
 		mytree = []
 		mytree.append(repodir)
-		manifest_checksum_tree = self.get_manifest_checksum_tree(pkgdir, cp, repo, mytree)
+		manifest_mtime_tree = self.get_manifest_checksum_tree(pkgdir, cp, repo, mytree)
+		if not manifest_mtime_tree:
+			return None
 
-		# if we NOT have the same checksum in the db update the package
-		if manifest_checksum_tree != PackageInfo.Checksum:
+		# if we NOT have the same mtime in the db update the package
+		if PackageInfo.Mtime is None or manifest_mtime_tree > PackageInfo.Mtime:
 
 			# U = Update
 			log_msg = "U %s:%s" % (cp, repo)
@@ -328,25 +343,11 @@ class tbc_package(object):
 			old_ebuild_id_list = []
 			ebuild_list_tree = self._myportdb.cp_list(cp, use_cache=1, mytree=mytree)
 			if ebuild_list_tree == []:
-				if manifest_checksum_tree == "0":
-					old_ebuild_id_list = get_ebuild_id_list(self._session, package_id)
-					for ebuild_id in old_ebuild_id_list:
-						EbuildInfo = get_ebuild_info_ebuild_id(self._session, ebuild_id)
-						cpv = cp + "-" + EbuildInfo.Version
-						# R =  remove ebuild
-						log_msg = "R %s:%s" % (cpv, repo,)
-						add_logs(self._session, log_msg, "info", self._config_id)
-						if not os.path.isdir(pkgdir):
-							add_old_package(self._session, package_id)
-					add_old_ebuild(self._session, old_ebuild_id_list)
-					log_msg = "C %s:%s ... Done." % (cp, repo)
-					add_logs(self._session, log_msg, "info", self._config_id)
-				else:
-					log_msg = "QA: Can't get the ebuilds list. %s:%s" % (cp, repo,)
-					add_logs(self._session, log_msg, "info", self._config_id)
-					log_msg = "C %s:%s ... Fail." % (cp, repo)
-					add_logs(self._session, log_msg, "info", self._config_id)
-				return
+				log_msg = "QA: Can't get the ebuilds list. %s:%s" % (cp, repo,)
+				add_logs(self._session, log_msg, "info", self._config_id)
+				log_msg = "C %s:%s ... Fail." % (cp, repo)
+				add_logs(self._session, log_msg, "info", self._config_id)
+				return None
 
 			# Check cp with repoman full
 			status = check_repoman_full(self._session, pkgdir, package_id, self._config_id)
@@ -403,7 +404,7 @@ class tbc_package(object):
 					del packageDict[cpv]
 					ebuild_id , status = get_ebuild_id_db(self._session, ebuild_version_checksum_tree, package_id)
 					new_ebuild_id_list.append(ebuild_id)
-			self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_checksum_tree)
+			self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_mtime_tree)
 
 		log_msg = "C %s:%s ... Done." % (cp, repo)
 		add_logs(self._session, log_msg, "info", self._config_id)
