@@ -44,7 +44,7 @@
  
  	if '--usepkgonly' not in myopts:
  		old_tree_timestamp_warn(settings['PORTDIR'], settings)
-@@ -312,16 +314,10 @@ def action_build(settings, trees, mtimed
+@@ -319,20 +319,14 @@ def action_build(settings, trees, mtimed
  			print(darkgreen("emerge: It seems we have nothing to resume..."))
  			return os.EX_OK
  
@@ -57,6 +57,10 @@
 -			return 1
 +		success, settings, trees, mtimedb, mydepgraph = build_mydepgraph(settings,
 +			trees, mtimedb, myopts, myparams, myaction, myfiles, spinner, build_dict, session)
+ 
+ 		if "--autounmask-only" in myopts:
+ 			mydepgraph.display_problems()
+ 			return 0
  
  		if not success:
 -			mydepgraph.display_problems()
