@@ -11,19 +11,20 @@ import portage
 from portage.xml.metadata import MetaDataXML
 from sqlalchemy.orm import scoped_session, sessionmaker
 from tbc.ConnectionManager import NewConnection
-from tbc.sqlquerys import add_logs, get_package_info, update_repo_db, \
+from tbc.sqlquerys import get_package_info, update_repo_db, \
 	update_categories_db, get_configmetadata_info, get_config_all_info, add_new_build_job, \
 	get_config_info, get_setup_info
 from tbc.check_setup import check_make_conf
 from tbc.package import tbc_package
 # Get the options from the config file tbc.conf
 from tbc.readconf import  read_config_settings
+from tbc.log import write_log
 
 def init_portage_settings(session, config_id):
 	# check config setup
 	check_make_conf(session, config_id)
 	log_msg = "Check configs done"
-	add_logs(session, log_msg, "info", config_id)
+	write_log(session, log_msg, "info", config_id, 'updatedb.init_portage_settings')
 
 	# setup default root
 	ConfigsMetaDataInfo = get_configmetadata_info(session, config_id)
@@ -35,7 +36,7 @@ def init_portage_settings(session, config_id):
 	# Set config_root (PORTAGE_CONFIGROOT)  to default_config_root
 	mysettings = portage.config(config_root = default_config_root)
 	log_msg = "Setting default config to: %s" % (host_config,)
-	add_logs(session, log_msg, "info", config_id)
+	write_log(session, log_msg, "info", config_id, 'updatedb.init_portage_settings')
 	return mysettings
 
 def get_categories_metadataDict(pkgdir):
@@ -78,7 +79,7 @@ def update_cpv_db_pool(mysettings, myportdb, cp, repo, tbc_settings, config_id):
 def update_cpv_db(session, repo_cp_dict, config_id, tbc_settings):
 	GuestBusy = True
 	log_msg = "Waiting for Guest to be idel"
-	add_logs(session, log_msg, "info", config_id)
+	write_log(session, log_msg, "info", config_id, 'updatedb.update_cpv_db')
 	guestid_list = []
 	for config in get_config_all_info(session):
 		if not config.Host:
@@ -93,7 +94,7 @@ def update_cpv_db(session, repo_cp_dict, config_id, tbc_settings):
 		time.sleep(30)
 
 	log_msg = "Checking categories, package, ebuilds"
-	add_logs(session, log_msg, "info", config_id)
+	write_log(session, log_msg, "info", config_id, 'updatedb.update_cpv_db')
 	new_build_jobs_list = []
 
 	# Setup settings, portdb and pool
@@ -101,8 +102,8 @@ def update_cpv_db(session, repo_cp_dict, config_id, tbc_settings):
 	myportdb = portage.portdbapi(mysettings=mysettings)
 	
 	# Use all cores when multiprocessing
-	pool_cores = multiprocessing.cpu_count()
-	pool = multiprocessing.Pool(processes = pool_cores)
+	#pool_cores = multiprocessing.cpu_count()
+	#pool = multiprocessing.Pool(processes = pool_cores)
 
 	# Get packages and repo
 	if repo_cp_dict is None:
@@ -147,7 +148,7 @@ def update_cpv_db(session, repo_cp_dict, config_id, tbc_settings):
 	# pool.close()
 	# pool.join()
 	log_msg = "Checking categories, package and ebuilds ... done"
-	add_logs(session, log_msg, "info", config_id)
+	write_log(session, log_msg, "info", config_id, 'updatedb.update_cpv_db')
 
 def update_db_main(session, repo_cp_dict, config_id):
 	# Main
@@ -156,10 +157,10 @@ def update_db_main(session, repo_cp_dict, config_id):
 	# Logging
 	tbc_settings = read_config_settings()
 	log_msg = "Update db started."
-	add_logs(session, log_msg, "info", config_id)
+	write_log(session, log_msg, "info", config_id, 'updatedb.update_db_main')
 
 	# Update the cpv db
 	update_cpv_db(session, repo_cp_dict, config_id, tbc_settings)
 	log_msg = "Update db ... Done."
-	add_logs(session, log_msg, "info", config_id)
+	write_log(session, log_msg, "info", config_id, 'updatedb.update_db_main')
 	return True

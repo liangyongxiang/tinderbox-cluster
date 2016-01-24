@@ -1,15 +1,16 @@
-#!/usr/bin/python
+#!/usr/bin/python3.4
 #
-# Copyright 1998-2015 Gentoo Foundation
+# Copyright 1998-2016 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 from __future__ import print_function
 from tbc.readconf import read_config_settings
 from tbc.ConnectionManager import NewConnection
-from tbc.sqlquerys import add_logs, get_config_id_fqdn, check_host_updatedb, update_deamon_status
+from tbc.sqlquerys import get_config_id_fqdn, check_host_updatedb, update_deamon_status
 from tbc.check_setup import check_configure_guest
 from tbc.build_job import build_job_action
 from tbc.jobs import jobs_main
+from tbc.log import setup_logger, write_log
 from sqlalchemy.orm import sessionmaker
 import portage
 import sys
@@ -19,11 +20,18 @@ import time
 def main():
 	repeat = True
 	tbc_settings = read_config_settings()
+
+	# setupt the logger
+	logger = setup_logger(tbc_settings):
+
 	Session = sessionmaker(bind=NewConnection(tbc_settings))
 	session = Session()
 	config_id = get_config_id_fqdn(session, tbc_settings['hostname'])
-	add_logs(session, "Job and build deamon started.", "info", config_id)
-	update_deamon_status(session, 'Waiting', config_id)
+	write_log(session, "Job and build deamon started.", "info", config_id, 'main')
+	Status = 'Waiting'
+	update_deamon_status(session, Status, config_id)
+	msg = 'Status: %s Host: %s' % (Status, tbc_settings['hostname'],)
+	write_log(session, msg, "info", config_id, 'main')
 	init_build_job = build_job_action(config_id, session)
 	while repeat:
 		jobs_main(session, config_id)
@@ -31,10 +39,16 @@ def main():
 			time.sleep(60)
 			continue
 		else:
-			update_deamon_status(session, 'Runing', config_id)
+			Status = 'Runing'
+			update_deamon_status(session, Status, config_id)
+			msg = 'Status: %s Host: %s' % (Status, tbc_settings['hostname'],)
+			write_log(session, msg, "info", config_id, 'main')
 			init_build_job.procces_build_jobs()
-			time.sleep(5)
-			update_deamon_status(session, 'Waiting', config_id)
+			Status = 'Waiting'
+			update_deamon_status(session, Status, config_id)
+			msg = 'Status: %s Host: %s' % (Status, tbc_settings['hostname'],)
+			write_log(session, msg, "info", config_id, 'main')
+			time.sleep(60)
 	conn.close
 
 if __name__ == "__main__":

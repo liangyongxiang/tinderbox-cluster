@@ -1,4 +1,4 @@
-# Copyright 1998-2015 Gentoo Foundation
+# Copyright 1998-2016 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 from __future__ import print_function
@@ -6,6 +6,7 @@ import re
 import os
 import platform
 import hashlib
+import logging
 
 from portage.versions import catpkgsplit, cpv_getversion
 import portage
@@ -25,15 +26,18 @@ from tbc.text import get_log_text_dict
 from tbc.readconf import read_config_settings
 from tbc.flags import tbc_use_flags
 from tbc.ConnectionManager import NewConnection
-from tbc.sqlquerys import add_logs, get_config_id, get_ebuild_id_db, add_new_buildlog, \
+from tbc.sqlquerys import get_config_id, get_ebuild_id_db, add_new_buildlog, \
 	get_package_info, get_build_job_id, get_use_id, get_config_info, get_hilight_info, get_error_info_list, \
 	add_e_info, get_fail_times, add_fail_times, update_fail_times, del_old_build_jobs, add_old_ebuild, \
 	update_buildjobs_status, update_mtime_sql, add_repoman_qa, get_config_id_fqdn, get_setup_info, \
 	add_repoman_log
+from tbc.log import write_log
+
 from sqlalchemy.orm import sessionmaker
 
 def check_repoman_full(session, pkgdir, package_id, config_id, cpv=False):
 	# Check cp with repoman repoman full
+	write_log(session, 'Repoman Check', "info", config_id, 'build_log.check_repoman_full')
 	status = repoman_full(session, pkgdir, config_id)
 	repoman_hash = hashlib.sha256()
 	if cpv:
@@ -59,7 +63,9 @@ def check_repoman_full(session, pkgdir, package_id, config_id, cpv=False):
 					repoman_log = repoman_log + line + "\n"
 					repoman_hash.update(line.encode('utf-8'))
 			add_repoman_log(session, package_id, repoman_log, repoman_hash.hexdigest())
+			write_log(session, 'Repoman Check Fail\n' + repoman_log, "warning", config_id, 'build_log.check_repoman_full')
 			return repoman_log
+	write_log(session, 'Repoman Check Pass', "info", config_id, 'build_log.check_repoman_full')
 	return False
 
 def get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg):
@@ -281,7 +287,7 @@ def add_buildlog_main(settings, pkg, trees):
 		build_dict = get_build_dict_db(session, config_id, settings, tbc_settings, pkg)
 	if build_dict is None:
 		log_msg = "Package %s:%s is NOT logged." % (pkg.cpv, pkg.repo,)
-		add_logs(session, log_msg, "info", config_id)
+		write_log(session, log_msg, "info", config_id, 'build_log.add_buildlog_main')
 		session.close
 		return
 	build_log_dict = {}
@@ -298,19 +304,18 @@ def add_buildlog_main(settings, pkg, trees):
 	build_log_dict['log_hash'] = log_hash.hexdigest()
 	build_log_dict['logfilename'] = settings.get("PORTAGE_LOG_FILE").split(host_config)[1]
 	log_msg = "Logfile name: %s" % (settings.get("PORTAGE_LOG_FILE"),)
-	add_logs(session, log_msg, "info", config_id)
+        write_log(session, log_msg, "info", config_id, 'build_log.add_buildlog_main')
 	build_log_dict['emerge_info'] = get_emerge_info_id(settings, trees, session, config_id)
 	log_id = add_new_buildlog(session, build_dict, build_log_dict)
 
 	if log_id is None:
 		log_msg = "Package %s:%s is NOT logged." % (pkg.cpv, pkg.repo,)
-		add_logs(session, log_msg, "info", config_id)
+		write_log(session, log_msg, "info", config_id, 'build_log.add_buildlog_main')
 	else:
 		add_repoman_qa(session, build_log_dict, log_id)
 		os.chmod(settings.get("PORTAGE_LOG_FILE"), 0o664)
 		log_msg = "Package: %s:%s is logged." % (pkg.cpv, pkg.repo,)
-		add_logs(session, log_msg, "info", config_id)
-		print("\n>>> Logging %s:%s\n" % (pkg.cpv, pkg.repo,))
+		write_log(session, log_msg, "info", config_id, 'build_log.add_buildlog_main')
 		build_msg = "BUILD: PASS"
 		qa_msg = "QA: PASS"
 		repoman_msg = "REPOMAN: PASS"
@@ -322,7 +327,8 @@ def add_buildlog_main(settings, pkg, trees):
 					qa_msg = "QA: FAILD"
 				else:
 					build_msg = "BUILD: FAILD"
-		msg = "Package: %s Repo: %s %s %s %s Weblink http://foo.gg.oo/new/logs/build/%s\n" % (pkg.cpv, pkg.repo, build_msg, repoman_msg, qa_msg, log_id,)
+		msg = "Package: %s Repo: %s %s %s %s Weblink http://77.110.8.67/new/logs/build/%s\n" % (pkg.cpv, pkg.repo, build_msg, repoman_msg, qa_msg, log_id,)
+		write_log(session, msg, "info", config_id, 'build_log.add_buildlog_main')
 		send_irk(msg)
 	session.close
 

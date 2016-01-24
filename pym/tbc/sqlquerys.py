@@ -1,4 +1,4 @@
-# Copyright 1998-2015 Gentoo Foundation
+# Copyright 1998-2016 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 from __future__ import print_function
@@ -10,6 +10,7 @@ from tbc.db_mapping import Configs, Logs, ConfigsMetaData, Jobs, BuildJobs, Pack
 	BuildJobsEmergeOptions, EbuildsMetadata, EbuildsIUse, Restrictions, EbuildsRestrictions, EbuildsKeywords, \
 	Keywords, PackagesMetadata, Emails, PackagesEmails, Setups, BuildLogsRepomanQa, CategoriesMetadata, \
 	PackagesRepoman
+from tbc.log import write_log
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy import and_, or_
 
@@ -83,8 +84,6 @@ def get_packages_to_build(session, config_id):
 	elif BuildJobsTmp.filter_by(BuildNow = False).all() != []:
 		BuildJobsInfo = BuildJobsTmp.filter_by(BuildNow = False).first()
 	else:
-		log_msg = "BuildJobsTmp found job but the if state mant did not."
-		add_zobcs_logs(session, log_msg, "error", config_id)
 		return None
 	update_buildjobs_status(session, BuildJobsInfo.BuildJobId, 'Looked', config_id)
 	EbuildsInfo = session.query(Ebuilds).filter_by(EbuildId = BuildJobsInfo.EbuildId).one()
@@ -219,6 +218,8 @@ def add_new_buildlog(session, build_dict, build_log_dict):
 			else:
 				for use in use_list:
 					useflagsdict[use.UseId] = use.Status
+			msg = 'Log_hash: %s Log_hash_sql: %s Build_log_id: %s' % (build_log_dict['log_hash'], log_hash[0], build_log_id,)
+			write_log(session, msg, "debug", build_dict['config_id'], 'sqlquerys.add_new_buildlog.build_log_id_match')
 			if log_hash[0] == build_log_dict['log_hash'] and build_dict['build_useflags'] == useflagsdict:
 				if session.query(BuildLogsConfig).filter(BuildLogsConfig.ConfigId.in_([build_dict['config_id']])).filter_by(BuildLogId = build_log_id[0]):
 					return None, True
@@ -255,6 +256,8 @@ def add_new_buildlog(session, build_dict, build_log_dict):
 			session.commit()
 		return build_log_id
 
+	msg = 'build_job_id: %s build_log_id_list: %s' % (build_dict['build_job_id'], build_log_id_list,)
+	write_log(session, msg, "debug", build_dict['config_id'], 'sqlquerys.add_new_buildlog')
 	if build_dict['build_job_id'] is None and build_log_id_list == []:
 		build_log_id = build_log_id_no_match(build_dict, build_log_dict)
 		return build_log_id
