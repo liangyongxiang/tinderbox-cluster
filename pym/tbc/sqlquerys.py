@@ -422,7 +422,7 @@ def add_new_ebuild_sql(session, packageDict):
 			except (MultipleResultsFound) as e:
 				# FIXME
 				sys.exit()
-		session.add(EbuildsMetadata(EbuildId = EbuildInfo.EbuildId, Revision = v['ebuild_version_revision_tree'], Descriptions = v['ebuild_version_descriptions_tree']))
+		session.add(EbuildsMetadata(EbuildId = EbuildInfo.EbuildId, Commit = v['git_commit'], Descriptions = v['ebuild_version_descriptions_tree']))
 		session.commit()
 		ebuild_id_list.append(EbuildInfo.EbuildId)
 		restrictions = []

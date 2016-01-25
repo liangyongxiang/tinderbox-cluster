@@ -304,7 +304,7 @@ def add_buildlog_main(settings, pkg, trees):
 	build_log_dict['log_hash'] = log_hash.hexdigest()
 	build_log_dict['logfilename'] = settings.get("PORTAGE_LOG_FILE").split(host_config)[1]
 	log_msg = "Logfile name: %s" % (settings.get("PORTAGE_LOG_FILE"),)
-        write_log(session, log_msg, "info", config_id, 'build_log.add_buildlog_main')
+	write_log(session, log_msg, "info", config_id, 'build_log.add_buildlog_main')
 	build_log_dict['emerge_info'] = get_emerge_info_id(settings, trees, session, config_id)
 	log_id = add_new_buildlog(session, build_dict, build_log_dict)
 

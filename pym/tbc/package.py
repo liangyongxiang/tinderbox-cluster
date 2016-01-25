@@ -7,6 +7,7 @@ import hashlib
 import os
 import git
 import portage
+import datetime
 from portage.xml.metadata import MetaDataXML
 from tbc.flags import tbc_use_flags
 from tbc.text import get_ebuild_cvs_revision, get_log_text_dict
@@ -83,6 +84,7 @@ class tbc_package(object):
 				if ebuild_auxdb_list[i] == '':
 					ebuild_auxdb_list[i] = ''
 			return ebuild_auxdb_list
+
 	def get_git_log_ebuild(self, repodir, ebuild_file):
 		git_log_ebuild = ''
 		g = git.Git(repodir)
@@ -105,11 +107,12 @@ class tbc_package(object):
 		except:
 			ebuild_version_checksum_tree = "0"
 			log_msg = "QA: Can't checksum the ebuild file. %s on repo %s" % (cpv, repo,)
-			write_log(session, log_msg, "warning", config_id, 'packages.get_packageDict')
+			write_log(self._session, log_msg, "warning", self._config_id, 'packages.get_packageDict')
 			log_msg = "C %s:%s ... Fail." % (cpv, repo)
-			write_log(session, log_msg, "info", config_id, 'packages.get_packageDict')
+			write_log(self._session, log_msg, "info", self._config_id, 'packages.get_packageDict')
 			git_commit = '0'
 		else:
+			repodir =self._ myportdb.getRepositoryPath(repo)
 			git_commit = self.get_git_log_ebuild(repodir, ebuild_file)
 
 		# Get the ebuild metadata
@@ -119,7 +122,7 @@ class tbc_package(object):
 		# so it can be updated next time we update the db
 		if not ebuild_version_metadata_tree:
 			log_msg = " QA: %s have broken metadata on repo %s" % (cpv, repo)
-			write_log(session, log_msg, "warning", config_id, 'packages.get_packageDict')
+			write_log(self._session, log_msg, "warning", self._config_id, 'packages.get_packageDict')
 			ebuild_version_metadata_tree = ['','','','','','','','','','','','','','','','','','','','','','','','','']
 			ebuild_version_checksum_tree = '0'
 
@@ -168,17 +171,17 @@ class tbc_package(object):
 						# B = Build cpv use-flags config
 						# FIXME log_msg need a fix to log the use flags corect.
 						log_msg = "B %s:%s USE: %s Setup: %s" % (k, v['repo'], use_flagsDict, setup_id,)
-						write_log(session, log_msg, "info", config_id, 'packages.add_new_build_job_db')
+						write_log(self._session, log_msg, "info", self._config_id, 'packages.add_new_build_job_db')
 					i = i +1
 
-	def get_git_log_pkg_text(self, repodir, cp):
+	def get_git_changelog_text(self, repodir, cp):
 		n = '5'
 		git_log_pkg = ''
 		g = git.Git(repodir)
 		git_log_pkg = g.log('-n ' + n, '--grep=' + cp)
 		return git_log_pkg
 
-	def get_package_metadataDict(self, pkgdir, package_id):
+	def get_package_metadataDict(self, pkgdir, repodir, package_id, cp):
 		# Make package_metadataDict
 		attDict = {}
 		package_metadataDict = {}
@@ -189,7 +192,7 @@ class tbc_package(object):
 			pkg_md = MetaDataXML(pkgdir + "/metadata.xml", herd)
 		except:
 			log_msg = "Metadata file %s is missing or has errors" % (pkgdir + "/metadata.xml")
-			write_log(session, log_msg, "warning", config_id, 'packages.get_package_metadataDict')
+			write_log(self._session, log_msg, "warning", self._config_id, 'packages.get_package_metadataDict')
 		else:
 			tmp_herds = pkg_md.herds()
 			if tmp_herds != ():
@@ -201,8 +204,8 @@ class tbc_package(object):
 				attDict['metadata_xml_email'] = md_email_list
 			else:
 				log_msg = "Metadata file %s missing Email" % (pkgdir + "/metadata.xml")
-				write_log(session, log_msg, "warning", config_id, 'packages.get_package_metadataDict')
-		attDict['git_log_pkg_text'] = self.get_git_log_pkg_text(repodir, cp)
+				write_log(self._session, log_msg, "warning", self._config_id, 'packages.get_package_metadataDict')
+		attDict['git_changlog'] = self.get_git_changelog_text(repodir, cp)
 		attDict['metadata_xml_descriptions'] = ''
 		package_metadataDict[package_id] = attDict
 		return package_metadataDict
@@ -247,9 +250,9 @@ class tbc_package(object):
 			mtime = os.path.getmtime(pkgdir + "/Manifest")
 		except:
 			log_msg = "QA: Can't checksum the Manifest file. :%s:%s" % (cp, repo,)
-			write_log(session, log_msg, "warning", config_id, 'packages.get_manifest_mtime_tree')
+			write_log(self._session, log_msg, "warning", self._config_id, 'packages.get_manifest_mtime_tree')
 			log_msg = "C %s:%s ... Fail." % (cp, repo)
-			write_log(session, log_msg, "warning", config_id, 'packages.get_manifest_mtime_tree')
+			write_log(self._session, log_msg, "warning", self._config_id, 'packages.get_manifest_mtime_tree')
 			return False
 		return datetime.datetime.fromtimestamp(mtime).replace(microsecond=0)
 
@@ -258,9 +261,9 @@ class tbc_package(object):
 		# C = Checking
 		# N = New Package
 		log_msg = "C %s:%s" % (cp, repo)
-		write_log(session, log_msg, "info", config_id, 'packages.add_new_package_db')
+		write_log(self._session, log_msg, "info", self._config_id, 'packages.add_new_package_db')
 		log_msg = "N %s:%s" % (cp, repo)
-		write_log(session, log_msg, "info", config_id, 'packages.add_new_package_db')
+		write_log(self._session, log_msg, "info", self._config_id, 'packages.add_new_package_db')
 		repodir = self._myportdb.getRepositoryPath(repo)
 		mytree = []
 		mytree.append(repodir)
@@ -275,16 +278,16 @@ class tbc_package(object):
 		status = check_repoman_full(self._session, pkgdir, package_id, self._config_id)
 		if status:
 			log_msg = "Repoman %s::%s ... Fail." % (cp, repo)
-			write_log(session, log_msg, "warning", config_id, 'packages.add_new_package_db')
+			write_log(self._session, log_msg, "warning", self._config_id, 'packages.add_new_package_db')
 
-		package_metadataDict = self.get_package_metadataDict(pkgdir, package_id)
+		package_metadataDict = self.get_package_metadataDict(pkgdir, repodir, package_id, cp)
 		# Get the ebuild list for cp
 		ebuild_list_tree = self._myportdb.cp_list(cp, use_cache=1, mytree=mytree)
 		if ebuild_list_tree == []:
 			log_msg = "QA: Can't get the ebuilds list. %s:%s" % (cp, repo,)
-			write_log(session, log_msg, "error", config_id, 'packages.add_new_package_db')
+			write_log(self._session, log_msg, "error", self._config_id, 'packages.add_new_package_db')
 			log_msg = "C %s:%s ... Fail." % (cp, repo)
-			write_log(session, log_msg, "warning", config_id, 'packages.add_new_package_db')
+			write_log(self._session, log_msg, "warning", self._config_id, 'packages.add_new_package_db')
 			return None
 
 		# Make the needed packageDict with ebuild infos so we can add it later to the db.
@@ -301,7 +304,7 @@ class tbc_package(object):
 		packageDict[cpv]['new'] = True
 		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_mtime_tree)
 		log_msg = "C %s:%s ... Done." % (cp, repo)
-		write_log(session, log_msg, "info", config_id, 'packages.add_new_package_db')
+		write_log(self._session, log_msg, "info", self._config_id, 'packages.add_new_package_db')
 
 	def update_package_db(self, package_id):
 		# Update the categories and package with new info
@@ -310,7 +313,7 @@ class tbc_package(object):
 		cp = CategoryInfo.Category + '/' + PackageInfo.Package
 		repo = RepoInfo.Repo
 		log_msg = "C %s:%s" % (cp, repo)
-		write_log(session, log_msg, "info", config_id, 'packages.update_package_db')
+		write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
 		repodir = self._myportdb.getRepositoryPath(repo)
 		pkgdir = repodir + "/" + cp # Get RepoDIR + cp
 		if not os.path.isdir(pkgdir):
@@ -320,16 +323,16 @@ class tbc_package(object):
 				cpv = cp + "-" + EbuildInfo.Version
 				# R =  remove ebuild
 				log_msg = "R %s:%s" % (cpv, repo,)
-				write_log(session, log_msg, "info", config_id, 'packages.update_package_db')
+				write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
 			add_old_ebuild(self._session, old_ebuild_id_list)
 			add_old_package(self._session, package_id)
 			log_msg = "C %s:%s ... Done." % (cp, repo)
-			write_log(session, log_msg, "info", config_id, 'packages.update_package_db')
+			write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
 			return None
 		
 		mytree = []
 		mytree.append(repodir)
-		manifest_mtime_tree = self.get_manifest_checksum_tree(pkgdir, cp, repo, mytree)
+		manifest_mtime_tree = self.get_manifest_mtime_tree(pkgdir, cp, repo, mytree)
 		if not manifest_mtime_tree:
 			return None
 
@@ -338,24 +341,24 @@ class tbc_package(object):
 
 			# U = Update
 			log_msg = "U %s:%s" % (cp, repo)
-			write_log(session, log_msg, "info", config_id, 'packages.update_package_db')
+			write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
 
 			# Get the ebuild list for cp
 			old_ebuild_id_list = []
 			ebuild_list_tree = self._myportdb.cp_list(cp, use_cache=1, mytree=mytree)
 			if ebuild_list_tree == []:
 				log_msg = "QA: Can't get the ebuilds list. %s:%s" % (cp, repo,)
-				write_log(session, log_msg, "error", config_id, 'packages.update_package_db')
+				write_log(self._session, log_msg, "error", self._config_id, 'packages.update_package_db')
 				log_msg = "C %s:%s ... Fail." % (cp, repo)
-				write_log(session, log_msg, "warning", config_id, 'packages.update_package_db')
+				write_log(self._session, log_msg, "warning", self._config_id, 'packages.update_package_db')
 				return None
 
 			# Check cp with repoman full
 			status = check_repoman_full(self._session, pkgdir, package_id, self._config_id)
 			if status:
 				log_msg = "Repoman %s::%s ... Fail." % (cp, repo)
-				write_log(session, log_msg, "warning", config_id, 'packages.update_package_db')
-			package_metadataDict = self.get_package_metadataDict(pkgdir, package_id)
+				write_log(self._session, log_msg, "warning", self._config_id, 'packages.update_package_db')
+			package_metadataDict = self.get_package_metadataDict(pkgdir, repodir, package_id, cp)
 			packageDict ={}
 			new_ebuild_id_list = []
 			for cpv in sorted(ebuild_list_tree):
@@ -383,7 +386,7 @@ class tbc_package(object):
 						ebuilds_id , status = get_ebuild_id_db(self._session, checksum, package_id)
 						for ebuild_id in ebuilds_id:
 							log_msg = "U %s:%s:%s Dups of checksums" % (cpv, repo, ebuild_id,)
-							write_log(session, log_msg, "warning", config_id, 'packages.update_package_db')
+							write_log(self._session, log_msg, "warning", self._config_id, 'packages.update_package_db')
 							dupe_ebuild_id_list.append(ebuild_id)
 					add_old_ebuild(self._session, dupe_ebuild_id_list)
 					ebuild_version_manifest_checksum_db = None
@@ -394,12 +397,12 @@ class tbc_package(object):
 				if ebuild_version_manifest_checksum_db is None:
 					# N = New ebuild
 					log_msg = "N %s:%s" % (cpv, repo,)
-					write_log(session, log_msg, "info", config_id, 'packages.update_package_db')
+					write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
 					packageDict[cpv]['new'] = True
 				elif  ebuild_version_checksum_tree != ebuild_version_manifest_checksum_db:
 					# U = Updated ebuild
 					log_msg = "U %s:%s" % (cpv, repo,)
-					write_log(session, log_msg, "info", config_id, 'packages.update_package_db')
+					write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
 				else:
 					# Remove cpv from packageDict and add ebuild to new ebuils list
 					del packageDict[cpv]
@@ -408,4 +411,4 @@ class tbc_package(object):
 			self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_mtime_tree)
 
 		log_msg = "C %s:%s ... Done." % (cp, repo)
-		write_log(session, log_msg, "info", config_id, 'packages.update_package_db')
+		write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
