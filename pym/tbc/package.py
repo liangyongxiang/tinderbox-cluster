@@ -17,7 +17,7 @@ from tbc.build_log import check_repoman_full
 from tbc.log import write_log
 from tbc.sqlquerys import get_package_info, get_config_info, \
 	add_new_build_job, add_new_ebuild_sql, get_ebuild_id_list, add_old_ebuild, \
-	get_package_metadata_sql, update_package_metadata, update_mtime_sql, \
+	get_package_metadata_sql, update_package_metadata, \
 	get_package_info_from_package_id, get_config_all_info, add_new_package_sql, \
 	get_ebuild_checksums, get_ebuild_id_db, get_configmetadata_info, get_setup_info, \
 	get_ebuild_info_ebuild_id, get_ebuild_restrictions, add_old_package
@@ -210,7 +210,7 @@ class tbc_package(object):
 		package_metadataDict[package_id] = attDict
 		return package_metadataDict
 
-	def add_package(self, packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_mtime_tree):
+	def add_package(self, packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list):
 		# Use packageDict to update the db
 		ebuild_id_list = add_new_ebuild_sql(self._session, packageDict)
 
@@ -227,9 +227,6 @@ class tbc_package(object):
 		# update package metadata
 		update_package_metadata(self._session, package_metadataDict)
 
-		# update the cp manifest checksum
-		update_mtime_sql(self._session, package_id, manifest_mtime_tree)
-
 		# Get the best cpv for the configs and add it to config_cpv_listDict
 		PackageInfo, CategoryInfo, RepoInfo = get_package_info_from_package_id(self._session, package_id)
 		cp = CategoryInfo.Category + '/' + PackageInfo.Package
@@ -244,18 +241,6 @@ class tbc_package(object):
 		# Add the ebuild to the build jobs table if needed
 		self.add_new_build_job_db(ebuild_id_list, packageDict, config_cpv_listDict)
 
-	def get_manifest_mtime_tree(self, pkgdir, cp, repo, mytree):
-		# Get the cp manifest file mtime.
-		try:
-			mtime = os.path.getmtime(pkgdir + "/Manifest")
-		except:
-			log_msg = "QA: Can't checksum the Manifest file. :%s:%s" % (cp, repo,)
-			write_log(self._session, log_msg, "warning", self._config_id, 'packages.get_manifest_mtime_tree')
-			log_msg = "C %s:%s ... Fail." % (cp, repo)
-			write_log(self._session, log_msg, "warning", self._config_id, 'packages.get_manifest_mtime_tree')
-			return False
-		return datetime.datetime.fromtimestamp(mtime).replace(microsecond=0)
-
 	def add_new_package_db(self, cp, repo):
 		# Add new categories package ebuild to tables package and ebuilds
 		# C = Checking
@@ -268,9 +253,6 @@ class tbc_package(object):
 		mytree = []
 		mytree.append(repodir)
 		pkgdir = repodir + "/" + cp # Get RepoDIR + cp
-		manifest_mtime_tree = self.get_manifest_mtime_tree(pkgdir, cp, repo, mytree)
-		if not manifest_mtime_tree:
-			return None
 		
 		package_id = add_new_package_sql(self._session, cp, repo)
 
@@ -332,83 +314,78 @@ class tbc_package(object):
 		
 		mytree = []
 		mytree.append(repodir)
-		manifest_mtime_tree = self.get_manifest_mtime_tree(pkgdir, cp, repo, mytree)
-		if not manifest_mtime_tree:
+
+		# Get the ebuild list for cp
+		old_ebuild_id_list = []
+		ebuild_list_tree = self._myportdb.cp_list(cp, use_cache=1, mytree=mytree)
+		if ebuild_list_tree == []:
+			log_msg = "QA: Can't get the ebuilds list. %s:%s" % (cp, repo,)
+			write_log(self._session, log_msg, "error", self._config_id, 'packages.update_package_db')
+			log_msg = "C %s:%s ... Fail." % (cp, repo)
+			write_log(self._session, log_msg, "warning", self._config_id, 'packages.update_package_db')
 			return None
 
-		# if we NOT have the same mtime in the db update the package
-		if PackageInfo.Mtime is None or manifest_mtime_tree > PackageInfo.Mtime:
+		package_metadataDict = self.get_package_metadataDict(pkgdir, repodir, package_id, cp)
+		packageDict ={}
+		new_ebuild_id_list = []
+		package_updated = False
+		for cpv in sorted(ebuild_list_tree):
 
-			# U = Update
-			log_msg = "U %s:%s" % (cp, repo)
-			write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
+			# split out ebuild version
+			ebuild_version_tree = portage.versions.cpv_getversion(cpv)
 
-			# Get the ebuild list for cp
-			old_ebuild_id_list = []
-			ebuild_list_tree = self._myportdb.cp_list(cp, use_cache=1, mytree=mytree)
-			if ebuild_list_tree == []:
-				log_msg = "QA: Can't get the ebuilds list. %s:%s" % (cp, repo,)
-				write_log(self._session, log_msg, "error", self._config_id, 'packages.update_package_db')
-				log_msg = "C %s:%s ... Fail." % (cp, repo)
-				write_log(self._session, log_msg, "warning", self._config_id, 'packages.update_package_db')
-				return None
+			# Get packageDict for cpv
+			packageDict[cpv] = self.get_packageDict(pkgdir, cpv, repo)
 
+			# take package descriptions from the ebuilds
+			if package_metadataDict[package_id]['metadata_xml_descriptions'] != packageDict[cpv]['ebuild_version_descriptions_tree']:
+				package_metadataDict[package_id]['metadata_xml_descriptions'] = packageDict[cpv]['ebuild_version_descriptions_tree']
+
+			# Get the checksum of the ebuild in tree and db
+			ebuild_version_checksum_tree = packageDict[cpv]['checksum']
+			checksums_db, fail = get_ebuild_checksums(self._session, package_id, ebuild_version_tree)
+
+			# check if we have dupes of the checksum from db
+			if checksums_db is None:
+				ebuild_version_manifest_checksum_db = None
+			elif fail:
+				dupe_ebuild_id_list = []
+				for checksum in checksums_db:
+					ebuilds_id , status = get_ebuild_id_db(self._session, checksum, package_id)
+					for ebuild_id in ebuilds_id:
+						log_msg = "U %s:%s:%s Dups of checksums" % (cpv, repo, ebuild_id,)
+						write_log(self._session, log_msg, "warning", self._config_id, 'packages.update_package_db')
+						dupe_ebuild_id_list.append(ebuild_id)
+				add_old_ebuild(self._session, dupe_ebuild_id_list)
+				ebuild_version_manifest_checksum_db = None
+			else:
+				ebuild_version_manifest_checksum_db = checksums_db
+
+			# Check if the checksum have change
+			if ebuild_version_manifest_checksum_db is None:
+				# N = New ebuild
+				log_msg = "N %s:%s" % (cpv, repo,)
+				write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
+				packageDict[cpv]['new'] = True
+				package_updated = True
+			elif  ebuild_version_checksum_tree != ebuild_version_manifest_checksum_db:
+				# U = Updated ebuild
+				log_msg = "U %s:%s" % (cpv, repo,)
+				write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
+				package_updated = True
+			else:
+				# Remove cpv from packageDict and add ebuild to new ebuils list
+				del packageDict[cpv]
+				ebuild_id , status = get_ebuild_id_db(self._session, ebuild_version_checksum_tree, package_id)
+				new_ebuild_id_list.append(ebuild_id)
+		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_mtime_tree)
+
+		if package_updated:
 			# Check cp with repoman full
 			status = check_repoman_full(self._session, pkgdir, package_id, self._config_id)
 			if status:
 				log_msg = "Repoman %s::%s ... Fail." % (cp, repo)
 				write_log(self._session, log_msg, "warning", self._config_id, 'packages.update_package_db')
-			package_metadataDict = self.get_package_metadataDict(pkgdir, repodir, package_id, cp)
-			packageDict ={}
-			new_ebuild_id_list = []
-			for cpv in sorted(ebuild_list_tree):
-
-				# split out ebuild version
-				ebuild_version_tree = portage.versions.cpv_getversion(cpv)
-
-				# Get packageDict for cpv
-				packageDict[cpv] = self.get_packageDict(pkgdir, cpv, repo)
-
-				# take package descriptions from the ebuilds
-				if package_metadataDict[package_id]['metadata_xml_descriptions'] != packageDict[cpv]['ebuild_version_descriptions_tree']:
-					package_metadataDict[package_id]['metadata_xml_descriptions'] = packageDict[cpv]['ebuild_version_descriptions_tree']
-
-				# Get the checksum of the ebuild in tree and db
-				ebuild_version_checksum_tree = packageDict[cpv]['checksum']
-				checksums_db, fail = get_ebuild_checksums(self._session, package_id, ebuild_version_tree)
-
-				# check if we have dupes of the checksum from db
-				if checksums_db is None:
-					ebuild_version_manifest_checksum_db = None
-				elif fail:
-					dupe_ebuild_id_list = []
-					for checksum in checksums_db:
-						ebuilds_id , status = get_ebuild_id_db(self._session, checksum, package_id)
-						for ebuild_id in ebuilds_id:
-							log_msg = "U %s:%s:%s Dups of checksums" % (cpv, repo, ebuild_id,)
-							write_log(self._session, log_msg, "warning", self._config_id, 'packages.update_package_db')
-							dupe_ebuild_id_list.append(ebuild_id)
-					add_old_ebuild(self._session, dupe_ebuild_id_list)
-					ebuild_version_manifest_checksum_db = None
-				else:
-					ebuild_version_manifest_checksum_db = checksums_db
-
-				# Check if the checksum have change
-				if ebuild_version_manifest_checksum_db is None:
-					# N = New ebuild
-					log_msg = "N %s:%s" % (cpv, repo,)
-					write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
-					packageDict[cpv]['new'] = True
-				elif  ebuild_version_checksum_tree != ebuild_version_manifest_checksum_db:
-					# U = Updated ebuild
-					log_msg = "U %s:%s" % (cpv, repo,)
-					write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
-				else:
-					# Remove cpv from packageDict and add ebuild to new ebuils list
-					del packageDict[cpv]
-					ebuild_id , status = get_ebuild_id_db(self._session, ebuild_version_checksum_tree, package_id)
-					new_ebuild_id_list.append(ebuild_id)
-			self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_mtime_tree)
 
 		log_msg = "C %s:%s ... Done." % (cp, repo)
 		write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')

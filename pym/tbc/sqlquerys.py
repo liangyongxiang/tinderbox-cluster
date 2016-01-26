@@ -515,11 +515,6 @@ def update_package_metadata(session, package_metadataDict):
 				EmailInfo = update_email_info(session, email)
 				PackagesEmailInfo = update_package_email_info(session, EmailInfo.EmailId, k)
 
-def update_mtime_sql(session, package_id, manifest_mtime_tree):
-	PackagesInfo = session.query(Packages).filter_by(PackageId = package_id).one()
-	PackagesInfo.Mtime = manifest_mtime_tree
-	session.commit()
-
 def get_package_info_from_package_id(session, package_id):
 	PackageInfo = session.query(Packages).filter_by(PackageId = package_id).one()
 	CategoryInfo = session.query(Categories).filter_by(CategoryId = PackageInfo.CategoryId).one()

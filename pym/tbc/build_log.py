@@ -29,7 +29,7 @@ from tbc.ConnectionManager import NewConnection
 from tbc.sqlquerys import get_config_id, get_ebuild_id_db, add_new_buildlog, \
 	get_package_info, get_build_job_id, get_use_id, get_config_info, get_hilight_info, get_error_info_list, \
 	add_e_info, get_fail_times, add_fail_times, update_fail_times, del_old_build_jobs, add_old_ebuild, \
-	update_buildjobs_status, update_mtime_sql, add_repoman_qa, get_config_id_fqdn, get_setup_info, \
+	update_buildjobs_status, add_repoman_qa, get_config_id_fqdn, get_setup_info, \
 	add_repoman_log
 from tbc.log import write_log
 
@@ -112,8 +112,7 @@ def get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg):
 	if status:
 		if ebuild_id_list is None:
 			log_msg = "%s:%s Don't have any ebuild_id!" % (pkg.cpv, repo,)
-			add_logs(session, log_msg, "info", config_id)
-			update_mtime_sql(session, build_dict['package_id'], 0)
+			add_logs(session, log_msg, "error", config_id)
 		else:
 			old_ebuild_id_list = []
 			for ebuild_id in ebuild_id_list:

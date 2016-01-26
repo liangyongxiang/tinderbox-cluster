@@ -70,9 +70,10 @@ def git_sync_main(session):
 	except:
 		pass
 
-	# check git diffs witch Manifests get updated and pass that to a dict
+	# check git diffs witch get updated and pass that to a dict
 	# fetch and merge the repo
 	repo_cp_dict = {}
+	search_list = [ '^metadata', '^eclass', '^licenses', '^profiles', '^scripts',]
 	for repo_dir in git_repos_list(myportdb):
 		reponame = myportdb.getRepositoryName(repo_dir)
 		repo = git.Repo(repo_dir)
@@ -82,14 +83,21 @@ def git_sync_main(session):
 		if not repouptodate:
 			cp_list = []
 			attr = {}
-			# We check for Manifest changes and add the package to a list
+			# We check for dir changes and add the package to a list
 			repo_diff = repo.git.diff('origin', '--name-only')
-			write_log(session, 'Git diff: %s' % (repo_diff,), "debug", config_id, 'sync.git_sync_main')
+			write_log(session, 'Git dir diff:\n%s' % (repo_diff,), "debug", config_id, 'sync.git_sync_main')
 			for diff_line in repo_diff.splitlines():
-				if re.search("Manifest$", diff_line):
-						cp = re.sub('/Manifest', '', diff_line)
-						cp_list.append(cp)
+                                find_search = True
+                                for search_line in search_list:
+                                        if re.search(search_line, diff_line):
+                                                find_search = False
+                                if find_search:
+                                        splited_diff_line = re.split('/', diff_line)
+                                        cp = splited_diff_line[0] + '/' + splited_diff_line[1]
+                                        if not cp in cp_list:
+                                                cp_list.append(cp)
 			attr['cp_list'] = cp_list
+			write_log(session, 'Git CP Diff: %s' % (cp_list,), "debug", config_id, 'sync.git_sync_main')
 			repo_cp_dict[reponame] = attr
 			git_merge(repo, info_list[0])
 		else:
