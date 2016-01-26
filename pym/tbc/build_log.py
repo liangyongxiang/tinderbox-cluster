@@ -75,8 +75,8 @@ def get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg):
 	package = cpvr_list[1]
 	repo = pkg.repo
 	ebuild_version = cpv_getversion(pkg.cpv)
-	log_msg = "Logging %s:%s" % (pkg.cpv, repo,)
-	add_logs(session, log_msg, "info", config_id)
+	log_msg = "Setting up logging for %s:%s" % (pkg.cpv, repo,)
+	write_log(session, log_msg, "info", config_id, 'build_log.get_build_dict_db')
 	PackageInfo = get_package_info(session, categories, package, repo)
 	build_dict = {}
 	build_dict['ebuild_version'] = ebuild_version

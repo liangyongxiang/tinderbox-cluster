@@ -21,8 +21,8 @@ def main():
 	repeat = True
 	tbc_settings = read_config_settings()
 
-	# setupt the logger
-	logger = setup_logger(tbc_settings):
+	# setup the logger
+	logger = setup_logger(tbc_settings)
 
 	Session = sessionmaker(bind=NewConnection(tbc_settings))
 	session = Session()

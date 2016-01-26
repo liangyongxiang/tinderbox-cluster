@@ -112,7 +112,7 @@ class tbc_package(object):
 			write_log(self._session, log_msg, "info", self._config_id, 'packages.get_packageDict')
 			git_commit = '0'
 		else:
-			repodir =self._ myportdb.getRepositoryPath(repo)
+			repodir =self._myportdb.getRepositoryPath(repo)
 			git_commit = self.get_git_log_ebuild(repodir, ebuild_file)
 
 		# Get the ebuild metadata
