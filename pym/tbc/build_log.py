@@ -108,16 +108,16 @@ def get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg):
 	pkgdir = myportdb.getRepositoryPath(repo) + "/" + categories + "/" + package
 	ebuild_version_checksum_tree = portage.checksum.sha256hash(pkgdir+ "/" + package + "-" + ebuild_version + ".ebuild")[0]
 	build_dict['checksum'] = ebuild_version_checksum_tree
-	ebuild_id_list, status = get_ebuild_id_db(session, build_dict['checksum'], build_dict['package_id'])
+	ebuild_id_list, status = get_ebuild_id_db(session, build_dict['checksum'], build_dict['package_id'], build_dict['ebuild_version'])
 	if status:
 		if ebuild_id_list is None:
 			log_msg = "%s:%s Don't have any ebuild_id!" % (pkg.cpv, repo,)
-			add_logs(session, log_msg, "error", config_id)
+			write_log(session, log_msg, "error", config_id, 'build_log.get_build_dict_db')
 		else:
 			old_ebuild_id_list = []
 			for ebuild_id in ebuild_id_list:
 				log_msg = "%s:%s:%s Dups of checksums" % (pkg.cpv, repo, ebuild_id,)
-				add_logs(session, log_msg, "error", config_id)
+				write_log(session, log_msg, "error", config_id, 'build_log.get_build_dict_db')
 				old_ebuild_id_list.append(ebuild_id)
 			add_old_ebuild(session, old_ebuild_id_list)
 		return

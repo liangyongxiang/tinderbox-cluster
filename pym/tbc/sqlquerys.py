@@ -545,13 +545,13 @@ def get_ebuild_checksums(session, package_id, ebuild_version):
 		return ebuild_checksum_list, True
 	return EbuildInfo.Checksum, False
 
-def get_ebuild_id_db(session, checksum, package_id):
+def get_ebuild_id_db(session, checksum, package_id, ebuild_version):
 	try:
-		EbuildInfos = session.query(Ebuilds).filter_by(PackageId = package_id).filter_by(Checksum = checksum).one()
+		EbuildInfos = session.query(Ebuilds).filter_by(PackageId = package_id).filter_by(Checksum = checksum).filter_by(Version = ebuild_version).filter_by(Active = True).one()
 	except NoResultFound as e:
 		return None, True
 	except MultipleResultsFound as e:
-		EbuildInfos = session.query(Ebuilds).filter_by(PackageId = package_id).filter_by(Checksum = checksum).all()
+		EbuildInfos = session.query(Ebuilds).filter_by(PackageId = package_id).filter_by(Checksum = checksum).filter_by(Version = ebuild_version).filter_by(Active = True).all()
 		ebuilds_id = []
 		for EbuildInfo in EbuildInfos:
 			ebuilds_id.append(EbuildInfo.EbuildId)

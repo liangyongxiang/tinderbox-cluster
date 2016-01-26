@@ -351,7 +351,7 @@ class tbc_package(object):
 			elif fail:
 				dupe_ebuild_id_list = []
 				for checksum in checksums_db:
-					ebuilds_id , status = get_ebuild_id_db(self._session, checksum, package_id)
+					ebuilds_id , status = get_ebuild_id_db(self._session, checksum, package_id, ebuild_version_tree)
 					for ebuild_id in ebuilds_id:
 						log_msg = "U %s:%s:%s Dups of checksums" % (cpv, repo, ebuild_id,)
 						write_log(self._session, log_msg, "warning", self._config_id, 'packages.update_package_db')
