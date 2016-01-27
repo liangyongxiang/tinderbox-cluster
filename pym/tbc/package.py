@@ -284,7 +284,7 @@ class tbc_package(object):
 				package_metadataDict[package_id]['metadata_xml_descriptions'] = packageDict[cpv]['ebuild_version_descriptions_tree']
 
 		packageDict[cpv]['new'] = True
-		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_mtime_tree)
+		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list)
 		log_msg = "C %s:%s ... Done." % (cp, repo)
 		write_log(self._session, log_msg, "info", self._config_id, 'packages.add_new_package_db')
 
@@ -378,7 +378,7 @@ class tbc_package(object):
 				del packageDict[cpv]
 				ebuild_id , status = get_ebuild_id_db(self._session, ebuild_version_checksum_tree, package_id)
 				new_ebuild_id_list.append(ebuild_id)
-		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list, manifest_mtime_tree)
+		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list)
 
 		if package_updated:
 			# Check cp with repoman full
