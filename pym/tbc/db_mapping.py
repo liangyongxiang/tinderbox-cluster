@@ -223,11 +223,17 @@ class BuildLogsUse(Base):
 	Status = Column('status', Boolean, default=False)
 	__tablename__ = 'build_logs_use'
 
-class BuildLogsRepomanQa(Base):
+class BuildLogsRepoman(Base):
 	Id = Column('id', Integer, primary_key=True)
 	BuildLogId = Column('build_log_id', Integer, ForeignKey('build_logs.build_log_id'))
 	SummeryText = Column('summery_text', Text)
-	__tablename__ = 'build_logs_repoman_qa'
+	__tablename__ = 'build_logs_repoman'
+
+class BuildLogsQa(Base):
+	Id = Column('id', Integer, primary_key=True)
+	BuildLogId = Column('build_log_id', Integer, ForeignKey('build_logs.build_log_id'))
+	SummeryText = Column('summery_text', Text)
+	__tablename__ = 'build_logs_qa'
 
 class PackagesRepoman(Base):
 	Id = Column('id', Integer, primary_key=True)

@@ -8,8 +8,8 @@ from tbc.db_mapping import Configs, Logs, ConfigsMetaData, Jobs, BuildJobs, Pack
 	Uses, ConfigsEmergeOptions, EmergeOptions, HiLight, BuildLogs, BuildLogsConfig, BuildJobsUse, BuildJobsRedo, \
 	HiLightCss, BuildLogsHiLight, BuildLogsEmergeOptions, BuildLogsErrors, ErrorsInfo, EmergeInfo, BuildLogsUse, \
 	BuildJobsEmergeOptions, EbuildsMetadata, EbuildsIUse, Restrictions, EbuildsRestrictions, EbuildsKeywords, \
-	Keywords, PackagesMetadata, Emails, PackagesEmails, Setups, BuildLogsRepomanQa, CategoriesMetadata, \
-	PackagesRepoman
+	Keywords, PackagesMetadata, Emails, PackagesEmails, Setups, BuildLogsRepoman, CategoriesMetadata, \
+	PackagesRepoman, BuildLogsQa
 from tbc.log import write_log
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy import and_, or_
@@ -280,20 +280,17 @@ def add_new_buildlog(session, build_dict, build_log_dict):
 def add_repoman_qa(session, build_log_dict, log_id):
 	repoman_error = ""
 	qa_error = ""
-	error = False
 	if build_log_dict['repoman_error_list']:
 		for repoman_text in build_log_dict['repoman_error_list']:
 			repoman_error = repoman_error + repoman_text
-		error = True
+		NewBuildLogRepoman = BuildLogsRepoman(BuildLogId = log_id, SummeryText = repoman_error)
+		session.add(NewBuildLogRepoman)
+		session.commit()
 	if build_log_dict['qa_error_list']:
 		for qa_text in build_log_dict['qa_error_list']:
 			qa_error = qa_error + qa_text
-		error = True
-	repoman_error = repoman_error + qa_error
-	if error:
-		repoman_error = repoman_error + qa_error
-		NewBuildLogRepoman = BuildLogsRepomanQa(BuildLogId = log_id, SummeryText = repoman_error)
-		session.add(NewBuildLogRepoman)
+		NewBuildLogQa = BuildLogsQa(BuildLogId = log_id, SummeryText = qa_error)
+		session.add(NewBuildLogQa)
 		session.commit()
 
 def update_fail_times(session, FailInfo):

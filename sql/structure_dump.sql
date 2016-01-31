@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jan 31, 2016 at 01:39 PM
+-- Generation Time: Jan 31, 2016 at 06:07 PM
 -- Server version: 10.0.22-MariaDB-log
 -- PHP Version: 5.6.16-pl0-gentoo
 
@@ -173,10 +173,22 @@ CREATE TABLE IF NOT EXISTS `build_logs_hilight` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `build_logs_repoman_qa`
+-- Table structure for table `build_logs_qa`
 --
 
-CREATE TABLE IF NOT EXISTS `build_logs_repoman_qa` (
+CREATE TABLE IF NOT EXISTS `build_logs_qa` (
+`id` int(11) NOT NULL,
+  `build_log_id` int(11) NOT NULL,
+  `summery_text` text NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `build_logs_repoman`
+--
+
+CREATE TABLE IF NOT EXISTS `build_logs_repoman` (
 `id` int(11) NOT NULL,
   `build_log_id` int(11) NOT NULL,
   `summery_text` text NOT NULL
@@ -607,9 +619,15 @@ ALTER TABLE `build_logs_hilight`
  ADD PRIMARY KEY (`id`), ADD KEY `log_id` (`log_id`), ADD KEY `hilight_id` (`hilight_css_id`), ADD KEY `hilight_css_id` (`hilight_css_id`);
 
 --
--- Indexes for table `build_logs_repoman_qa`
+-- Indexes for table `build_logs_qa`
 --
-ALTER TABLE `build_logs_repoman_qa`
+ALTER TABLE `build_logs_qa`
+ ADD PRIMARY KEY (`id`), ADD KEY `build_logs_id` (`build_log_id`);
+
+--
+-- Indexes for table `build_logs_repoman`
+--
+ALTER TABLE `build_logs_repoman`
  ADD PRIMARY KEY (`id`), ADD KEY `build_logs_id` (`build_log_id`);
 
 --
@@ -830,9 +848,14 @@ MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `build_logs_hilight`
 MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
--- AUTO_INCREMENT for table `build_logs_repoman_qa`
+-- AUTO_INCREMENT for table `build_logs_qa`
 --
-ALTER TABLE `build_logs_repoman_qa`
+ALTER TABLE `build_logs_qa`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+--
+-- AUTO_INCREMENT for table `build_logs_repoman`
+--
+ALTER TABLE `build_logs_repoman`
 MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 --
 -- AUTO_INCREMENT for table `build_logs_use`
