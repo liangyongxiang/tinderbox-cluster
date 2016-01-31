@@ -504,10 +504,10 @@ def update_package_metadata(session, package_metadataDict):
 		try:
 			PackagesMetadataInfo = session.query(PackagesMetadata).filter_by(PackageId = k).one()
 		except NoResultFound as e:
-			session.add(PackagesMetadata(PackageId = k, Changlog = v['changelog_text'], Descriptions = v['metadata_xml_descriptions']))
+			session.add(PackagesMetadata(PackageId = k, Gitlog = v['git_changlog'], Descriptions = v['metadata_xml_descriptions']))
 			session.commit()
 		else:
-			PackagesMetadataInfo.Changlog = v['changelog_text']
+			PackagesMetadataInfo.Gitlog = v['git_changlog']
 			PackagesMetadataInfo.Descriptions = v['metadata_xml_descriptions']
 			session.commit()
 		if v['metadata_xml_email']:

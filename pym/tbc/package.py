@@ -376,7 +376,7 @@ class tbc_package(object):
 			else:
 				# Remove cpv from packageDict and add ebuild to new ebuils list
 				del packageDict[cpv]
-				ebuild_id , status = get_ebuild_id_db(self._session, ebuild_version_checksum_tree, package_id)
+				ebuild_id , status = get_ebuild_id_db(self._session, ebuild_version_checksum_tree, package_id, ebuild_version_tree)
 				new_ebuild_id_list.append(ebuild_id)
 		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list)
 

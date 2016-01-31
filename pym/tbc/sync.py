@@ -73,7 +73,7 @@ def git_sync_main(session):
 	# check git diffs witch get updated and pass that to a dict
 	# fetch and merge the repo
 	repo_cp_dict = {}
-	search_list = [ '^metadata', '^eclass', '^licenses', '^profiles', '^scripts',]
+	search_list = [ '^metadata', '^eclass', '^licenses', '^profiles', '^scripts', '^skel.ebuild',]
 	for repo_dir in git_repos_list(myportdb):
 		reponame = myportdb.getRepositoryName(repo_dir)
 		repo = git.Repo(repo_dir)
@@ -87,15 +87,15 @@ def git_sync_main(session):
 			repo_diff = repo.git.diff('origin', '--name-only')
 			write_log(session, 'Git dir diff:\n%s' % (repo_diff,), "debug", config_id, 'sync.git_sync_main')
 			for diff_line in repo_diff.splitlines():
-                                find_search = True
-                                for search_line in search_list:
-                                        if re.search(search_line, diff_line):
-                                                find_search = False
-                                if find_search:
-                                        splited_diff_line = re.split('/', diff_line)
-                                        cp = splited_diff_line[0] + '/' + splited_diff_line[1]
-                                        if not cp in cp_list:
-                                                cp_list.append(cp)
+				find_search = True
+				for search_line in search_list:
+					if re.search(search_line, diff_line):
+						find_search = False
+				if find_search:
+					splited_diff_line = re.split('/', diff_line)
+					cp = splited_diff_line[0] + '/' + splited_diff_line[1]
+					if not cp in cp_list:
+						cp_list.append(cp)
 			attr['cp_list'] = cp_list
 			write_log(session, 'Git CP Diff: %s' % (cp_list,), "debug", config_id, 'sync.git_sync_main')
 			repo_cp_dict[reponame] = attr
