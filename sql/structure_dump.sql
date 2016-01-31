@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Dec 27, 2015 at 10:25 PM
+-- Generation Time: Jan 31, 2016 at 01:39 PM
 -- Server version: 10.0.22-MariaDB-log
 -- PHP Version: 5.6.16-pl0-gentoo
 
@@ -460,7 +460,6 @@ CREATE TABLE IF NOT EXISTS `packages` (
   `category_id` int(11) NOT NULL,
   `package` varchar(50) NOT NULL,
   `repo_id` int(11) NOT NULL,
-  `checksum` varchar(100) NOT NULL,
   `active` tinyint(1) NOT NULL,
   `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Packages main table (P)';
@@ -737,7 +736,7 @@ ALTER TABLE `logs`
 -- Indexes for table `packages`
 --
 ALTER TABLE `packages`
- ADD PRIMARY KEY (`package_id`), ADD KEY `category_id` (`category_id`), ADD KEY `repo_id` (`repo_id`), ADD KEY `checksum` (`checksum`), ADD KEY `package` (`package`);
+ ADD PRIMARY KEY (`package_id`), ADD KEY `category_id` (`category_id`), ADD KEY `repo_id` (`repo_id`), ADD KEY `package` (`package`);
 
 --
 -- Indexes for table `packages_emails`
@@ -979,8 +978,7 @@ DELIMITER $$
 --
 -- Events
 --
-CREATE DEFINER=`tbc`@`localhost` EVENT `add_esync_jobs` ON SCHEDULE EVERY 30 MINUTE STARTS '2012-12-23 17:15:13' ON COMPLETION NOT PRESERVE ENABLE DO
-BEGIN
+CREATE DEFINER=`tbc`@`localhost` EVENT `add_esync_jobs` ON SCHEDULE EVERY 30 MINUTE STARTS '2012-12-23 17:15:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
   CALL add_jobs_esync();
 END$$
 
