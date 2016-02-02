@@ -241,16 +241,14 @@ def get_buildlog_info(session, settings, pkg, build_dict, config_id):
 	pkgdir = myportdb.getRepositoryPath(build_dict['repo']) + "/" + categories + "/" + package
 	repoman_error_list = check_repoman_full(session, pkgdir, build_dict['package_id'], config_id, build_dict['cpv'])
 	build_log_dict = {}
+	error_search_line = "^ \\* ERROR: "
 	build_log_dict['fail'] = False
 	if repoman_error_list:
 		sum_build_log_list.append(1) # repoman = 1
-		build_log_dict['fail'] = True
 	if qa_error_list != []:
 		sum_build_log_list.append(2) # qa = 2
-		build_log_dict['fail'] = True
 	else:
 		qa_error_list = False
-	error_search_line = "^ \\* ERROR: "
 	for error_log_line in error_log_list:
 		if re.search(error_search_line, error_log_line):
 			build_log_dict['fail'] = True
