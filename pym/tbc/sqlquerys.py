@@ -9,12 +9,16 @@ from tbc.db_mapping import Configs, Logs, ConfigsMetaData, Jobs, BuildJobs, Pack
 	HiLightCss, BuildLogsHiLight, BuildLogsEmergeOptions, BuildLogsErrors, ErrorsInfo, EmergeInfo, BuildLogsUse, \
 	BuildJobsEmergeOptions, EbuildsMetadata, EbuildsIUse, Restrictions, EbuildsRestrictions, EbuildsKeywords, \
 	Keywords, PackagesMetadata, Emails, PackagesEmails, Setups, BuildLogsRepoman, CategoriesMetadata, \
-	PackagesRepoman, BuildLogsQa
+	PackagesRepoman, BuildLogsQa, TbcConfig
 from tbc.log import write_log
 from sqlalchemy.orm.exc import NoResultFound, MultipleResultsFound
 from sqlalchemy import and_, or_
 
 # Guest Functions
+def get_tbc_config(session):
+	TbcConfigInfo = session.query(TbcConfig).one()
+	return TbcConfigInfo
+
 def get_config_id(session, setup, host):
 	SetupInfo = session.query(Setups).filter_by(Setup = setup).one()
 	ConfigInfo = session.query(Configs).filter_by(SetupId = SetupInfo.SetupId).filter_by(Hostname = host).one()
@@ -419,7 +423,7 @@ def add_new_ebuild_sql(session, packageDict):
 			except (MultipleResultsFound) as e:
 				# FIXME
 				sys.exit()
-		session.add(EbuildsMetadata(EbuildId = EbuildInfo.EbuildId, Commit = v['git_commit'], Descriptions = v['ebuild_version_descriptions_tree']))
+		session.add(EbuildsMetadata(EbuildId = EbuildInfo.EbuildId, New = v['new'], Commit = v['git_commit'], Descriptions = v['ebuild_version_descriptions_tree']))
 		session.commit()
 		ebuild_id_list.append(EbuildInfo.EbuildId)
 		restrictions = []

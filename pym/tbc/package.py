@@ -136,7 +136,7 @@ class tbc_package(object):
 		attDict['ebuild_version_metadata_tree'] = ebuild_version_metadata_tree
 		#attDict['ebuild_version_text_tree'] = ebuild_version_text_tree[0]
 		attDict['git_commit'] = git_commit
-		attDict['New'] = False
+		attDict['new'] = False
 		attDict['ebuild_version_descriptions_tree'] = ebuild_version_metadata_tree[7]
 		return attDict
 

@@ -287,3 +287,9 @@ class EbuildsMetadata(Base):
 	New = Column('new', Boolean, default=False)
 	Descriptions = Column('descriptions', Text)
 	__tablename__ = 'ebuilds_metadata'
+
+class TbcConfig(Base):
+	Id =  Column('id', Integer, primary_key=True)
+	WebIker = Column('webinker', String)
+	WebBug = Column('webbug', String)
+	__tablename__ = 'tbc_config'

@@ -30,7 +30,7 @@ from tbc.sqlquerys import get_config_id, get_ebuild_id_db, add_new_buildlog, \
 	get_package_info, get_build_job_id, get_use_id, get_config_info, get_hilight_info, get_error_info_list, \
 	add_e_info, get_fail_times, add_fail_times, update_fail_times, del_old_build_jobs, add_old_ebuild, \
 	update_buildjobs_status, add_repoman_qa, get_config_id_fqdn, get_setup_info, \
-	add_repoman_log
+	add_repoman_log,  get_tbc_config
 from tbc.log import write_log
 
 from sqlalchemy.orm import sessionmaker
@@ -224,13 +224,13 @@ def get_buildlog_info(session, settings, pkg, build_dict, config_id):
 	for k, v in sorted(hilight_dict.items()):
 		if v['startline'] == v['endline']:
 			error_log_list.append(logfile_text_dict[k])
-			if v['hilight_css_id'] == 3: # qa = 3 and 4
+			if v['hilight_css_id'] == 3: # qa = 3
 				qa_error_list.append(logfile_text_dict[k])
 		else:
 			i = k
 			while i != (v['endline'] + 1):
 				error_log_list.append(logfile_text_dict[i])
-				if v['hilight_css_id'] == 3: # qa = 3 and 4
+				if v['hilight_css_id'] == 3: # qa = 3
 					qa_error_list.append(logfile_text_dict[i])
 				i = i +1
 
@@ -245,8 +245,10 @@ def get_buildlog_info(session, settings, pkg, build_dict, config_id):
 	build_log_dict['fail'] = False
 	if repoman_error_list:
 		sum_build_log_list.append(1) # repoman = 1
+		build_log_dict['fail'] = True
 	if qa_error_list != []:
 		sum_build_log_list.append(2) # qa = 2
+		build_log_dict['fail'] = True
 	else:
 		qa_error_list = False
 	for error_log_line in error_log_list:
@@ -324,7 +326,8 @@ def add_buildlog_main(settings, pkg, trees):
 					qa_msg = "QA: FAILD"
 				else:
 					build_msg = "BUILD: FAILD"
-		msg = "Package: %s Repo: %s %s %s %s Weblink http://77.110.8.67/new/logs/build/%s\n" % (pkg.cpv, pkg.repo, build_msg, repoman_msg, qa_msg, log_id,)
+		tbc_config =  get_tbc_config(session)
+		msg = "Package: %s Repo: %s %s %s %s Weblink http://%s/new/logs/build/%s\n" % (pkg.cpv, pkg.repo, build_msg, repoman_msg, qa_msg, tbc_config.WebIker, log_id,)
 		write_log(session, msg, "info", config_id, 'build_log.add_buildlog_main')
 		send_irk(msg)
 	session.close
