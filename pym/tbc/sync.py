@@ -63,12 +63,6 @@ def git_sync_main(session):
 			GuestBusy = False
 		else:
 			time.sleep(60)
-	#remove the needed base profile clone
-	try:
-		os.remove(mysettings['PORTDIR'] + "/profiles/config/parent")
-		os.rmdir(mysettings['PORTDIR'] + "/profiles/config")
-	except:
-		pass
 
 	# check git diffs witch get updated and pass that to a dict
 	# fetch and merge the repo
@@ -105,14 +99,6 @@ def git_sync_main(session):
 			write_log(session, log_msg, "info", config_id, 'sync.git_sync_main')
 		log_msg = "Checking repo %s Done" % (reponame)
 		write_log(session, log_msg, "info", config_id, 'sync.git_sync_main')
-	# Need to add a clone of profiles/base for reading the tree
-	try:
-		os.mkdir(mysettings['PORTDIR'] + "/profiles/config", 0o777)
-		with open(mysettings['PORTDIR'] + "/profiles/config/parent", "w") as f:
-			f.write("../base\n")
-			f.close()
-	except:
-		pass
 
 	log_msg = "Repo sync ... Done."
 	write_log(session, log_msg, "info", config_id, 'sync.git_sync_main')

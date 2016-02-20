@@ -117,7 +117,6 @@ class tbc_use_flags(object):
 		# reset cpv filter
 		self._mysettings.reset()
 		self._mysettings.lock()
-		print(usemask)
 		return use, use_expand_hidden, usemask, useforce
 
 	def get_all_cpv_use_looked(self):
@@ -218,7 +217,6 @@ class tbc_use_flags(object):
 			use_flagsDict[x] = True
 		for x in use_disable:
 			use_flagsDict[x] = False
-		print("use_flagsDict", use_flagsDict)
 		for k, v in use_flagsDict.items():
 			if build_use_flags_dict[k] != v:
 				if build_use_flags_dict[k]:
@@ -227,5 +225,4 @@ class tbc_use_flags(object):
 					build_use_flags_list.append("-" + k)
 		if build_use_flags_list == []:
 			build_use_flags_list = None
-		print(build_use_flags_list)
 		return build_use_flags_list
