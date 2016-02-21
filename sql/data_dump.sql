@@ -168,8 +168,9 @@ INSERT INTO `hilight_css` (`hilight_css_id`, `hilight_css_name`, `hilight_css_co
 --
 
 INSERT INTO `jobs` (`job_id`, `job_type`, `status`, `user`, `config_id`, `run_config_id`, `time_stamp`) VALUES
-(1, 'updatedb', 'Done', 'cron', 1, 1, '2016-01-27 17:54:38'),
-(3, 'esync', 'Done', 'cron', 1, 1, '2016-02-13 14:35:58');
+(1, 'updatedb', 'Done', 'cron', 1, 1, '2016-02-20 14:13:32'),
+(2, 'esync', 'Done', 'cron', 1, 1, '2016-02-21 20:02:08'),
+(3, 'removeold_cpv', 'Done', 'cron', 1, 1, '2016-02-21 20:04:51');
 
 --
 -- Dumping data for table `setups`

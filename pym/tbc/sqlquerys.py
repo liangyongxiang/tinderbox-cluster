@@ -583,3 +583,44 @@ def add_repoman_log(session, package_id, repoman_log, repoman_hash):
 			PackagesRepomanInfo.RepomanHash = repoman_hash
 			PackagesRepomanInfo.RepomanText = repoman_log
 			session.commit()
+
+def get_category_list_info(session):
+	try:
+		CategorysInfo = session.query(Categories).all()
+	except NoResultFound as e:
+		return False
+	return CategorysInfo
+
+def get_package_list_info(session, category_id):
+	try:
+		PackagesInfo = session.query(Packages).filter_by(CategoryId = category_id).all()
+	except NoResultFound as e:
+		return False
+	return PackagesInfo
+
+def get_ebuild_list_info(session, package_id):
+	try:
+		EbuildsInfo = session.query(Ebuilds).filter_by(PackageId = package_id).all()
+	except NoResultFound as e:
+		return False
+	return EbuildsInfo
+
+def del_old_ebuild(session, ebuild_id):
+	session.query(EbuildsRestrictions).filter(EbuildsRestrictions.EbuildId == ebuild_id).delete()
+	session.query(EbuildsIUse).filter(EbuildsIUse.EbuildId == ebuild_id).delete()
+	session.query(EbuildsKeywords).filter(EbuildsKeywords.EbuildId == ebuild_id).delete()
+	session.query(EbuildsMetadata).filter(EbuildsMetadata.EbuildId == ebuild_id).delete()
+	session.query(Ebuilds).filter(Ebuilds.EbuildId == ebuild_id).delete()
+	session.commit()
+
+def del_old_package(session, package_id):
+	session.query(PackagesRepoman).filter(PackagesRepoman.PackageId == package_id).delete()
+	session.query(PackagesEmails).filter(PackagesEmails.PackageId== package_id).delete()
+	session.query(PackagesMetadata).filter(PackagesMetadata.PackageId == package_id).delete()
+	session.query(Packages).filter(Packages.PackageId == package_id).delete()
+	session.commit()
+
+def add_old_category(session, category_id):
+	CategorysInfo = session.query(Categories).filter_by(CategoryId = category_id).one()
+	CategorysInfo.Active = False
+	session.commit()

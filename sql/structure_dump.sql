@@ -3,9 +3,9 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Jan 31, 2016 at 06:07 PM
+-- Generation Time: Feb 21, 2016 at 08:08 PM
 -- Server version: 10.0.22-MariaDB-log
--- PHP Version: 5.6.16-pl0-gentoo
+-- PHP Version: 7.0.3-pl0-gentoo
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 SET time_zone = "+00:00";
@@ -31,13 +31,32 @@ BEGIN
   DECLARE in_job_id INT;
   SET in_config_id = (SELECT config_id
     FROM configs WHERE default_config = True);
-  SET in_job_id = (SELECT job_id FROM jobs
+  SET in_job_id = (SELECT job_id FROM jobs 
     WHERE job_type = 'esync'
-    AND config_id = in_config_id
+    AND config_id = in_config_id 
     AND status = 'Done'
     LIMIT 1);
   IF in_job_id >= 1 THEN
     UPDATE jobs SET user = 'cron', status = 'Waiting' WHERE job_type = 'esync';
+  ELSE
+  	SET in_job_id = 0;
+  END IF;
+END$$
+
+CREATE DEFINER=`tbc`@`localhost` PROCEDURE `add_jobs_removeold_cpv`()
+    MODIFIES SQL DATA
+BEGIN
+  DECLARE in_config_id INT;
+  DECLARE in_job_id INT;
+  SET in_config_id = (SELECT config_id
+    FROM configs WHERE default_config = True);
+  SET in_job_id = (SELECT job_id FROM jobs 
+    WHERE job_type = 'removeold_cpv'
+    AND config_id = in_config_id 
+    AND status = 'Done'
+    LIMIT 1);
+  IF in_job_id >= 1 THEN
+    UPDATE jobs SET user = 'cron', status = 'Waiting' WHERE job_type = 'removeold_cpv';
   ELSE
   	SET in_job_id = 0;
   END IF;
@@ -331,7 +350,7 @@ CREATE TABLE IF NOT EXISTS `ebuilds_metadata` (
 `id` int(11) NOT NULL,
   `ebuild_id` int(11) NOT NULL,
   `commit` varchar(100) NOT NULL COMMENT 'Git commit',
-  `New` tinyint(1) NOT NULL,
+  `new` tinyint(1) NOT NULL,
   `descriptions` varchar(200) NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
@@ -428,7 +447,7 @@ CREATE TABLE IF NOT EXISTS `hilight_css` (
 
 CREATE TABLE IF NOT EXISTS `jobs` (
 `job_id` int(11) NOT NULL,
-  `job_type` enum('esync','updatedb') NOT NULL,
+  `job_type` enum('esync','updatedb','removeold_cpv') NOT NULL,
   `status` enum('Runing','Done','Waiting') NOT NULL DEFAULT 'Waiting',
   `user` varchar(20) NOT NULL,
   `config_id` int(11) NOT NULL,
@@ -547,6 +566,18 @@ CREATE TABLE IF NOT EXISTS `setups` (
 `setup_id` int(11) NOT NULL,
   `setup` varchar(100) NOT NULL,
   `profile` varchar(150) NOT NULL
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `tbc_config`
+--
+
+CREATE TABLE IF NOT EXISTS `tbc_config` (
+`id` int(11) NOT NULL,
+  `webinker` varchar(100) NOT NULL,
+  `webbug` varchar(100) NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
@@ -793,6 +824,12 @@ ALTER TABLE `setups`
  ADD PRIMARY KEY (`setup_id`), ADD UNIQUE KEY `setup_id` (`setup_id`);
 
 --
+-- Indexes for table `tbc_config`
+--
+ALTER TABLE `tbc_config`
+ ADD PRIMARY KEY (`id`);
+
+--
 -- Indexes for table `uses`
 --
 ALTER TABLE `uses`
@@ -993,6 +1030,11 @@ MODIFY `restriction_id` int(11) NOT NULL AUTO_INCREMENT;
 ALTER TABLE `setups`
 MODIFY `setup_id` int(11) NOT NULL AUTO_INCREMENT;
 --
+-- AUTO_INCREMENT for table `tbc_config`
+--
+ALTER TABLE `tbc_config`
+MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+--
 -- AUTO_INCREMENT for table `uses`
 --
 ALTER TABLE `uses`
@@ -1001,8 +1043,12 @@ DELIMITER $$
 --
 -- Events
 --
-CREATE DEFINER=`tbc`@`localhost` EVENT `add_esync_jobs` ON SCHEDULE EVERY 30 MINUTE STARTS '2012-12-23 17:15:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
+CREATE DEFINER=`tbc`@`localhost` EVENT `add_esync_jobs` ON SCHEDULE EVERY 1 HOUR STARTS '2012-12-23 17:15:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
   CALL add_jobs_esync();
+END$$
+
+CREATE DEFINER=`tbc`@`localhost` EVENT `add_removeold_cpv_jobs` ON SCHEDULE EVERY 24 HOUR STARTS '2016-02-21 21:00:22' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
+  CALL add_jobs_removeold_cpv();
 END$$
 
 DELIMITER ;

@@ -5,6 +5,7 @@ from __future__ import print_function
 from tbc.sync import git_sync_main
 #from tbc.buildquerydb import add_buildquery_main, del_buildquery_main
 from tbc.updatedb import update_db_main
+from tbc.old_cpv import remove_old_cpv_main
 from tbc.sqlquerys import get_config_id, get_jobs, update_job_list
 from tbc.log import write_log
 
@@ -68,4 +69,12 @@ def jobs_main(session, config_id):
 				update_job_list(session, "Fail", job_id)
 				log_msg = "Job %s did fail." % (job_id,)
 				write_log(session, log_msg, "info", config_id, 'jobs_main')
+		elif job == "removeold_cpv":
+			update_job_list(session, "Runing", job_id)
+			log_msg = "Job %s is runing." % (job_id,)
+			write_log(session, log_msg, "info", config_id, 'jobs_main')
+			remove_old_cpv_main(session, config_id)
+			update_job_list(session, "Done", job_id)
+			log_msg = "Job %s is done.." % (job_id,)
+			write_log(session, log_msg, "info", config_id, 'jobs_main')
 	return
