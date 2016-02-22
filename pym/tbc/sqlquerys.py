@@ -585,25 +585,13 @@ def add_repoman_log(session, package_id, repoman_log, repoman_hash):
 			session.commit()
 
 def get_category_list_info(session):
-	try:
-		CategorysInfo = session.query(Categories).all()
-	except NoResultFound as e:
-		return False
-	return CategorysInfo
+	return session.query(Categories).all()
 
 def get_package_list_info(session, category_id):
-	try:
-		PackagesInfo = session.query(Packages).filter_by(CategoryId = category_id).all()
-	except NoResultFound as e:
-		return False
-	return PackagesInfo
+	return session.query(Packages).filter_by(CategoryId = category_id).all()
 
 def get_ebuild_list_info(session, package_id):
-	try:
-		EbuildsInfo = session.query(Ebuilds).filter_by(PackageId = package_id).all()
-	except NoResultFound as e:
-		return False
-	return EbuildsInfo
+	return session.query(Ebuilds).filter_by(PackageId = package_id).all()
 
 def del_old_ebuild(session, ebuild_id):
 	session.query(EbuildsRestrictions).filter(EbuildsRestrictions.EbuildId == ebuild_id).delete()
