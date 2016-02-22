@@ -9,8 +9,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from tbc.ConnectionManager import NewConnection
 from tbc.readconf import  read_config_settings
 from tbc.sqlquerys import get_category_list_info, get_package_list_info, get_ebuild_list_info, \
-	get_build_job_all, del_old_build_jobs, del_old_ebuild, add_old_package,  del_old_package, \
-	add_old_category
+	get_build_job_all, del_old_build_jobs, del_old_ebuild, del_old_package, add_old_category
 
 def remove_old_ebuilds(package_id, config_id, tbc_settings, cp):
 	today = datetime.utcnow()
@@ -33,12 +32,13 @@ def remove_old_ebuilds(package_id, config_id, tbc_settings, cp):
 						del_old_build_jobs(session2, build_job.BuildJobId)
 				del_old_ebuild(session2, EbuildInfo.EbuildId)
 	if not get_ebuild_list_info(session2, package_id):
-		add_old_package(session2, package_id)
+		log_msg = "Removing: %s" % (cp,)
+		write_log(session2, log_msg, "info", config_id, 'old_cpv.remove_old_cpv_ebuilds')
+		del_old_package(session2, package_id)
 	session2.close
 	Session.remove()
 
 def remove_old_cpv_main(session, config_id):
-	today = datetime.datetime.utcnow()
 	tbc_settings = read_config_settings()
 	# Use all cores when multiprocessing
 	#pool_cores = multiprocessing.cpu_count()
@@ -51,16 +51,9 @@ def remove_old_cpv_main(session, config_id):
 		PackagesInfo = get_package_list_info(session, CategoryInfo.CategoryId)
 		for PackageInfo in PackagesInfo:
 			cp = CategoryInfo.Category + '/' + PackageInfo.Package
-			if PackageInfo.Active:
-				# pool.apply_async( remove_old_ebuilds, (Package.PackageId, config_id, tbc_settings, cp,))
-				# use this when debuging
-			 	remove_old_ebuilds(PackageInfo.PackageId, config_id, tbc_settings, cp,)
-			else:
-				duration = today - PackageInfo.TimeStamp
-				if duration.days > 30:
-					log_msg = "Removing: %s" % (cp,)
-					write_log(session2, log_msg, "info", config_id, 'old_cpv.remove_old_cpv_main')
-					del_old_package(session, PackageInfo.PackageId)
+			# pool.apply_async( remove_old_ebuilds, (Package.PackageId, config_id, tbc_settings, cp,))
+			# use this when debuging
+			remove_old_ebuilds(PackageInfo.PackageId, config_id, tbc_settings, cp,)
 
 		#close and join the multiprocessing pools
 		# pool.close()
