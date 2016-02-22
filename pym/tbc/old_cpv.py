@@ -38,7 +38,7 @@ def remove_old_ebuilds(package_id, config_id, tbc_settings, cp):
 	Session.remove()
 
 def remove_old_cpv_main(session, config_id):
-	today = datetime.datetime.utcnow
+	today = datetime.datetime.utcnow()
 	tbc_settings = read_config_settings()
 	# Use all cores when multiprocessing
 	#pool_cores = multiprocessing.cpu_count()
@@ -65,5 +65,5 @@ def remove_old_cpv_main(session, config_id):
 		#close and join the multiprocessing pools
 		# pool.close()
 		# pool.join()
-		if not get_package_list_info(session, CategoryId = CategoryInfo.CategoryId):
-			 add_old_category(session, category_id)
+		if not get_package_list_info(session, CategoryInfo.CategoryId):
+			 add_old_category(session, CategoryInfo.CategoryId)
