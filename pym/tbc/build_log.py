@@ -41,16 +41,16 @@ def check_repoman_full(session, pkgdir, package_id, config_id, cpv=False):
 	status = repoman_full(session, pkgdir, config_id)
 	repoman_hash = hashlib.sha256()
 	if cpv:
-		element = cpv.split('/')
-		pv = element[1]
+		ebuild_version_tree = portage.versions.cpv_getversion(cpv)
 	if status:
 		repoman_dict = {}
 		for k, v in status.items():
 			repoman_log2 = []
 			for line in v:
-				if not cpv:
-					repoman_log2.append(line)
-				elif cpv and re.search(pv + '.ebuild', line):
+				if cpv:
+					if re.search(ebuild_version_tree, line):
+						repoman_log2.append(line)
+				else: 
 					repoman_log2.append(line)
 			if not repoman_log2 == []:
 				repoman_dict[k] = repoman_log2
