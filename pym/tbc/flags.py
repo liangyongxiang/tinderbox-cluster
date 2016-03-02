@@ -1,14 +1,8 @@
-#!/usr/bin/python
-#
-# Copyright 1998-2015 Gentoo Foundation
+# Copyright 1998-2016 Gentoo Foundation
 # Distributed under the terms of the GNU General Public License v2
 
 # Origin flags.py from portage public api repo
 from __future__ import print_function
-from _emerge.main import parse_opts
-from _emerge.depgraph import backtrack_depgraph, depgraph, resume_depgraph
-from _emerge.create_depgraph_params import create_depgraph_params
-from _emerge.actions import load_emerge_config
 import portage
 import os
 
@@ -163,7 +157,7 @@ class tbc_use_flags(object):
 		iuse_flags = self.filter_flags(self.get_iuse(), use_expand_hidden, usemasked, useforced)
 		#flags = filter_flags(use_flags, use_expand_hidden, usemasked, useforced)
 		final_flags = self.filter_flags(final_use, use_expand_hidden, usemasked, useforced)
-		return iuse_flags, final_flags
+		return iuse_flags, final_flags, usemasked
 
 	def get_flags_looked(self):
 		"""Retrieves all information needed to filter out hidden, masked, etc.

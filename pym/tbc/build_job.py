@@ -67,6 +67,14 @@ class build_job_action(object):
 		build_cpv_list = []
 		depclean_fail = True
 		disable_test_features = False
+		enable_test_features = False
+		restrictions_test = False
+		restrictions_list= get_ebuild_restrictions(self._session, build_dict['ebuild_id'])
+		if restrictions_list:
+			if "test" in restrictions_list:
+				restrictions_test = True
+		if restrictions_test and "test" in settings.features:
+			disable_test_features = True
 		for k, build_use_flags_list in buildqueru_cpv_dict.items():
 			build_cpv_list.append("=" + k)
 			if not build_use_flags_list == None:
@@ -80,22 +88,37 @@ class build_job_action(object):
 					f.write(filetext)
 					f.write('\n')
 					f.close
-		if not build_dict['build_useflags'] is None:
-			if "test" in build_dict['build_useflags'] and "test" in settings.features:
-				if build_dict['build_useflags']['test'] is False:
-					disable_test_features = True
-		restrictions_dict = get_ebuild_restrictions(self._session, build_dict['ebuild_id'])
-		if restrictions_dict:
-			if "test" in restrictions_dict:
-				disable_test_features = True
-		if disable_test_features:
-			filetext = k + ' ' + 'notest.conf'
+
+			if not build_dict['build_useflags'] is None:
+				if "test" in build_dict['build_useflags']:
+					if build_dict['build_useflags']['test'] is False and "test" in settings.features:
+						disable_test_features = True
+					if build_dict['build_useflags']['test'] is True and not disable_test_features and "test" not in settings.features:
+						enable_test_features = True
+			if disable_test_features:
+				filetext = '=' + k + ' ' + 'notest.conf'
+				log_msg = "filetext: %s" % filetext
+				add_logs(self._session, log_msg, "info", self._config_id)
+				with open("/etc/portage/package.env/99_env", "a") as f:
+					f.write(filetext)
+					f.write('\n')
+					f.close
+		if enable_test_features:
+			filetext = k + ' ' + 'test.conf'
 			log_msg = "filetext: %s" % filetext
 			add_logs(self._session, log_msg, "info", self._config_id)
-			with open("/etc/portage/package.env", "a") as f:
+			with open("/etc/portage/package.env/99_env", "a") as f:
 				f.write(filetext)
 				f.write('\n')
 				f.close
+			filetext = '=' + k + ' ' + 'test.conf'
+			log_msg = "filetext: %s" % filetext
+			add_logs(self._session, log_msg, "info", self._config_id)
+			with open("/etc/portage/package.env/99_env", "a") as f:
+				f.write(filetext)
+				f.write('\n')
+				f.close
+
 		log_msg = "build_cpv_list: %s" % (build_cpv_list,)
 		add_logs(self._session, log_msg, "info", self._config_id)
 
@@ -138,8 +161,8 @@ class build_job_action(object):
 			os.remove("/etc/portage/package.use/99_autounmask")
 			with open("/etc/portage/package.use/99_autounmask", "a") as f:
 				f.close
-			os.remove("/etc/portage/package.env")
-			with open("/etc/portage/package.env", "a") as f:
+			os.remove("/etc/portage/package.env/99_env")
+			with open("/etc/portage/package.env/99_env/", "a") as f:
 				f.close
 		except:
 			pass

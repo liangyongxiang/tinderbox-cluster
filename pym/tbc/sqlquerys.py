@@ -561,16 +561,13 @@ def get_ebuild_id_db(session, checksum, package_id, ebuild_version):
 
 def get_ebuild_restrictions(session, ebuild_id):
 	restrictions = []
-	try:
-		EbuildsRestrictionsInfo = session.query(EbuildsRestrictions).filter_by(EbuildId = ebuild_id).one()
-	except NoResultFound as e:
+	EbuildsRestrictionsInfos = session.query(EbuildsRestrictions).filter_by(EbuildId = ebuild_id).all()
+	if EbuildsRestrictionsInfos == []:
 		return False
-	except MultipleResultsFound as e:
-		EbuildsRestrictionsInfos = session.query(EbuildsRestrictions).filter_by(EbuildId = ebuild_id).all()
-		for EbuildsRestrictionsInfo in EbuildsRestrictionsInfos:
-			restrictions.append(session.query(Restrictions).filter_by(RestrictionId = EbuildsRestrictionsInfo.RestrictionId).one())
-		return restrictions
-	return restrictions.append(session.query(Restrictions).filter_by(RestrictionId = EbuildsRestrictionsInfo.RestrictionId).one())
+	for EbuildsRestrictionsInfo in EbuildsRestrictionsInfos:
+		RestrictionsInfo = session.query(Restrictions).filter_by(RestrictionId = EbuildsRestrictionsInfo.RestrictionId).one()
+		restrictions.append(RestrictionsInfo.Restriction)
+	return restrictions
 
 def add_repoman_log(session, package_id, repoman_log, repoman_hash):
 	try:

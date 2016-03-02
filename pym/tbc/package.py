@@ -56,16 +56,20 @@ class tbc_package(object):
 
 					# Get the iuse and use flags for that config/setup and cpv
 					init_useflags = tbc_use_flags(mysettings_setup, myportdb_setup, build_cpv)
-					iuse_flags_list, final_use_list = init_useflags.get_flags()
+					iuse_flags_list, final_use_list, usemasked = init_useflags.get_flags()
 					iuse_flags_list2 = []
 					for iuse_line in iuse_flags_list:
 						iuse_flags_list2.append( init_useflags.reduce_flag(iuse_line))
-
+					enable_test = False
+					if SetupInfo.Test:
+						if not "test" in usemasked:
+							enable_test = True
 					# Dict the needed info
 					attDict = {}
 					attDict['cpv'] = build_cpv
 					attDict['useflags'] = final_use_list
 					attDict['iuse'] = iuse_flags_list2
+					attDict['test'] = enable_test
 					config_cpv_dict[ConfigInfo.SetupId] = attDict
 
 				# Clean some cache
@@ -156,6 +160,7 @@ class tbc_package(object):
 					use_flagsDict[x] = True
 				for x in use_disable:
 					use_flagsDict[x] = False
+				enable_test = v['test']
 				# Unpack packageDict
 				i = 0
 				for k, v in packageDict.items():
@@ -163,9 +168,12 @@ class tbc_package(object):
 
 					# Comper and add the cpv to buildqueue
 					if build_cpv == k:
-						restrictions_dict = get_ebuild_restrictions(self._session, ebuild_id)
-						if restrictions_dict:
-							if "test" in restrictions_dict and "test" in use_flagsDict:
+						# check if we need to enable or disable test
+						if "test" in use_flagsDict and enable_test:
+							use_flagsDict['test'] = True
+						restrictions_list = get_ebuild_restrictions(self._session, ebuild_id)
+						if restrictions_list:
+							if "test" in restrictions_list and "test" in use_flagsDict:
 								use_flagsDict['test'] = False
 						add_new_build_job(self._session, ebuild_id, setup_id, use_flagsDict, self._config_id)
 						# B = Build cpv use-flags config

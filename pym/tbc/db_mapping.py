@@ -12,11 +12,13 @@ class Keywords(Base):
 	KeywordId = Column('keyword_id', Integer, primary_key=True)
 	Keyword = Column('keyword', String)
 	__tablename__ = 'keywords'
-	
+
 class Setups(Base):
 	SetupId = Column('setup_id', Integer, primary_key=True)
 	Setup = Column('setup', String(100))
 	Profile = Column('profile', String(150))
+	Test = Column('test', Boolean, default=False)
+	Repoman = Column('repoman', Boolean, default=False)
 	__tablename__ = 'setups'
 
 class Configs(Base):
@@ -25,7 +27,7 @@ class Configs(Base):
 	SetupId = Column('setup_id', Integer, ForeignKey('setups.setup_id'))
 	Host = Column('default_config', Boolean, default=False)
 	__tablename__ = 'configs'
-	
+
 class Logs(Base):
 	LogId = Column('log_id', Integer, primary_key=True)
 	ConfigId = Column('config_id', Integer, ForeignKey('configs.config_id'))
