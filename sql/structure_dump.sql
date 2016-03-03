@@ -3,7 +3,7 @@
 -- http://www.phpmyadmin.net
 --
 -- Host: localhost
--- Generation Time: Feb 21, 2016 at 08:08 PM
+-- Generation Time: Mar 03, 2016 at 03:48 PM
 -- Server version: 10.0.22-MariaDB-log
 -- PHP Version: 7.0.3-pl0-gentoo
 
@@ -565,7 +565,9 @@ CREATE TABLE IF NOT EXISTS `restrictions` (
 CREATE TABLE IF NOT EXISTS `setups` (
 `setup_id` int(11) NOT NULL,
   `setup` varchar(100) NOT NULL,
-  `profile` varchar(150) NOT NULL
+  `profile` varchar(150) NOT NULL,
+  `test` tinyint(1) NOT NULL DEFAULT '0',
+  `repoman` tinyint(1) NOT NULL DEFAULT '0'
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
 -- --------------------------------------------------------
