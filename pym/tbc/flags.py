@@ -195,7 +195,7 @@ class tbc_use_flags(object):
 		return iuse_flags, final_flags
 
 	def comper_useflags(self, build_dict):
-		iuse_flags, use_enable = self.get_flags()
+		iuse_flags, use_enable, usemasked = self.get_flags()
 		iuse = []
 		build_use_flags_dict = build_dict['build_useflags']
 		build_use_flags_list = []
