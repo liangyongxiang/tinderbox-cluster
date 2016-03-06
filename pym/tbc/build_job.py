@@ -103,21 +103,14 @@ class build_job_action(object):
 					f.write(filetext)
 					f.write('\n')
 					f.close
-		if enable_test_features:
-			filetext = k + ' ' + 'test.conf'
-			log_msg = "filetext: %s" % filetext
-			add_logs(self._session, log_msg, "info", self._config_id)
-			with open("/etc/portage/package.env/99_env", "a") as f:
-				f.write(filetext)
-				f.write('\n')
-				f.close
-			filetext = '=' + k + ' ' + 'test.conf'
-			log_msg = "filetext: %s" % filetext
-			add_logs(self._session, log_msg, "info", self._config_id)
-			with open("/etc/portage/package.env/99_env", "a") as f:
-				f.write(filetext)
-				f.write('\n')
-				f.close
+			if enable_test_features:
+				filetext = '=' + k + ' ' + 'test.conf'
+				log_msg = "filetext: %s" % filetext
+				add_logs(self._session, log_msg, "info", self._config_id)
+				with open("/etc/portage/package.env/99_env", "a") as f:
+					f.write(filetext)
+					f.write('\n')
+					f.close
 
 		log_msg = "build_cpv_list: %s" % (build_cpv_list,)
 		add_logs(self._session, log_msg, "info", self._config_id)
