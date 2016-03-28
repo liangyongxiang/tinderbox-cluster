@@ -292,6 +292,7 @@ class EbuildsMetadata(Base):
 
 class TbcConfig(Base):
 	Id =  Column('id', Integer, primary_key=True)
-	WebIker = Column('webinker', String)
+	WebIrker = Column('webirker', String)
+	HostIrker = Column('hostirker', String)
 	WebBug = Column('webbug', String)
 	__tablename__ = 'tbc_config'

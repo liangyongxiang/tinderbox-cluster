@@ -185,8 +185,8 @@ INSERT INTO `setups` (`setup_id`, `setup`, `profile`) VALUES
 -- Dumping data for table `tbc_config`
 --
 
-INSERT INTO `tbc_config` (`id`, `webinker`, `webbug`) VALUES
-(1, '77.110.8.76', 'bugs.gentoo.org');
+INSERT INTO `tbc_config` (`id`, `webirker`, `hostirker`, `webbug`) VALUES
+(1, '77.110.8.76', '192.168.1.4', 'bugs.gentoo.org');
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;

@@ -20,9 +20,9 @@ def irk(target, message, server = DEFAULT_SERVER):
 		send(s, target, message)
 	s.close()
 
-def send_irk(msg):
+def send_irk(msg, host):
 	target = "tinderbox-cluster"
 	try:
-		irk(target, msg)
+		irk(target, msg, server = host)
 	except socket.error as e:
 		sys.stderr.write("irk: write to server failed: %r\n" % e)

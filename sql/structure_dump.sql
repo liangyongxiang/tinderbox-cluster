@@ -578,7 +578,8 @@ CREATE TABLE IF NOT EXISTS `setups` (
 
 CREATE TABLE IF NOT EXISTS `tbc_config` (
 `id` int(11) NOT NULL,
-  `webinker` varchar(100) NOT NULL,
+  `webirker` varchar(100) NOT NULL,
+  `hostirker` varchar(100) NOT NULL,
   `webbug` varchar(100) NOT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
 
