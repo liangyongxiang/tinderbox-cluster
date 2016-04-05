@@ -292,16 +292,17 @@ def add_buildlog_main(settings, pkg, trees):
 	build_log_dict = {}
 	build_log_dict = get_buildlog_info(session, settings, pkg, build_dict, config_id)
 	error_log_list = build_log_dict['error_log_list']
+	build_log_dict['logfilename'] = settings.get("PORTAGE_LOG_FILE").split(host_config)[1]
 	build_error = ""
 	log_hash = hashlib.sha256()
 	build_error = ""
 	if error_log_list != []:
 		for log_line in error_log_list:
-			build_error = build_error + log_line
+			if not re.search(build_log_dict['logfilename'], log_line):
+				build_error = build_error + log_line
 		log_hash.update(build_error.encode('utf-8'))
 	build_log_dict['build_error'] = build_error
 	build_log_dict['log_hash'] = log_hash.hexdigest()
-	build_log_dict['logfilename'] = settings.get("PORTAGE_LOG_FILE").split(host_config)[1]
 	log_msg = "Logfile name: %s" % (settings.get("PORTAGE_LOG_FILE"),)
 	write_log(session, log_msg, "info", config_id, 'build_log.add_buildlog_main')
 	build_log_dict['emerge_info'] = get_emerge_info_id(settings, trees, session, config_id)
