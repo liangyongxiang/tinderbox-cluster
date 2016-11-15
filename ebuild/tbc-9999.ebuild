@@ -3,7 +3,7 @@
 # $Id$
 
 EAPI="5"
-PYTHON_COMPAT=( python{2_7,3_4})
+PYTHON_COMPAT=( python{2_7,3_4,3_5})
 
 inherit distutils-r1 git-2
 
@@ -15,7 +15,8 @@ KEYWORDS="~amd64"
 SLOT="0"
 IUSE="+mysql"
 
-RDEPEND=">=sys-apps/portage-2.2.27[${PYTHON_USEDEP}]
+RDEPEND=">=sys-apps/portage-2.3.2[${PYTHON_USEDEP}]
+	>=sys-apps/repoman-2.3.0-r2[${PYTHON_USEDEP}]
         dev-python/sqlalchemy[${PYTHON_USEDEP}]
         dev-python/git-python[${PYTHON_USEDEP}]
         mysql? ( dev-python/mysql-connector-python[${PYTHON_USEDEP}] )"
