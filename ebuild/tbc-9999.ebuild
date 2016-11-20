@@ -16,7 +16,7 @@ SLOT="0"
 IUSE="+mysql"
 
 RDEPEND=">=sys-apps/portage-2.3.2[${PYTHON_USEDEP}]
-	>=sys-apps/repoman-2.3.0-r2[${PYTHON_USEDEP}]
+	>=app-portage/repoman-2.3.0-r2[${PYTHON_USEDEP}]
         dev-python/sqlalchemy[${PYTHON_USEDEP}]
         dev-python/git-python[${PYTHON_USEDEP}]
         mysql? ( dev-python/mysql-connector-python[${PYTHON_USEDEP}] )"
@@ -27,6 +27,7 @@ DEPEND="${RDEPEND}
 EGIT_REPO_URI="https://anongit.gentoo.org/git/proj/tinderbox-cluster.git"
 PATCHES=(
         "${S}"/patches/portage.patch
+        "${S}"/patches/repoman.patch
 )
 
 python_prepare_all() {

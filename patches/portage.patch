@@ -1,4 +1,4 @@
-2015-10-04  Magnus Granberg  <zorry@gentoo.org>
+2016-11-20  Magnus Granberg  <zorry@gentoo.org>
 
 	* tbc/pym/actions.py
 	Use the patched Scheduler and add build_dict so it can be ust.
@@ -7,13 +7,11 @@
 	And pass unresolvable in action_depclean so we can use it later.
 	* tbc/pym/main.py
 	Use or own patched actions.
-	We pass build_dict to some functions.
+	We pass build_dict and session to some functions.
 	* tbc/pym/Scheduler.py
 	We copy Scheduler.py from portage and patch it.
 	Fix so we can use add_buildlog_main()
 	We use add_buildlog_main() for loging.
-	* tbc/pym/repoman.py
-	We add config_root pkdir and remove action
 
 --- a/pym/tbc/actions.py	2013-03-22 17:57:23.000000000 +0100
 +++ b/pym/tbc/actions.py	2013-03-22 19:00:43.265582143 +0100
@@ -35,16 +33,15 @@
  if sys.hexversion >= 0x3000000:
  	long = int
  	_unicode = str
-@@ -98,7 +98,8 @@ else:
+@@ -96,7 +96,7 @@ if sys.hexversion >= 0x3000000:
+ else:
+ 	_unicode = unicode
  
- def action_build(emerge_config, trees=DeprecationWarning,
+-def action_build(emerge_config, trees=DeprecationWarning,
++def action_build(emerge_config, build_dict, session, trees=DeprecationWarning,
  	mtimedb=DeprecationWarning, myopts=DeprecationWarning,
--	myaction=DeprecationWarning, myfiles=DeprecationWarning, spinner=None):
-+	myaction=DeprecationWarning, myfiles=DeprecationWarning,
-+	spinner=None, build_dict, session):
+ 	myaction=DeprecationWarning, myfiles=DeprecationWarning, spinner=None):
  
- 	if not isinstance(emerge_config, _emerge_config):
- 		warnings.warn("_emerge.actions.action_build() now expects "
 @@ -333,13 +334,8 @@ def action_build(emerge_config, trees=DeprecationWarning,
  			print(darkgreen("emerge: It seems we have nothing to resume..."))
  			return os.EX_OK
@@ -179,12 +176,12 @@
  
  	# skip global updates prior to sync, since it's called after sync
  	if emerge_config.action not in ('help', 'info', 'sync', 'version') and \
-@@ -3258,7 +3253,7 @@ def run_action(emerge_config):
+@@ -3258,7 +3252,7 @@ def run_action(emerge_config):
  				except OSError:
  					writemsg("Please install eselect to use this feature.\n",
  							noiselevel=-1)
 -		retval = action_build(emerge_config, spinner=spinner)
-+		retval = action_build(emerge_config, spinner=spinner, build_dict, session)
++		retval = action_build(emerge_config, build_dict, session, spinner=spinner)
  		post_emerge(emerge_config.action, emerge_config.opts,
  			emerge_config.args, emerge_config.target_config.root,
  			emerge_config.trees, emerge_config.target_config.mtimedb, retval)
@@ -293,39 +290,3 @@
  		self._jobs -= 1
  		self._status_display.running = self._jobs
  		self._schedule()
---- a/pym/tbc/repoman.py	2015-09-22 02:20:41.000000000 +0200
-+++ b/pym/tbc/repoman.py	2015-10-04 20:21:57.586494104 +0200
-@@ -45,8 +45,9 @@ bad = create_color_func("BAD")
- os.umask(0o22)
- 
- 
--def repoman_main(argv):
--	config_root = os.environ.get("PORTAGE_CONFIGROOT")
-+def repoman_main(argv, config_root=None, pkgdir=None):
-+	if config_root is None:
-+		config_root = os.environ.get("PORTAGE_CONFIGROOT")
- 	repoman_settings = portage.config(config_root=config_root, local_config=False)
- 
- 	if repoman_settings.get("NOCOLOR", "").lower() in ("yes", "true") or \
-@@ -71,6 +72,9 @@ def repoman_main(argv):
- 	# commit (like if Manifest generation fails).
- 	can_force = True
- 
-+	if not pkgdir is None:
-+            os.chdir(pkgdir)
-+
- 	portdir, portdir_overlay, mydir = utilities.FindPortdir(repoman_settings)
- 	if portdir is None:
- 		sys.exit(1)
-@@ -159,10 +163,4 @@ def repoman_main(argv):
- 	qa_output = qa_output.getvalue()
- 	qa_output = qa_output.splitlines(True)
- 
--	# output the results
--	actions = Actions(repo_settings, options, scanner, vcs_settings)
--	if actions.inform(can_force.get(), result):
--		# perform any other actions
--		actions.perform(qa_output)
--
--	sys.exit(0)
-+	return qatracker, qawarnings

@@ -1,0 +1,42 @@
+2016-11-20  Magnus Granberg  <zorry@gentoo.org>
+
+	* tbc/pym/repoman.py
+	We add config_root pkdir and remove action and return
+	vcs_settings.qatracker and qawarnings.
+
+--- a/pym/tbc/repoman.py	2015-09-22 02:20:41.000000000 +0200
++++ b/pym/tbc/repoman.py	2015-10-04 20:21:57.586494104 +0200
+@@ -45,8 +45,9 @@ bad = create_color_func("BAD")
+ os.umask(0o22)
+ 
+ 
+-def repoman_main(argv):
+-	config_root = os.environ.get("PORTAGE_CONFIGROOT")
++def repoman_main(argv, config_root=None, pkgdir=None):
++	if config_root is None:
++		config_root = os.environ.get("PORTAGE_CONFIGROOT")
+ 	repoman_settings = portage.config(config_root=config_root, local_config=False)
+ 
+ 	if repoman_settings.get("NOCOLOR", "").lower() in ("yes", "true") or \
+@@ -71,6 +72,9 @@ def repoman_main(argv):
+ 	# commit (like if Manifest generation fails).
+ 	can_force = True
+ 
++	if not pkgdir is None:
++            os.chdir(pkgdir)
++
+ 	portdir, portdir_overlay, mydir = utilities.FindPortdir(repoman_settings)
+ 	if portdir is None:
+ 		sys.exit(1)
+@@ -159,10 +163,4 @@ def repoman_main(argv):
+ 	qa_output = qa_output.getvalue()
+ 	qa_output = qa_output.splitlines(True)
+ 
+-	# output the results
+-	actions = Actions(repo_settings, options, scanner, vcs_settings)
+-	if actions.inform(can_force.get(), result):
+-		# perform any other actions
+-		actions.perform(qa_output)
+-
+-	sys.exit(0)
++	return vcs_settings.qatracker, qawarnings
