@@ -211,7 +211,9 @@ class tbc_package(object):
 			if md_email_list != []:
 				attDict['metadata_xml_email'] = md_email_list
 			else:
-				log_msg = "Metadata file %s missing Email" % (pkgdir + "/metadata.xml")
+				md_email_list.append('maintainer-needed@gentoo.org')
+				attDict['metadata_xml_email'] = md_email_list
+				log_msg = "Metadata file %s missing Email. Setting it to maintainer-needed" % (pkgdir + "/metadata.xml")
 				write_log(self._session, log_msg, "warning", self._config_id, 'packages.get_package_metadataDict')
 		attDict['git_changlog'] = self.get_git_changelog_text(repodir, cp)
 		attDict['metadata_xml_descriptions'] = ''
