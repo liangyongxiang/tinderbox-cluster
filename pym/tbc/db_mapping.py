@@ -39,7 +39,7 @@ class Logs(Base):
 class Jobs(Base):
 	JobId = Column('job_id', Integer, primary_key=True)
 	JobType = Column('job_type', Enum('updatedb', 'esync', 'removeold_cpv'))
-	Status = Column('status', Enum('Runing', 'Done', 'Waiting'))
+	Status = Column('status', Enum('Runing', 'Done', 'Waiting', 'Waiting_on_guest'))
 	User = Column('user', String(50))
 	ConfigId = Column('config_id', Integer, ForeignKey('configs.config_id'))
 	RunConfigId = Column('run_config_id', Integer, ForeignKey('configs.config_id'))

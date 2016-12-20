@@ -13,7 +13,7 @@ from sqlalchemy.orm import scoped_session, sessionmaker
 from tbc.ConnectionManager import NewConnection
 from tbc.sqlquerys import get_package_info, update_repo_db, \
 	update_categories_db, get_configmetadata_info, get_config_all_info, add_new_build_job, \
-	get_config_info, get_setup_info
+	get_config_info, get_setup_info, get_job_status_waiting_on_guest, update_job_list
 from tbc.check_setup import check_make_conf
 from tbc.package import tbc_package
 # Get the options from the config file tbc.conf
@@ -93,6 +93,8 @@ def update_cpv_db(session, repo_cp_dict, config_id, tbc_settings):
 			break
 		time.sleep(30)
 
+	job_id = get_job_status_waiting_on_guest(session)
+	update_job_list(session, 'Runing', job_id)
 	log_msg = "Checking categories, package, ebuilds"
 	write_log(session, log_msg, "info", config_id, 'updatedb.update_cpv_db')
 	new_build_jobs_list = []

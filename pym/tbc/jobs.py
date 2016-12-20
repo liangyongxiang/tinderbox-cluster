@@ -46,7 +46,7 @@ def jobs_main(session, config_id):
 			#	log_msg = "Job %s did fail." % (job_id,)
 			#	write_log(session, log_msg, "info", config_id, 'jobs_main')
 		elif job == "esync":
-			update_job_list(session, "Runing", job_id)
+			update_job_list(session, "Waiting_on_guest", job_id)
 			log_msg = "Job %s is runing." % (job_id,)
 			write_log(session, log_msg, "info", config_id, 'jobs_main')
 			if update_db_main(session, git_sync_main(session), config_id):
@@ -58,7 +58,7 @@ def jobs_main(session, config_id):
 				log_msg = "Job %s did fail." % (job_id,)
 				write_log(session, log_msg, "info", config_id, 'jobs_main')
 		elif job == "updatedb":
-			update_job_list(session, "Runing", job_id)
+			update_job_list(session, "Waiting_on_guest", job_id)
 			log_msg = "Job %s is runing." % (job_id,)
 			write_log(session, log_msg, "info", config_id, 'jobs_main')
 			if update_db_main(session, None, config_id):

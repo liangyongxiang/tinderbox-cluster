@@ -44,6 +44,12 @@ def get_jobs(session, config_id):
 		return None
 	return JobsInfo
 
+def get_job_status_waiting_on_guest(session):
+	JobsInfo = session.query(Jobs).filter_by(Status = 'Waiting_on_guest').one()
+	if JobsInfo == []:
+		return None
+	return JobInfo.JobId
+
 def update_job_list(session, status, job_id):
 	JobInfo = session.query(Jobs).filter_by(JobId = job_id).one()
 	JobInfo.Status = status

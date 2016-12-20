@@ -11,7 +11,8 @@ import re
 import git
 
 from tbc.sqlquerys import get_config_id_fqdn, add_logs, get_config_all_info, \
-	get_configmetadata_info, get_config_info, get_setup_info
+	get_configmetadata_info, get_config_info, get_setup_info, get_job_status_waiting_on_guest, \
+	update_job_list
 from tbc.readconf import read_config_settings
 from tbc.log import write_log
 
@@ -64,6 +65,8 @@ def git_sync_main(session):
 		else:
 			time.sleep(60)
 
+	job_id = get_job_status_waiting_on_guest(session)
+	update_job_list(session, 'Runing', job_id)
 	# check git diffs witch get updated and pass that to a dict
 	# fetch and merge the repo
 	repo_cp_dict = {}
