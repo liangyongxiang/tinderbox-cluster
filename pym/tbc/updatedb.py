@@ -94,7 +94,9 @@ def update_cpv_db(session, repo_cp_dict, config_id, tbc_settings):
 		time.sleep(30)
 
 	job_id = get_job_status_waiting_on_guest(session)
-	update_job_list(session, 'Runing', job_id)
+	if not job_id is None:
+		update_job_list(session, 'Runing', job_id)
+
 	log_msg = "Checking categories, package, ebuilds"
 	write_log(session, log_msg, "info", config_id, 'updatedb.update_cpv_db')
 	new_build_jobs_list = []

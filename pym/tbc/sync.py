@@ -66,7 +66,9 @@ def git_sync_main(session):
 			time.sleep(60)
 
 	job_id = get_job_status_waiting_on_guest(session)
-	update_job_list(session, 'Runing', job_id)
+	if not job_id is None:
+		update_job_list(session, 'Runing', job_id)
+
 	# check git diffs witch get updated and pass that to a dict
 	# fetch and merge the repo
 	repo_cp_dict = {}
