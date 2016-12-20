@@ -106,6 +106,7 @@ class PackagesMetadata(Base):
 	PackageId = Column('package_id', Integer, ForeignKey('packages.package_id'))
 	Gitlog = Column('gitlog', Text)
 	Descriptions = Column('descriptions', Text)
+	New = Column('new', Boolean, default=False)
 	__tablename__ = 'packages_metadata'
 
 class Ebuilds(Base):
@@ -287,6 +288,7 @@ class EbuildsMetadata(Base):
 	EbuildId = Column('ebuild_id', ForeignKey('ebuilds.ebuild_id'))
 	Commit = Column('commit', String(100))
 	New = Column('new', Boolean, default=False)
+	Updated = Column('updated', Boolean, default=False)
 	Descriptions = Column('descriptions', Text)
 	__tablename__ = 'ebuilds_metadata'
 

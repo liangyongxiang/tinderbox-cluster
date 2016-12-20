@@ -141,6 +141,7 @@ class tbc_package(object):
 		#attDict['ebuild_version_text_tree'] = ebuild_version_text_tree[0]
 		attDict['git_commit'] = git_commit
 		attDict['new'] = False
+		attDict['update'] = False
 		attDict['ebuild_version_descriptions_tree'] = ebuild_version_metadata_tree[7]
 		return attDict
 
@@ -195,7 +196,6 @@ class tbc_package(object):
 		package_metadataDict = {}
 		md_email_list = []
 		herd = None
-		attDict['metadata_xml_email'] = False
 		try:
 			pkg_md = MetaDataXML(pkgdir + "/metadata.xml", herd)
 		except:
@@ -217,6 +217,7 @@ class tbc_package(object):
 				write_log(self._session, log_msg, "warning", self._config_id, 'packages.get_package_metadataDict')
 		attDict['git_changlog'] = self.get_git_changelog_text(repodir, cp)
 		attDict['metadata_xml_descriptions'] = ''
+		attDict['new'] = False
 		package_metadataDict[package_id] = attDict
 		return package_metadataDict
 
@@ -288,12 +289,12 @@ class tbc_package(object):
 		old_ebuild_id_list = []
 		for cpv in sorted(ebuild_list_tree):
 			packageDict[cpv] = self.get_packageDict(pkgdir, cpv, repo)
+			packageDict[cpv]['new'] = True
 
 			# take package descriptions from the ebuilds
 			if package_metadataDict[package_id]['metadata_xml_descriptions'] != packageDict[cpv]['ebuild_version_descriptions_tree']:
 				package_metadataDict[package_id]['metadata_xml_descriptions'] = packageDict[cpv]['ebuild_version_descriptions_tree']
-
-		packageDict[cpv]['new'] = True
+		package_metadataDict[package_id][new] = True
 		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list)
 		log_msg = "C %s:%s ... Done." % (cp, repo)
 		write_log(self._session, log_msg, "info", self._config_id, 'packages.add_new_package_db')
@@ -382,6 +383,7 @@ class tbc_package(object):
 				# U = Updated ebuild
 				log_msg = "U %s:%s" % (cpv, repo,)
 				write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
+				packageDict[cpv]['updated'] = True
 				package_updated = True
 			else:
 				# Remove cpv from packageDict and add ebuild to new ebuils list

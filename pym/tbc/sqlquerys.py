@@ -423,7 +423,7 @@ def add_new_ebuild_sql(session, packageDict):
 			except (MultipleResultsFound) as e:
 				# FIXME
 				sys.exit()
-		session.add(EbuildsMetadata(EbuildId = EbuildInfo.EbuildId, New = v['new'], Commit = v['git_commit'], Descriptions = v['ebuild_version_descriptions_tree']))
+		session.add(EbuildsMetadata(EbuildId = EbuildInfo.EbuildId, New = v['new'], Updated = v['updated'], = v['git_commit'], Descriptions = v['ebuild_version_descriptions_tree']))
 		session.commit()
 		ebuild_id_list.append(EbuildInfo.EbuildId)
 		restrictions = []
@@ -505,7 +505,7 @@ def update_package_metadata(session, package_metadataDict):
 		try:
 			PackagesMetadataInfo = session.query(PackagesMetadata).filter_by(PackageId = k).one()
 		except NoResultFound as e:
-			session.add(PackagesMetadata(PackageId = k, Gitlog = v['git_changlog'], Descriptions = v['metadata_xml_descriptions']))
+			session.add(PackagesMetadata(PackageId = k, Gitlog = v['git_changlog'], Descriptions = v['metadata_xml_descriptions'], v['new']))
 			session.commit()
 		else:
 			PackagesMetadataInfo.Gitlog = v['git_changlog']
