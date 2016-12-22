@@ -287,6 +287,7 @@ class EbuildsMetadata(Base):
 	Id =  Column('id', Integer, primary_key=True)
 	EbuildId = Column('ebuild_id', ForeignKey('ebuilds.ebuild_id'))
 	Commit = Column('commit', String(100))
+	CommitMsg = Column('git_commit_msg', String(200))
 	New = Column('new', Boolean, default=False)
 	Updated = Column('updated', Boolean, default=False)
 	Descriptions = Column('descriptions', Text)

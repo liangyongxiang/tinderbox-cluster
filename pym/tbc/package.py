@@ -92,10 +92,14 @@ class tbc_package(object):
 	def get_git_log_ebuild(self, repodir, ebuild_file):
 		git_log_ebuild = ''
 		g = git.Git(repodir)
+		index = 1
+		git_log_dict = {}
 		for line in g.log('-n 1', ebuild_file).splitlines():
-			if re.search('^commit', line):
-				git_log_ebuild = re.sub('commit', '', line)
-		return git_log_ebuild
+			git_log_dict[index] = line
+			index = index + 1
+		git_ebuild_commit = re.sub('commit ', '', git_log_dict[1])
+		git_ebuild_commit_msg = re.sub('    ', '', git_log_dict[5])
+		return git_ebuild_commit, git_ebuild_commit_msg
 
 	def get_packageDict(self, pkgdir, cpv, repo):
 
@@ -115,9 +119,10 @@ class tbc_package(object):
 			log_msg = "C %s:%s ... Fail." % (cpv, repo)
 			write_log(self._session, log_msg, "info", self._config_id, 'packages.get_packageDict')
 			git_commit = '0'
+			git_commit_msg = '0'
 		else:
 			repodir =self._myportdb.getRepositoryPath(repo)
-			git_commit = self.get_git_log_ebuild(repodir, ebuild_file)
+			git_commit, git_commit_msg = self.get_git_log_ebuild(repodir, ebuild_file)
 
 		# Get the ebuild metadata
 		ebuild_version_metadata_tree = self.get_ebuild_metadata(cpv, repo)
@@ -140,6 +145,7 @@ class tbc_package(object):
 		attDict['ebuild_version_metadata_tree'] = ebuild_version_metadata_tree
 		#attDict['ebuild_version_text_tree'] = ebuild_version_text_tree[0]
 		attDict['git_commit'] = git_commit
+		attDict['git_commit_msg'] = git_commit_msg
 		attDict['new'] = False
 		attDict['updated'] = False
 		attDict['ebuild_version_descriptions_tree'] = ebuild_version_metadata_tree[7]
