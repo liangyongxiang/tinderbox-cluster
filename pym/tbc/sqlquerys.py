@@ -616,3 +616,30 @@ def add_old_category(session, category_id):
 	CategorysInfo = session.query(Categories).filter_by(CategoryId = category_id).one()
 	CategorysInfo.Active = False
 	session.commit()
+
+def reset_new_updated(session):
+	try:
+		PMInfo = session.query(PackagesMetadata).filter(PackagesMetadata.New == True).all()
+	except NoResultFound as e:
+		pass
+	else:
+		for x in PMInfo:
+			x.New = False
+			session.flush()
+	try:
+		EMInfo = session.query(EbuildsMetadata).filter(EbuildsMetadata.New == True).all()
+	except NoResultFound as e:
+		pass
+	else:
+		for x in EMInfo:
+			x.New = False
+			session.flush()
+	try:
+		EMInfo = session.query(EbuildsMetadata).filter(EbuildsMetadata.Updated == True).all()
+	except NoResultFound as e:
+		pass
+	else:
+		for x in EMInfo:
+			x.Updated = False
+			session.flush()
+	session.commit()
