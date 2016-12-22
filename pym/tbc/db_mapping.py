@@ -136,6 +136,7 @@ class BuildJobs(Base):
 	Status = Column('status', Enum('Waiting','Building','Looked',))
 	BuildNow = Column('build_now', Boolean, default=False)
 	RemoveBin = Column('removebin', Boolean ,default=False)
+	New = Column('new', Boolean, default=False)
 	TimeStamp = Column('time_stamp', DateTime, nullable=False, default=datetime.datetime.utcnow)
 	__tablename__ = 'build_jobs'
 
@@ -188,6 +189,7 @@ class BuildLogs(Base):
 	SummeryText = Column('summery_text', Text)
 	LogHash = Column('log_hash', String(100))
 	BugId = Column('bug_id', Integer, default=0)
+	New = Column('new', Boolean, default=False)
 	TimeStamp = Column('time_stamp', DateTime, nullable=False, default=datetime.datetime.utcnow)
 	__tablename__ = 'build_logs'
 

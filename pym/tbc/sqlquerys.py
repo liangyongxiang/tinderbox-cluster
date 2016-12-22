@@ -54,7 +54,7 @@ def get_job_status_waiting_on_guest(session):
 def update_job_list(session, status, job_id):
 	JobInfo = session.query(Jobs).filter_by(JobId = job_id).one()
 	JobInfo.Status = status
-	if status = 'Done':
+	if status == 'Done':
 		JobInfo.TimeStamp = datetime.datetime.utcnow()
 	session.commit()
 
@@ -244,7 +244,7 @@ def add_new_buildlog(session, build_dict, build_log_dict):
 		return None, False
 
 	def build_log_id_no_match(build_dict, build_log_dict):
-		NewBuildLog = BuildLogs(EbuildId = build_dict['ebuild_id'], Fail = build_log_dict['fail'], SummeryText = build_log_dict['build_error'], LogHash = build_log_dict['log_hash'])
+		NewBuildLog = BuildLogs(EbuildId = build_dict['ebuild_id'], Fail = build_log_dict['fail'], SummeryText = build_log_dict['build_error'], LogHash = build_log_dict['log_hash'], New = True)
 		session.add(NewBuildLog)
 		session.flush()
 		build_log_id = NewBuildLog.BuildLogId
@@ -532,7 +532,7 @@ def get_package_info_from_package_id(session, package_id):
 	return PackageInfo, CategoryInfo, RepoInfo
 
 def add_new_build_job(session, ebuild_id, setup_id, use_flagsDict, config_id):
-	NewBuildJobs =BuildJobs(EbuildId = ebuild_id, SetupId = setup_id, ConfigId = config_id, Status = 'Waiting', BuildNow = False, RemoveBin = True)
+	NewBuildJobs = BuildJobs(EbuildId = ebuild_id, SetupId = setup_id, ConfigId = config_id, Status = 'Waiting', BuildNow = False, RemoveBin = True, New = True)
 	session.add(NewBuildJobs)
 	session.flush()
 	build_job_id = NewBuildJobs.BuildJobId
@@ -634,6 +634,22 @@ def reset_new_updated(session):
 		pass
 	else:
 		for x in EMInfo:
+			x.New = False
+			session.flush()
+try:
+		BLInfo = session.query(BuildLogs).filter(BuildLogs.New == True).all()
+	except NoResultFound as e:
+		pass
+	else:
+		for x in BLInfo:
+			x.New = False
+			session.flush()
+	try:
+		BJInfo = session.query(BuildJobs).filter(BuildJobs.New == True).all()
+	except NoResultFound as e:
+		pass
+	else:
+		for x in BJInfo:
 			x.New = False
 			session.flush()
 	try:
