@@ -141,7 +141,7 @@ class tbc_package(object):
 		#attDict['ebuild_version_text_tree'] = ebuild_version_text_tree[0]
 		attDict['git_commit'] = git_commit
 		attDict['new'] = False
-		attDict['update'] = False
+		attDict['updated'] = False
 		attDict['ebuild_version_descriptions_tree'] = ebuild_version_metadata_tree[7]
 		return attDict
 
@@ -264,7 +264,6 @@ class tbc_package(object):
 		mytree = []
 		mytree.append(repodir)
 		pkgdir = repodir + "/" + cp # Get RepoDIR + cp
-		
 		package_id = add_new_package_sql(self._session, cp, repo)
 
 		# Check cp with repoman full
@@ -377,7 +376,7 @@ class tbc_package(object):
 				# N = New ebuild
 				log_msg = "N %s:%s" % (cpv, repo,)
 				write_log(self._session, log_msg, "info", self._config_id, 'packages.update_package_db')
-				packageDict[cpv]['new'] = True
+				packageDict[cpv]['updated'] = True
 				package_updated = True
 			elif  ebuild_version_checksum_tree != ebuild_version_manifest_checksum_db:
 				# U = Updated ebuild

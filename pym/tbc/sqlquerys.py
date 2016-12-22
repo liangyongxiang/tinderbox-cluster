@@ -49,7 +49,7 @@ def get_job_status_waiting_on_guest(session):
 		JobsInfo = session.query(Jobs).filter_by(Status = 'Waiting_on_guest').one()
 	except NoResultFound as e:
 		return None
-	return JobInfo.JobId
+	return JobsInfo.JobId
 
 def update_job_list(session, status, job_id):
 	JobInfo = session.query(Jobs).filter_by(JobId = job_id).one()
