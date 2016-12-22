@@ -54,6 +54,8 @@ def get_job_status_waiting_on_guest(session):
 def update_job_list(session, status, job_id):
 	JobInfo = session.query(Jobs).filter_by(JobId = job_id).one()
 	JobInfo.Status = status
+	if status = 'Done':
+		JobInfo.TimeStamp = datetime.datetime.utcnow()
 	session.commit()
 
 def get_config_all_info(session):
