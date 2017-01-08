@@ -72,7 +72,7 @@ def git_sync_main(session):
 	# check git diffs witch get updated and pass that to a dict
 	# fetch and merge the repo
 	repo_cp_dict = {}
-	search_list = [ '^metadata', '^eclass', '^licenses', '^profiles', '^scripts', '^skel.', ]
+	search_list = [ '^metadata', '^eclass', '^licenses', '^profiles', '^scripts', '^skel.', '^header.txt']
 	for repo_dir in git_repos_list(myportdb):
 		reponame = myportdb.getRepositoryName(repo_dir)
 		repo = git.Repo(repo_dir)
