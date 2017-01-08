@@ -299,7 +299,7 @@ class tbc_package(object):
 			# take package descriptions from the ebuilds
 			if package_metadataDict[package_id]['metadata_xml_descriptions'] != packageDict[cpv]['ebuild_version_descriptions_tree']:
 				package_metadataDict[package_id]['metadata_xml_descriptions'] = packageDict[cpv]['ebuild_version_descriptions_tree']
-		package_metadataDict[package_id][new] = True
+		package_metadataDict[package_id]['new'] = True
 		self.add_package(packageDict, package_metadataDict, package_id, new_ebuild_id_list, old_ebuild_id_list)
 		log_msg = "C %s:%s ... Done." % (cp, repo)
 		write_log(self._session, log_msg, "info", self._config_id, 'packages.add_new_package_db')

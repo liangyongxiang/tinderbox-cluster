@@ -432,7 +432,9 @@ def add_new_ebuild_sql(session, packageDict):
 			except (MultipleResultsFound) as e:
 				# FIXME
 				sys.exit()
-		session.add(EbuildsMetadata(EbuildId = EbuildInfo.EbuildId, New = v['new'], Updated = v['updated'], Commit = v['git_commit'], CommitMsg = v['git_commit_msg'], Descriptions = v['ebuild_version_descriptions_tree']))
+		session.add(EbuildsMetadata(EbuildId = EbuildInfo.EbuildId, New = v['new'], Updated = v['updated'], Commit = v['git_commit'], \
+			CommitMsg = v['git_commit_msg'], Descriptions = v['ebuild_version_descriptions_tree'], Slot = v['ebuild_version_metadata_tree'][2], \
+			Homepage = v['ebuild_version_metadata_tree'][5], License = v['ebuild_version_metadata_tree'][6]))
 		session.commit()
 		ebuild_id_list.append(EbuildInfo.EbuildId)
 		restrictions = []
@@ -636,7 +638,7 @@ def reset_new_updated(session):
 		for x in EMInfo:
 			x.New = False
 			session.flush()
-try:
+	try:
 		BLInfo = session.query(BuildLogs).filter(BuildLogs.New == True).all()
 	except NoResultFound as e:
 		pass

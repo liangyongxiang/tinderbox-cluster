@@ -293,6 +293,9 @@ class EbuildsMetadata(Base):
 	New = Column('new', Boolean, default=False)
 	Updated = Column('updated', Boolean, default=False)
 	Descriptions = Column('descriptions', Text)
+	Slot = Column('slot', String(10))
+	Homepage = Column('homepage', String(200))
+	License = Column('license', String(200))
 	__tablename__ = 'ebuilds_metadata'
 
 class TbcConfig(Base):
