@@ -328,7 +328,7 @@ def add_buildlog_main(settings, pkg, trees):
 				else:
 					build_msg = "BUILD: FAILD"
 		tbc_config =  get_tbc_config(session)
-		msg = "Package: %s Repo: %s %s %s %s Weblink http://%s/new/logs/build/%s\n" % (pkg.cpv, pkg.repo, build_msg, repoman_msg, qa_msg, tbc_config.WebIrker, log_id,)
+		msg = "Package: %s Repo: %s %s %s %s Weblink http://%s/%s\n" % (pkg.cpv, pkg.repo, build_msg, repoman_msg, qa_msg, tbc_config.WebIrker, log_id,)
 		write_log(session, msg, "info", config_id, 'build_log.add_buildlog_main')
 		send_irk(msg, tbc_config.HostIrker)
 	session.close
