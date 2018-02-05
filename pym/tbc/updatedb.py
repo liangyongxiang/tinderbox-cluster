@@ -9,6 +9,7 @@ import time
 import re
 import portage
 from portage.xml.metadata import MetaDataXML
+from portage.checksum import perform_checksum
 from sqlalchemy.orm import scoped_session, sessionmaker
 from tbc.ConnectionManager import NewConnection
 from tbc.sqlquerys import get_package_info, update_repo_db, \
@@ -46,7 +47,7 @@ def get_categories_metadataDict(pkgdir):
 		pkg_md = MetaDataXML(pkgdir + "/metadata.xml", None)
 		metadata_xml_descriptions_tree = re.sub('\t', '', pkg_md.descriptions()[0])
 		categories_metadataDict['metadata_xml_descriptions'] = re.sub('\n', '', metadata_xml_descriptions_tree)
-		categories_metadataDict['metadata_xml_checksum'] =  portage.checksum.sha256hash(pkgdir + "/metadata.xml")[0]
+		categories_metadataDict['metadata_xml_checksum'] =  perform_checksum(pkgdir + "/metadata.xml", "SHA256")[0]
 		return categories_metadataDict
 
 def update_cpv_db_pool(mysettings, myportdb, cp, repo, tbc_settings, config_id):

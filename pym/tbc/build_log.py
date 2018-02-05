@@ -14,7 +14,7 @@ from portage.util import writemsg, \
 	writemsg_level, writemsg_stdout
 from portage import _encodings
 from portage import _unicode_encode
-
+from portage.checksum import perform_checksum
 from _emerge.main import parse_opts
 
 portage.proxy.lazyimport.lazyimport(globals(),
@@ -106,7 +106,7 @@ def get_build_dict_db(session, config_id, settings, tbc_settings_dict, pkg):
 	else:
 		build_dict['build_useflags'] = use_flagsDict
 	pkgdir = myportdb.getRepositoryPath(repo) + "/" + categories + "/" + package
-	ebuild_version_checksum_tree = portage.checksum.sha256hash(pkgdir+ "/" + package + "-" + ebuild_version + ".ebuild")[0]
+	ebuild_version_checksum_tree = perform_checksum(pkgdir+ "/" + package + "-" + ebuild_version + ".ebuild", "SHA256")[0]
 	build_dict['checksum'] = ebuild_version_checksum_tree
 	ebuild_id_list, status = get_ebuild_id_db(session, build_dict['checksum'], build_dict['package_id'], build_dict['ebuild_version'])
 	if status:

@@ -12,6 +12,7 @@ from portage import _encodings
 from portage import _unicode_decode
 from portage.versions import cpv_getkey
 from portage.dep import check_required_use
+from portage.checksum import perform_checksum
 from tbc.depclean import do_depclean
 from tbc.flags import tbc_use_flags
 from tbc.qachecks import check_file_in_manifest
@@ -34,7 +35,7 @@ class build_job_action(object):
 		pkgdir = portdb.getRepositoryPath(repo) + "/" + cp
 		build_use_flags_list = []
 		try:
-			ebuild_version_checksum_tree = portage.checksum.sha256hash(pkgdir + "/" + package + "-" + build_dict['ebuild_version'] + ".ebuild")[0]
+			ebuild_version_checksum_tree = perform_checksum(pkgdir + "/" + package + "-" + build_dict['ebuild_version'] + ".ebuild", "SHA256")[0]
 		except:
 			ebuild_version_checksum_tree = None
 		if ebuild_version_checksum_tree == build_dict['checksum']:

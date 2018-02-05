@@ -9,6 +9,7 @@ import git
 import portage
 import datetime
 from portage.xml.metadata import MetaDataXML
+from portage.checksum import perform_checksum
 from tbc.flags import tbc_use_flags
 from tbc.text import get_ebuild_cvs_revision, get_log_text_dict
 from tbc.flags import tbc_use_flags
@@ -111,7 +112,7 @@ class tbc_package(object):
 		ebuild_file = pkgdir + "/" + package + "-" + ebuild_version_tree + ".ebuild"
 		# Make a checksum of the ebuild
 		try:
-			ebuild_version_checksum_tree = portage.checksum.sha256hash(ebuild_file)[0]
+			ebuild_version_checksum_tree = perform_checksum(ebuild_file, "SHA256")[0]
 		except:
 			ebuild_version_checksum_tree = "0"
 			log_msg = "QA: Can't checksum the ebuild file. %s on repo %s" % (cpv, repo,)

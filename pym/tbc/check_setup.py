@@ -7,6 +7,7 @@ import os
 import errno
 
 from portage.exception import DigestException, FileNotFound, ParseError, PermissionDenied
+from portage.checksum import perform_checksum
 from tbc.text import get_file_text
 from tbc.sqlquerys import get_config_all_info, add_logs, get_configmetadata_info, get_setup_info
 from tbc.sync import git_pull
@@ -29,7 +30,7 @@ def check_make_conf(session, config_id):
 		# Check if we have some error in the file. (portage.util.getconfig)
 		# Check if we envorment error with the config. (settings.validate)
 		try:
-			make_conf_checksum_tree = portage.checksum.sha256hash(make_conf_file)[0]
+			make_conf_checksum_tree = perform_checksum(make_conf_file, "SHA256")[0]
 			portage.util.getconfig(make_conf_file, tolerant=0, allow_sourcing=True, expand=True)
 			mysettings = portage.config(config_root = check_config_dir)
 			mysettings.validate()
@@ -61,7 +62,7 @@ def check_configure_guest(session, config_id):
 	# Check if we have some error in the file (portage.util.getconfig)
 	# Check if we envorment error with the config (settings.validate)
 	try:
-		make_conf_checksum_tree = portage.checksum.sha256hash(make_conf_file)[0]
+		make_conf_checksum_tree = perform_checksum(make_conf_file, "SHA256")[0]
 		portage.util.getconfig(make_conf_file, tolerant=0, allow_sourcing=True, expand=True)
 		mysettings = portage.config(config_root = "/")
 		mysettings.validate()
