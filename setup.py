@@ -1,27 +1,29 @@
-import os
+# Copyright (c) 2013 Hewlett-Packard Development Company, L.P.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#    http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or
+# implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
 
+# THIS FILE IS MANAGED BY THE GLOBAL REQUIREMENTS REPO - DO NOT EDIT
+import setuptools
+
+# In python < 2.7.4, a lazy loading of package `pbr` will break
+# setuptools if some other modules registered functions in `atexit`.
+# solution from: http://bugs.python.org/issue15881#msg170215
 try:
-	from setuptools import setup
+    import multiprocessing  # noqa
 except ImportError:
-	raise
-	from ez_setup import use_setuptools
-	use_setuptools()
-	from setuptools import setup
+    pass
 
-def find_packages():
-	for dirpath, dirnames, filenames in os.walk('pym'):
-		if '__init__.py' in filenames:
-			yield os.path.relpath(dirpath, 'pym')
-
-setup(
-	version = os.path.split(os.path.abspath(__file__))[-2].split('-')[-1],
-	packages = list(find_packages()),
-	package_dir = {'': 'pym'},
-	name="tbc",
-	author='Zorry',
-	author_email='tinderbox-cluster@gentoo.org',
-	url='https://anongit.gentoo.org/git/proj/tinderbox-cluster.git',
-	description='Tinderbox cluster',
-	platforms=["any"],
-	license="GPL2",
-)
+setuptools.setup(
+    setup_requires=['pbr>=2.0.0'],
+    pbr=True)
