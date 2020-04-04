@@ -1,1060 +1,476 @@
--- phpMyAdmin SQL Dump
--- version 4.2.13
--- http://www.phpmyadmin.net
---
--- Host: localhost
--- Generation Time: Mar 03, 2016 at 03:48 PM
--- Server version: 10.0.22-MariaDB-log
--- PHP Version: 7.0.3-pl0-gentoo
-
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
+SET AUTOCOMMIT = 0;
+START TRANSACTION;
 SET time_zone = "+00:00";
-
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
 /*!40101 SET @OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION */;
-/*!40101 SET NAMES utf8 */;
+/*!40101 SET NAMES utf8mb4 */;
 
---
--- Database: `tbc`
---
 
-DELIMITER $$
---
--- Procedures
---
-CREATE DEFINER=`tbc`@`localhost` PROCEDURE `add_jobs_esync`()
-    MODIFIES SQL DATA
-BEGIN
-  DECLARE in_config_id INT;
-  DECLARE in_job_id INT;
-  SET in_config_id = (SELECT config_id
-    FROM configs WHERE default_config = True);
-  SET in_job_id = (SELECT job_id FROM jobs 
-    WHERE job_type = 'esync'
-    AND config_id = in_config_id 
-    AND status = 'Done'
-    LIMIT 1);
-  IF in_job_id >= 1 THEN
-    UPDATE jobs SET user = 'cron', status = 'Waiting' WHERE job_type = 'esync';
-  ELSE
-  	SET in_job_id = 0;
-  END IF;
-END$$
-
-CREATE DEFINER=`tbc`@`localhost` PROCEDURE `add_jobs_removeold_cpv`()
-    MODIFIES SQL DATA
-BEGIN
-  DECLARE in_config_id INT;
-  DECLARE in_job_id INT;
-  SET in_config_id = (SELECT config_id
-    FROM configs WHERE default_config = True);
-  SET in_job_id = (SELECT job_id FROM jobs 
-    WHERE job_type = 'removeold_cpv'
-    AND config_id = in_config_id 
-    AND status = 'Done'
-    LIMIT 1);
-  IF in_job_id >= 1 THEN
-    UPDATE jobs SET user = 'cron', status = 'Waiting' WHERE job_type = 'removeold_cpv';
-  ELSE
-  	SET in_job_id = 0;
-  END IF;
-END$$
-
-DELIMITER ;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `build_jobs`
---
-
-CREATE TABLE IF NOT EXISTS `build_jobs` (
-`build_job_id` int(11) NOT NULL,
-  `ebuild_id` int(11) NOT NULL,
-  `setup_id` int(11) NOT NULL,
-  `config_id` int(11) NOT NULL,
-  `status` enum('Waiting','Building','Looked') NOT NULL DEFAULT 'Waiting',
-  `build_now` tinyint(1) NOT NULL,
-  `removebin` tinyint(1) NOT NULL,
-  `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='The build work list';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `build_jobs_emerge_options`
---
-
-CREATE TABLE IF NOT EXISTS `build_jobs_emerge_options` (
-`id` int(11) NOT NULL,
-  `build_job_id` int(11) NOT NULL,
-  `eoption_id` int(11) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `build_jobs_redo`
---
-
-CREATE TABLE IF NOT EXISTS `build_jobs_redo` (
-`id` int(11) NOT NULL,
-  `build_job_id` int(11) NOT NULL COMMENT 'build job id',
-  `fail_times` int(1) NOT NULL COMMENT 'Fail times max 5',
-  `fail_type` varchar(30) NOT NULL COMMENT 'Type of fail',
-  `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'Time'
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Build jobs that need to be redone';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `build_jobs_use`
---
-
-CREATE TABLE IF NOT EXISTS `build_jobs_use` (
-`id` int(11) NOT NULL,
-  `build_job_id` int(11) NOT NULL,
+CREATE TABLE `builds_uses` (
+  `id` int(11) NOT NULL,
+  `build_uuid` varchar(36) NOT NULL,
   `use_id` int(11) NOT NULL,
-  `status` tinyint(1) NOT NULL DEFAULT '0'
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+  `status` tinyint(1) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- --------------------------------------------------------
+CREATE TABLE `categories` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  `uuid` varchar(36) NOT NULL,
+  `status` enum('failed','completed','in-progress','waiting') DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
---
--- Table structure for table `build_logs`
---
+CREATE TABLE `categories_metadata` (
+  `id` int(11) NOT NULL,
+  `category_uuid` varchar(36) NOT NULL,
+  `checksum` varchar(255) DEFAULT NULL,
+  `description` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `build_logs` (
-`build_log_id` int(11) NOT NULL,
-  `ebuild_id` int(11) NOT NULL,
-  `fail` tinyint(1) NOT NULL DEFAULT '0',
-  `summery_text` longtext NOT NULL,
-  `log_hash` varchar(100) NOT NULL,
-  `bug_id` int(10) NOT NULL DEFAULT '0',
-  `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Main log info for the builds';
+CREATE TABLE `ebuilds` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `version` varchar(255) NOT NULL,
+  `checksum` varchar(255) NOT NULL,
+  `uuid` varchar(36) NOT NULL,
+  `package_uuid` varchar(36) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- --------------------------------------------------------
-
---
--- Table structure for table `build_logs_config`
---
-
-CREATE TABLE IF NOT EXISTS `build_logs_config` (
-`log_id` int(11) NOT NULL,
-  `build_log_id` int(11) NOT NULL,
-  `config_id` int(11) NOT NULL,
-  `einfo_id` int(11) NOT NULL,
-  `logname` varchar(150) NOT NULL COMMENT 'filename of the log',
-  `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `build_logs_emerge_options`
---
-
-CREATE TABLE IF NOT EXISTS `build_logs_emerge_options` (
-`id` int(11) NOT NULL,
-  `build_logs_id` int(11) NOT NULL,
-  `eoption_id` int(11) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `build_logs_errors`
---
-
-CREATE TABLE IF NOT EXISTS `build_logs_errors` (
-`id` int(11) NOT NULL,
-  `build_log_id` int(11) NOT NULL,
-  `error_id` int(11) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `build_logs_hilight`
---
-
-CREATE TABLE IF NOT EXISTS `build_logs_hilight` (
-`id` int(11) NOT NULL,
-  `log_id` int(11) NOT NULL,
-  `start_line` int(11) NOT NULL,
-  `end_line` int(11) NOT NULL,
-  `hilight_css_id` int(11) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `build_logs_qa`
---
-
-CREATE TABLE IF NOT EXISTS `build_logs_qa` (
-`id` int(11) NOT NULL,
-  `build_log_id` int(11) NOT NULL,
-  `summery_text` text NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `build_logs_repoman`
---
-
-CREATE TABLE IF NOT EXISTS `build_logs_repoman` (
-`id` int(11) NOT NULL,
-  `build_log_id` int(11) NOT NULL,
-  `summery_text` text NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `build_logs_use`
---
-
-CREATE TABLE IF NOT EXISTS `build_logs_use` (
-`id` int(11) NOT NULL,
-  `build_log_id` int(11) NOT NULL,
-  `use_id` int(11) NOT NULL,
-  `status` tinyint(1) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `categories`
---
-
-CREATE TABLE IF NOT EXISTS `categories` (
-`category_id` int(11) NOT NULL,
-  `category` varchar(50) NOT NULL,
-  `active` tinyint(1) NOT NULL DEFAULT '0',
-  `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Categories main table (C)';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `categories_metadata`
---
-
-CREATE TABLE IF NOT EXISTS `categories_metadata` (
-`id` int(11) NOT NULL,
-  `category_id` int(11) NOT NULL,
-  `checksum` varchar(100) NOT NULL,
-  `descriptions` text NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Categories main table (C)';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `configs`
---
-
-CREATE TABLE IF NOT EXISTS `configs` (
-`config_id` int(11) NOT NULL COMMENT 'Config index',
-  `hostname` varchar(50) NOT NULL,
-  `setup_id` int(11) NOT NULL COMMENT 'setup',
-  `default_config` tinyint(1) NOT NULL COMMENT 'Host setup'
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Main config table';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `configs_emerge_options`
---
-
-CREATE TABLE IF NOT EXISTS `configs_emerge_options` (
-`id` int(11) NOT NULL,
-  `config_id` int(11) NOT NULL COMMENT 'config id',
-  `eoption_id` int(11) NOT NULL COMMENT 'emerge option id'
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Emerge command options for the configs';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `configs_metadata`
---
-
-CREATE TABLE IF NOT EXISTS `configs_metadata` (
-`id` int(11) NOT NULL,
-  `config_id` int(11) NOT NULL,
+CREATE TABLE `ebuilds_keywords` (
+  `id` int(11) NOT NULL,
+  `ebuild_uuid` varchar(36) NOT NULL,
   `keyword_id` int(11) NOT NULL,
-  `make_conf_text` text NOT NULL,
-  `checksum` varchar(100) NOT NULL,
-  `configsync` tinyint(1) NOT NULL,
-  `active` tinyint(1) NOT NULL,
-  `config_error_text` text NOT NULL,
-  `updateing` tinyint(1) NOT NULL,
-  `status` enum('Waiting','Runing','Stoped') NOT NULL,
-  `auto` tinyint(1) NOT NULL,
-  `repo_path` varchar(100) NOT NULL COMMENT 'git repo path for etc/portage',
-  `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Config Status';
+  `status` enum('stable','unstable','negative') DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- --------------------------------------------------------
+CREATE TABLE `ebuilds_metadata` (
+  `id` int(11) NOT NULL,
+  `ebuild_uuid` varchar(36) NOT NULL,
+  `commit` varchar(255) NOT NULL,
+  `commit_msg` text DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `slot` varchar(30) NOT NULL,
+  `homepage` varchar(500) NOT NULL,
+  `license` varchar(500) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
---
--- Table structure for table `ebuilds`
---
-
-CREATE TABLE IF NOT EXISTS `ebuilds` (
-`ebuild_id` int(11) NOT NULL,
-  `package_id` int(11) NOT NULL,
-  `version` varchar(50) NOT NULL,
-  `checksum` varchar(100) NOT NULL,
-  `active` tinyint(1) NOT NULL DEFAULT '0',
-  `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Version main table (V)';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `ebuilds_iuse`
---
-
-CREATE TABLE IF NOT EXISTS `ebuilds_iuse` (
-`id` int(11) NOT NULL,
-  `ebuild_id` int(11) NOT NULL,
-  `use_id` int(11) NOT NULL,
-  `status` tinyint(1) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `ebuilds_keywords`
---
-
-CREATE TABLE IF NOT EXISTS `ebuilds_keywords` (
-`id` int(11) NOT NULL,
-  `ebuild_id` int(11) NOT NULL,
-  `keyword_id` int(11) NOT NULL,
-  `status` enum('Stable','Unstable','Negative') NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `ebuilds_metadata`
---
-
-CREATE TABLE IF NOT EXISTS `ebuilds_metadata` (
-`id` int(11) NOT NULL,
-  `ebuild_id` int(11) NOT NULL,
-  `commit` varchar(100) NOT NULL COMMENT 'Git commit',
-  `new` tinyint(1) NOT NULL,
-  `descriptions` varchar(200) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `ebuilds_restrictions`
---
-
-CREATE TABLE IF NOT EXISTS `ebuilds_restrictions` (
-`id` int(11) NOT NULL,
-  `ebuild_id` int(11) NOT NULL,
+CREATE TABLE `ebuilds_restrictions` (
+  `id` int(11) NOT NULL,
+  `ebuild_uuid` varchar(36) NOT NULL,
   `restriction_id` int(11) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- --------------------------------------------------------
+CREATE TABLE `ebuilds_uses` (
+  `id` int(11) NOT NULL,
+  `ebuild_uuid` varchar(36) NOT NULL,
+  `use_id` int(11) NOT NULL,
+  `status` tinyint(1) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
---
--- Table structure for table `emails`
---
+CREATE TABLE `emails` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL,
+  `email` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `emails` (
-`email_id` int(11) NOT NULL,
-  `email` varchar(150) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+CREATE TABLE `keywords` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL,
+  `keyword` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- --------------------------------------------------------
+CREATE TABLE `migrate_version` (
+  `repository_id` varchar(250) NOT NULL,
+  `repository_path` text DEFAULT NULL,
+  `version` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
---
--- Table structure for table `emerge_info`
---
+CREATE TABLE `packages` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  `uuid` varchar(36) NOT NULL,
+  `status` enum('failed','completed','in-progress','waiting') DEFAULT NULL,
+  `category_uuid` varchar(36) NOT NULL,
+  `repo_uuid` varchar(36) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `emerge_info` (
-`einfo_id` int(11) NOT NULL,
-  `emerge_info_text` text NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `emerge_options`
---
-
-CREATE TABLE IF NOT EXISTS `emerge_options` (
-`eoption_id` int(11) NOT NULL COMMENT 'emerge command options id',
-  `eoption` varchar(15) NOT NULL COMMENT 'emerge command options'
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `errors_info`
---
-
-CREATE TABLE IF NOT EXISTS `errors_info` (
-`error_id` int(11) NOT NULL,
-  `error_name` varchar(10) NOT NULL,
-  `error_search` varchar(20) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `hilight`
---
-
-CREATE TABLE IF NOT EXISTS `hilight` (
-`hilight_id` int(11) NOT NULL,
-  `hilight_search` varchar(30) NOT NULL,
-  `hilight_search_end` varchar(30) NOT NULL,
-  `hilight_search_pattern` varchar(30) NOT NULL,
-  `hilight_css_id` int(11) NOT NULL,
-  `hilight_start` int(11) NOT NULL,
-  `hilight_end` int(11) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `hilight_css`
---
-
-CREATE TABLE IF NOT EXISTS `hilight_css` (
-`hilight_css_id` int(11) NOT NULL,
-  `hilight_css_name` varchar(11) NOT NULL,
-  `hilight_css_collor` varchar(10) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `jobs`
---
-
-CREATE TABLE IF NOT EXISTS `jobs` (
-`job_id` int(11) NOT NULL,
-  `job_type` enum('esync','updatedb','removeold_cpv') NOT NULL,
-  `status` enum('Runing','Done','Waiting') NOT NULL DEFAULT 'Waiting',
-  `user` varchar(20) NOT NULL,
-  `config_id` int(11) NOT NULL,
-  `run_config_id` int(11) NOT NULL,
-  `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `keywords`
---
-
-CREATE TABLE IF NOT EXISTS `keywords` (
-`keyword_id` int(11) NOT NULL COMMENT 'keyword index',
-  `keyword` varchar(15) NOT NULL COMMENT 'keyword'
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='KEYWORD';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `logs`
---
-
-CREATE TABLE IF NOT EXISTS `logs` (
-`log_id` int(11) NOT NULL,
-  `config_id` int(11) NOT NULL,
-  `log_type` enum('info','error','debug','qa') NOT NULL,
-  `msg` text NOT NULL,
-  `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `packages`
---
-
-CREATE TABLE IF NOT EXISTS `packages` (
-`package_id` int(11) NOT NULL,
-  `category_id` int(11) NOT NULL,
-  `package` varchar(50) NOT NULL,
-  `repo_id` int(11) NOT NULL,
-  `active` tinyint(1) NOT NULL,
-  `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Packages main table (P)';
-
--- --------------------------------------------------------
-
---
--- Table structure for table `packages_emails`
---
-
-CREATE TABLE IF NOT EXISTS `packages_emails` (
-`id` int(11) NOT NULL,
-  `package_id` int(11) NOT NULL,
+CREATE TABLE `packages_emails` (
+  `id` int(11) NOT NULL,
+  `package_uuid` varchar(36) NOT NULL,
   `email_id` int(11) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- --------------------------------------------------------
+CREATE TABLE `packages_metadata` (
+  `id` int(11) NOT NULL,
+  `package_uuid` varchar(36) NOT NULL,
+  `gitlog` text DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `checksum` varchar(255) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
---
--- Table structure for table `packages_metadata`
---
+CREATE TABLE `projects` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  `uuid` varchar(36) NOT NULL,
+  `active` tinyint(1) DEFAULT NULL,
+  `auto` tinyint(1) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `packages_metadata` (
-`id` int(11) NOT NULL,
-  `package_id` int(11) NOT NULL,
-  `gitlog` text NOT NULL,
-  `descriptions` text NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+CREATE TABLE `projects_builds` (
+  `uuid` varchar(36) NOT NULL,
+  `ebuild_uuid` varchar(36) NOT NULL,
+  `project_uuid` varchar(36) NOT NULL,
+  `user_id` int(10) NOT NULL,
+  `status` enum('failed','completed','in-progress','waiting') NOT NULL,
+  `priority` int(1) NOT NULL DEFAULT 5,
+  `deleted` tinyint(1) NOT NULL DEFAULT 0,
+  `deleted_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `created_at` datetime DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- --------------------------------------------------------
+CREATE TABLE `projects_metadata` (
+  `id` int(11) NOT NULL,
+  `project_uuid` varchar(36) NOT NULL,
+  `titel` varchar(50) NOT NULL,
+  `description` text NOT NULL,
+  `project_repo_uuid` varchar(36) NOT NULL,
+  `project_profile` varchar(50) NOT NULL,
+  `project_profile_repo_uuid` varchar(36) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
---
--- Table structure for table `packages_repoman`
---
+CREATE TABLE `projects_repos` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL,
+  `repo_uuid` varchar(36) DEFAULT NULL,
+  `project_uuid` varchar(36) DEFAULT NULL,
+  `build` tinyint(1) DEFAULT NULL,
+  `test` tinyint(1) NOT NULL,
+  `repoman` tinyint(1) NOT NULL,
+  `qa` tinyint(1) NOT NULL,
+  `depclean` tinyint(1) NOT NULL,
+  `auto` tinyint(1) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `packages_repoman` (
-`id` int(11) NOT NULL,
-  `package_id` int(11) NOT NULL,
-  `repoman_hash` varchar(100) NOT NULL,
-  `repoman_text` text NOT NULL,
-  `time_stamp` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+CREATE TABLE `repos` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `name` varchar(255) NOT NULL,
+  `uuid` varchar(36) NOT NULL,
+  `src_url` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL,
+  `auto` tinyint(1) DEFAULT NULL,
+  `status` enum('failed','completed','in-progress','waiting') DEFAULT NULL,
+  `repo_type` enum('project','ebuild') DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- --------------------------------------------------------
+CREATE TABLE `restrictions` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL,
+  `restriction` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
---
--- Table structure for table `repos`
---
+CREATE TABLE `services` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL,
+  `uuid` varchar(36) DEFAULT NULL,
+  `host` varchar(255) DEFAULT NULL,
+  `binary` varchar(255) DEFAULT NULL,
+  `topic` varchar(255) DEFAULT NULL,
+  `report_count` int(11) NOT NULL,
+  `disabled` tinyint(1) DEFAULT NULL,
+  `disabled_reason` varchar(255) DEFAULT NULL,
+  `last_seen_up` datetime DEFAULT NULL,
+  `forced_down` varchar(255) DEFAULT NULL,
+  `version` int(11) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `repos` (
-`repo_id` int(11) NOT NULL,
-  `repo` varchar(100) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Repo main table (repo)';
+CREATE TABLE `services_repos` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL,
+  `repo_uuid` varchar(36) DEFAULT NULL,
+  `service_uuid` varchar(36) DEFAULT NULL,
+  `auto` tinyint(1) NOT NULL,
+  `status` enum('failed','completed','in-progress','waiting','stopped','rebuild_db','update_db') NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- --------------------------------------------------------
+CREATE TABLE `tasks` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `uuid` varchar(36) NOT NULL,
+  `name` varchar(255) DEFAULT NULL,
+  `service_uuid` varchar(36) DEFAULT NULL,
+  `repet` tinyint(1) DEFAULT NULL,
+  `run` datetime DEFAULT NULL,
+  `status` enum('failed','completed','in-progress','waiting') DEFAULT NULL,
+  `last` datetime DEFAULT NULL,
+  `priority` int(11) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
---
--- Table structure for table `restrictions`
---
+CREATE TABLE `users` (
+  `id` int(10) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
-CREATE TABLE IF NOT EXISTS `restrictions` (
-`restriction_id` int(11) NOT NULL,
-  `restriction` varchar(50) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+CREATE TABLE `uses` (
+  `created_at` datetime DEFAULT NULL,
+  `updated_at` datetime DEFAULT NULL,
+  `deleted_at` datetime DEFAULT NULL,
+  `deleted` tinyint(1) DEFAULT NULL,
+  `id` int(11) NOT NULL,
+  `flag` varchar(255) NOT NULL,
+  `description` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
--- --------------------------------------------------------
 
---
--- Table structure for table `setups`
---
+ALTER TABLE `builds_uses`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `builds_uses_uuid_fkey` (`build_uuid`) USING BTREE,
+  ADD KEY `builds_uses_use_id_fkey` (`use_id`) USING BTREE;
 
-CREATE TABLE IF NOT EXISTS `setups` (
-`setup_id` int(11) NOT NULL,
-  `setup` varchar(100) NOT NULL,
-  `profile` varchar(150) NOT NULL,
-  `test` tinyint(1) NOT NULL DEFAULT '0',
-  `repoman` tinyint(1) NOT NULL DEFAULT '0'
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `tbc_config`
---
-
-CREATE TABLE IF NOT EXISTS `tbc_config` (
-`id` int(11) NOT NULL,
-  `webirker` varchar(100) NOT NULL,
-  `hostirker` varchar(100) NOT NULL,
-  `webbug` varchar(100) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `uses`
---
-
-CREATE TABLE IF NOT EXISTS `uses` (
-`use_id` int(11) NOT NULL,
-  `flag` varchar(50) NOT NULL
-) ENGINE=MyISAM DEFAULT CHARSET=utf8 COMMENT='Use flags main table';
-
---
--- Indexes for dumped tables
---
-
---
--- Indexes for table `build_jobs`
---
-ALTER TABLE `build_jobs`
- ADD PRIMARY KEY (`build_job_id`), ADD KEY `ebuild_id` (`ebuild_id`), ADD KEY `config_id` (`config_id`), ADD KEY `time_stamp` (`time_stamp`);
-
---
--- Indexes for table `build_jobs_emerge_options`
---
-ALTER TABLE `build_jobs_emerge_options`
- ADD PRIMARY KEY (`id`), ADD KEY `build_job_id` (`build_job_id`), ADD KEY `eoption_id` (`eoption_id`);
-
---
--- Indexes for table `build_jobs_redo`
---
-ALTER TABLE `build_jobs_redo`
- ADD PRIMARY KEY (`id`), ADD KEY `build_job_id` (`build_job_id`);
-
---
--- Indexes for table `build_jobs_use`
---
-ALTER TABLE `build_jobs_use`
- ADD PRIMARY KEY (`id`), ADD KEY `build_job_id` (`build_job_id`), ADD KEY `use_id` (`use_id`);
-
---
--- Indexes for table `build_logs`
---
-ALTER TABLE `build_logs`
- ADD PRIMARY KEY (`build_log_id`), ADD KEY `ebuild_id` (`ebuild_id`);
-
---
--- Indexes for table `build_logs_config`
---
-ALTER TABLE `build_logs_config`
- ADD PRIMARY KEY (`log_id`), ADD KEY `config_id` (`config_id`), ADD KEY `build_log_id` (`build_log_id`), ADD KEY `einfo_id` (`einfo_id`);
-
---
--- Indexes for table `build_logs_emerge_options`
---
-ALTER TABLE `build_logs_emerge_options`
- ADD PRIMARY KEY (`id`), ADD KEY `eoption_id` (`eoption_id`), ADD KEY `build_logs_id` (`build_logs_id`);
-
---
--- Indexes for table `build_logs_errors`
---
-ALTER TABLE `build_logs_errors`
- ADD PRIMARY KEY (`id`), ADD KEY `build_log_id` (`build_log_id`), ADD KEY `error_id` (`error_id`);
-
---
--- Indexes for table `build_logs_hilight`
---
-ALTER TABLE `build_logs_hilight`
- ADD PRIMARY KEY (`id`), ADD KEY `log_id` (`log_id`), ADD KEY `hilight_id` (`hilight_css_id`), ADD KEY `hilight_css_id` (`hilight_css_id`);
-
---
--- Indexes for table `build_logs_qa`
---
-ALTER TABLE `build_logs_qa`
- ADD PRIMARY KEY (`id`), ADD KEY `build_logs_id` (`build_log_id`);
-
---
--- Indexes for table `build_logs_repoman`
---
-ALTER TABLE `build_logs_repoman`
- ADD PRIMARY KEY (`id`), ADD KEY `build_logs_id` (`build_log_id`);
-
---
--- Indexes for table `build_logs_use`
---
-ALTER TABLE `build_logs_use`
- ADD PRIMARY KEY (`id`), ADD KEY `build_log_id` (`build_log_id`), ADD KEY `use_id` (`use_id`);
-
---
--- Indexes for table `categories`
---
 ALTER TABLE `categories`
- ADD PRIMARY KEY (`category_id`);
+  ADD PRIMARY KEY (`uuid`);
 
---
--- Indexes for table `categories_metadata`
---
 ALTER TABLE `categories_metadata`
- ADD PRIMARY KEY (`id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `categories_metadata_uuid_fkey` (`category_uuid`) USING BTREE;
 
---
--- Indexes for table `configs`
---
-ALTER TABLE `configs`
- ADD PRIMARY KEY (`config_id`);
-
---
--- Indexes for table `configs_emerge_options`
---
-ALTER TABLE `configs_emerge_options`
- ADD PRIMARY KEY (`id`), ADD KEY `config_id` (`config_id`), ADD KEY `eoption_id` (`eoption_id`);
-
---
--- Indexes for table `configs_metadata`
---
-ALTER TABLE `configs_metadata`
- ADD PRIMARY KEY (`id`), ADD KEY `keyword_id` (`keyword_id`), ADD KEY `config_id` (`config_id`);
-
---
--- Indexes for table `ebuilds`
---
 ALTER TABLE `ebuilds`
- ADD PRIMARY KEY (`ebuild_id`), ADD KEY `package_id` (`package_id`), ADD KEY `checksum` (`checksum`), ADD KEY `version` (`version`);
+  ADD PRIMARY KEY (`uuid`),
+  ADD KEY `ebuilds_package_uuid_fkey` (`package_uuid`);
 
---
--- Indexes for table `ebuilds_iuse`
---
-ALTER TABLE `ebuilds_iuse`
- ADD PRIMARY KEY (`id`), ADD KEY `ebuild_id` (`ebuild_id`), ADD KEY `use_id` (`use_id`);
-
---
--- Indexes for table `ebuilds_keywords`
---
 ALTER TABLE `ebuilds_keywords`
- ADD PRIMARY KEY (`id`), ADD KEY `ebuild_id` (`ebuild_id`), ADD KEY `keyword_id` (`keyword_id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `ebuilds_keywords_keyword_id_fkey` (`keyword_id`),
+  ADD KEY `ebuild_uuid` (`ebuild_uuid`) USING BTREE;
 
---
--- Indexes for table `ebuilds_metadata`
---
 ALTER TABLE `ebuilds_metadata`
- ADD PRIMARY KEY (`id`), ADD KEY `ebuild_id` (`ebuild_id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `ebuild_uuid` (`ebuild_uuid`) USING BTREE;
 
---
--- Indexes for table `ebuilds_restrictions`
---
 ALTER TABLE `ebuilds_restrictions`
- ADD PRIMARY KEY (`id`), ADD KEY `restriction_id` (`restriction_id`), ADD KEY `ebuild_id` (`ebuild_id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `ebuilds_restrictions_uuid_fkey` (`ebuild_uuid`),
+  ADD KEY `ebuilds_restrictions_restriction_id_fkey` (`restriction_id`);
 
---
--- Indexes for table `emails`
---
+ALTER TABLE `ebuilds_uses`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `ebuilds_uses_uuid_fkey` (`ebuild_uuid`),
+  ADD KEY `ebuilds_uses_use_id_fkey` (`use_id`);
+
 ALTER TABLE `emails`
- ADD PRIMARY KEY (`email_id`);
+  ADD PRIMARY KEY (`id`);
 
---
--- Indexes for table `emerge_info`
---
-ALTER TABLE `emerge_info`
- ADD UNIQUE KEY `einfo_id` (`einfo_id`);
-
---
--- Indexes for table `emerge_options`
---
-ALTER TABLE `emerge_options`
- ADD PRIMARY KEY (`eoption_id`);
-
---
--- Indexes for table `errors_info`
---
-ALTER TABLE `errors_info`
- ADD PRIMARY KEY (`error_id`);
-
---
--- Indexes for table `hilight`
---
-ALTER TABLE `hilight`
- ADD PRIMARY KEY (`hilight_id`), ADD KEY `hilight_css_id` (`hilight_css_id`);
-
---
--- Indexes for table `hilight_css`
---
-ALTER TABLE `hilight_css`
- ADD PRIMARY KEY (`hilight_css_id`);
-
---
--- Indexes for table `jobs`
---
-ALTER TABLE `jobs`
- ADD PRIMARY KEY (`job_id`), ADD KEY `config_id` (`config_id`), ADD KEY `run_config_id` (`run_config_id`), ADD KEY `job_type_id` (`job_type`);
-
---
--- Indexes for table `keywords`
---
 ALTER TABLE `keywords`
- ADD PRIMARY KEY (`keyword_id`);
+  ADD PRIMARY KEY (`id`);
 
---
--- Indexes for table `logs`
---
-ALTER TABLE `logs`
- ADD PRIMARY KEY (`log_id`), ADD KEY `config_id` (`config_id`);
+ALTER TABLE `migrate_version`
+  ADD PRIMARY KEY (`repository_id`);
 
---
--- Indexes for table `packages`
---
 ALTER TABLE `packages`
- ADD PRIMARY KEY (`package_id`), ADD KEY `category_id` (`category_id`), ADD KEY `repo_id` (`repo_id`), ADD KEY `package` (`package`);
+  ADD PRIMARY KEY (`uuid`),
+  ADD KEY `packages_category_uuid_fkey` (`category_uuid`),
+  ADD KEY `packages_repo_uuid_fkey` (`repo_uuid`);
 
---
--- Indexes for table `packages_emails`
---
 ALTER TABLE `packages_emails`
- ADD PRIMARY KEY (`id`), ADD KEY `package_id` (`package_id`,`email_id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `packages_email_email_id_fkey` (`email_id`),
+  ADD KEY `package_uuid` (`package_uuid`) USING BTREE;
 
---
--- Indexes for table `packages_metadata`
---
 ALTER TABLE `packages_metadata`
- ADD PRIMARY KEY (`id`), ADD KEY `package_id` (`package_id`);
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `packages_metadata_uuid_fkey` (`package_uuid`) USING BTREE;
 
---
--- Indexes for table `packages_repoman`
---
-ALTER TABLE `packages_repoman`
- ADD PRIMARY KEY (`id`);
+ALTER TABLE `projects`
+  ADD PRIMARY KEY (`uuid`),
+  ADD UNIQUE KEY `name` (`name`);
 
---
--- Indexes for table `repos`
---
+ALTER TABLE `projects_builds`
+  ADD PRIMARY KEY (`uuid`);
+
+ALTER TABLE `projects_metadata`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `projects_metadata_uuid_fkey` (`project_uuid`) USING BTREE,
+  ADD KEY `project_repo_uuid` (`project_repo_uuid`),
+  ADD KEY `project_profile_repo_uuid` (`project_profile_repo_uuid`);
+
+ALTER TABLE `projects_repos`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `projects_repos_repo_uuid_fkey` (`repo_uuid`),
+  ADD KEY `projects_repos_project_uuid_fkey` (`project_uuid`);
+
 ALTER TABLE `repos`
- ADD PRIMARY KEY (`repo_id`);
+  ADD PRIMARY KEY (`uuid`);
 
---
--- Indexes for table `restrictions`
---
 ALTER TABLE `restrictions`
- ADD PRIMARY KEY (`restriction_id`);
+  ADD PRIMARY KEY (`id`);
 
---
--- Indexes for table `setups`
---
-ALTER TABLE `setups`
- ADD PRIMARY KEY (`setup_id`), ADD UNIQUE KEY `setup_id` (`setup_id`);
+ALTER TABLE `services`
+  ADD PRIMARY KEY (`id`),
+  ADD UNIQUE KEY `uniq_services0host0topic0deleted` (`host`,`topic`,`deleted`),
+  ADD UNIQUE KEY `uniq_services0host0binary0deleted` (`host`,`binary`,`deleted`);
 
---
--- Indexes for table `tbc_config`
---
-ALTER TABLE `tbc_config`
- ADD PRIMARY KEY (`id`);
+ALTER TABLE `services_repos`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `projects_repos_repo_uuid_fkey` (`repo_uuid`),
+  ADD KEY `projects_repos_project_uuid_fkey` (`service_uuid`);
 
---
--- Indexes for table `uses`
---
+ALTER TABLE `tasks`
+  ADD PRIMARY KEY (`uuid`),
+  ADD UNIQUE KEY `uuid` (`uuid`);
+
+ALTER TABLE `users`
+  ADD PRIMARY KEY (`id`);
+
 ALTER TABLE `uses`
- ADD PRIMARY KEY (`use_id`);
+  ADD PRIMARY KEY (`id`);
 
---
--- AUTO_INCREMENT for dumped tables
---
 
---
--- AUTO_INCREMENT for table `build_jobs`
---
-ALTER TABLE `build_jobs`
-MODIFY `build_job_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `build_jobs_emerge_options`
---
-ALTER TABLE `build_jobs_emerge_options`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `build_jobs_redo`
---
-ALTER TABLE `build_jobs_redo`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `build_jobs_use`
---
-ALTER TABLE `build_jobs_use`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `build_logs`
---
-ALTER TABLE `build_logs`
-MODIFY `build_log_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `build_logs_config`
---
-ALTER TABLE `build_logs_config`
-MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `build_logs_emerge_options`
---
-ALTER TABLE `build_logs_emerge_options`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `build_logs_errors`
---
-ALTER TABLE `build_logs_errors`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `build_logs_hilight`
---
-ALTER TABLE `build_logs_hilight`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `build_logs_qa`
---
-ALTER TABLE `build_logs_qa`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `build_logs_repoman`
---
-ALTER TABLE `build_logs_repoman`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `build_logs_use`
---
-ALTER TABLE `build_logs_use`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `categories`
---
-ALTER TABLE `categories`
-MODIFY `category_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `categories_metadata`
---
+ALTER TABLE `builds_uses`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `categories_metadata`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `configs`
---
-ALTER TABLE `configs`
-MODIFY `config_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'Config index';
---
--- AUTO_INCREMENT for table `configs_emerge_options`
---
-ALTER TABLE `configs_emerge_options`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `configs_metadata`
---
-ALTER TABLE `configs_metadata`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `ebuilds`
---
-ALTER TABLE `ebuilds`
-MODIFY `ebuild_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `ebuilds_iuse`
---
-ALTER TABLE `ebuilds_iuse`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `ebuilds_keywords`
---
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `ebuilds_keywords`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `ebuilds_metadata`
---
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `ebuilds_metadata`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `ebuilds_restrictions`
---
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `ebuilds_restrictions`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `emails`
---
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `ebuilds_uses`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `emails`
-MODIFY `email_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `emerge_info`
---
-ALTER TABLE `emerge_info`
-MODIFY `einfo_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `emerge_options`
---
-ALTER TABLE `emerge_options`
-MODIFY `eoption_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'emerge command options id';
---
--- AUTO_INCREMENT for table `errors_info`
---
-ALTER TABLE `errors_info`
-MODIFY `error_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `hilight`
---
-ALTER TABLE `hilight`
-MODIFY `hilight_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `hilight_css`
---
-ALTER TABLE `hilight_css`
-MODIFY `hilight_css_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `jobs`
---
-ALTER TABLE `jobs`
-MODIFY `job_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `keywords`
---
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `keywords`
-MODIFY `keyword_id` int(11) NOT NULL AUTO_INCREMENT COMMENT 'keyword index';
---
--- AUTO_INCREMENT for table `logs`
---
-ALTER TABLE `logs`
-MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `packages`
---
-ALTER TABLE `packages`
-MODIFY `package_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `packages_emails`
---
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `packages_emails`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `packages_metadata`
---
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `packages_metadata`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `packages_repoman`
---
-ALTER TABLE `packages_repoman`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `repos`
---
-ALTER TABLE `repos`
-MODIFY `repo_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `restrictions`
---
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `projects_metadata`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `projects_repos`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `restrictions`
-MODIFY `restriction_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `setups`
---
-ALTER TABLE `setups`
-MODIFY `setup_id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `tbc_config`
---
-ALTER TABLE `tbc_config`
-MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
---
--- AUTO_INCREMENT for table `uses`
---
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `services`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `services_repos`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+
+ALTER TABLE `users`
+  MODIFY `id` int(10) NOT NULL AUTO_INCREMENT;
+
 ALTER TABLE `uses`
-MODIFY `use_id` int(11) NOT NULL AUTO_INCREMENT;
-DELIMITER $$
---
--- Events
---
-CREATE DEFINER=`tbc`@`localhost` EVENT `add_esync_jobs` ON SCHEDULE EVERY 1 HOUR STARTS '2012-12-23 17:15:13' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
-  CALL add_jobs_esync();
-END$$
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
-CREATE DEFINER=`tbc`@`localhost` EVENT `add_removeold_cpv_jobs` ON SCHEDULE EVERY 24 HOUR STARTS '2016-02-21 21:00:22' ON COMPLETION NOT PRESERVE ENABLE DO BEGIN
-  CALL add_jobs_removeold_cpv();
-END$$
 
-DELIMITER ;
+ALTER TABLE `categories_metadata`
+  ADD CONSTRAINT `categories_metadata_ibfk_1` FOREIGN KEY (`category_uuid`) REFERENCES `categories` (`uuid`),
+  ADD CONSTRAINT `categories_metadata_uuid_fkey` FOREIGN KEY (`category_uuid`) REFERENCES `categories` (`uuid`);
+
+ALTER TABLE `ebuilds`
+  ADD CONSTRAINT `ebuilds_ibfk_1` FOREIGN KEY (`package_uuid`) REFERENCES `packages` (`uuid`),
+  ADD CONSTRAINT `ebuilds_package_uuid_fkey` FOREIGN KEY (`package_uuid`) REFERENCES `packages` (`uuid`);
+
+ALTER TABLE `ebuilds_keywords`
+  ADD CONSTRAINT `ebuilds_keywords_ibfk_1` FOREIGN KEY (`ebuild_uuid`) REFERENCES `ebuilds` (`uuid`),
+  ADD CONSTRAINT `ebuilds_keywords_ibfk_2` FOREIGN KEY (`keyword_id`) REFERENCES `keywords` (`id`),
+  ADD CONSTRAINT `ebuilds_keywords_keyword_id_fkey` FOREIGN KEY (`keyword_id`) REFERENCES `keywords` (`id`),
+  ADD CONSTRAINT `ebuilds_keywords_uuid_fkey` FOREIGN KEY (`ebuild_uuid`) REFERENCES `ebuilds` (`uuid`);
+
+ALTER TABLE `ebuilds_metadata`
+  ADD CONSTRAINT `ebuilds_metadata_ibfk_1` FOREIGN KEY (`ebuild_uuid`) REFERENCES `ebuilds` (`uuid`);
+
+ALTER TABLE `ebuilds_restrictions`
+  ADD CONSTRAINT `ebuilds_restrictions_ibfk_1` FOREIGN KEY (`ebuild_uuid`) REFERENCES `ebuilds` (`uuid`),
+  ADD CONSTRAINT `ebuilds_restrictions_ibfk_2` FOREIGN KEY (`restriction_id`) REFERENCES `restrictions` (`id`),
+  ADD CONSTRAINT `ebuilds_restrictions_restriction_id_fkey` FOREIGN KEY (`restriction_id`) REFERENCES `restrictions` (`id`),
+  ADD CONSTRAINT `ebuilds_restrictions_uuid_fkey` FOREIGN KEY (`ebuild_uuid`) REFERENCES `ebuilds` (`uuid`);
+
+ALTER TABLE `ebuilds_uses`
+  ADD CONSTRAINT `ebuilds_uses_ibfk_1` FOREIGN KEY (`ebuild_uuid`) REFERENCES `ebuilds` (`uuid`),
+  ADD CONSTRAINT `ebuilds_uses_ibfk_2` FOREIGN KEY (`use_id`) REFERENCES `uses` (`id`),
+  ADD CONSTRAINT `ebuilds_uses_use_id_fkey` FOREIGN KEY (`use_id`) REFERENCES `uses` (`id`),
+  ADD CONSTRAINT `ebuilds_uses_uuid_fkey` FOREIGN KEY (`ebuild_uuid`) REFERENCES `ebuilds` (`uuid`);
+
+ALTER TABLE `packages`
+  ADD CONSTRAINT `packages_category_uuid_fkey` FOREIGN KEY (`category_uuid`) REFERENCES `categories` (`uuid`),
+  ADD CONSTRAINT `packages_ibfk_1` FOREIGN KEY (`category_uuid`) REFERENCES `categories` (`uuid`),
+  ADD CONSTRAINT `packages_ibfk_2` FOREIGN KEY (`repo_uuid`) REFERENCES `repos` (`uuid`),
+  ADD CONSTRAINT `packages_repo_uuid_fkey` FOREIGN KEY (`repo_uuid`) REFERENCES `repos` (`uuid`);
+
+ALTER TABLE `packages_emails`
+  ADD CONSTRAINT `packages_email_email_id_fkey` FOREIGN KEY (`email_id`) REFERENCES `emails` (`id`),
+  ADD CONSTRAINT `packages_emails_ibfk_1` FOREIGN KEY (`package_uuid`) REFERENCES `packages` (`uuid`),
+  ADD CONSTRAINT `packages_emails_ibfk_2` FOREIGN KEY (`email_id`) REFERENCES `emails` (`id`);
+
+ALTER TABLE `packages_metadata`
+  ADD CONSTRAINT `packages_metadata_ibfk_1` FOREIGN KEY (`package_uuid`) REFERENCES `packages` (`uuid`),
+  ADD CONSTRAINT `packages_metadata_uuid_fkey` FOREIGN KEY (`package_uuid`) REFERENCES `packages` (`uuid`);
+
+ALTER TABLE `projects_metadata`
+  ADD CONSTRAINT `projects_metadata_ibfk_1` FOREIGN KEY (`project_uuid`) REFERENCES `projects` (`uuid`),
+  ADD CONSTRAINT `projects_metadata_profile_repo_uuid_fkey` FOREIGN KEY (`project_profile_repo_uuid`) REFERENCES `repos` (`uuid`),
+  ADD CONSTRAINT `projects_metadata_repo_uuid_fkey` FOREIGN KEY (`project_repo_uuid`) REFERENCES `repos` (`uuid`),
+  ADD CONSTRAINT `projects_metadata_uuid_fkey` FOREIGN KEY (`project_uuid`) REFERENCES `projects` (`uuid`);
+
+ALTER TABLE `projects_repos`
+  ADD CONSTRAINT `projects_repos_ibfk_1` FOREIGN KEY (`repo_uuid`) REFERENCES `repos` (`uuid`),
+  ADD CONSTRAINT `projects_repos_ibfk_2` FOREIGN KEY (`project_uuid`) REFERENCES `projects` (`uuid`),
+  ADD CONSTRAINT `projects_repos_project_uuid_fkey` FOREIGN KEY (`project_uuid`) REFERENCES `projects` (`uuid`),
+  ADD CONSTRAINT `projects_repos_repo_uuid_fkey` FOREIGN KEY (`repo_uuid`) REFERENCES `repos` (`uuid`);
+COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
