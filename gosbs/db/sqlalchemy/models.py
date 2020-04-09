@@ -15,8 +15,17 @@
 #    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
 #    License for the specific language governing permissions and limitations
 #    under the License.
+<<<<<<< HEAD
 """
 SQLAlchemy models for nova data.
+=======
+
+# Origin https://github.com/openstack/nova/blob/master/nova/db/sqlalchemy/models.py
+# Only small part is left from the origin
+
+"""
+SQLAlchemy models for gosbs data.
+>>>>>>> be80f7418991180567f0882902ca4151a635e42d
 """
 
 import uuid
@@ -274,7 +283,11 @@ class PackagesEmails(BASE, NovaBase):
                 default=lambda: str(uuid.uuid4()))
     email_id = Column(Integer, ForeignKey('emails.id'))
 
+<<<<<<< HEAD
 class Emails(BASE, NovaBase):
+=======
+class Emails(BASE, NovaBase, models.TimestampMixin, models.SoftDeleteMixin):
+>>>>>>> be80f7418991180567f0882902ca4151a635e42d
     """Represents an image in the datastore."""
     __tablename__ = 'emails'
     __table_args__ = (
@@ -282,7 +295,11 @@ class Emails(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     email = Column(String(255))
 
+<<<<<<< HEAD
 class Uses(BASE, NovaBase):
+=======
+class Uses(BASE, NovaBase, models.TimestampMixin, models.SoftDeleteMixin):
+>>>>>>> be80f7418991180567f0882902ca4151a635e42d
     """Represents an image in the datastore."""
     __tablename__ = 'uses'
     __table_args__ = (
@@ -292,7 +309,11 @@ class Uses(BASE, NovaBase):
     flag = Column(String(255))
     description = Column(Text)
 
+<<<<<<< HEAD
 class Restrictions(BASE, NovaBase):
+=======
+class Restrictions(BASE, NovaBase, models.TimestampMixin, models.SoftDeleteMixin):
+>>>>>>> be80f7418991180567f0882902ca4151a635e42d
     """Represents an image in the datastore."""
     __tablename__ = 'restrictions'
     __table_args__ = (
@@ -301,7 +322,11 @@ class Restrictions(BASE, NovaBase):
     id = Column(Integer, primary_key=True)
     restriction = Column(String(255))
     
+<<<<<<< HEAD
 class Keywords(BASE, NovaBase):
+=======
+class Keywords(BASE, NovaBase, models.TimestampMixin, models.SoftDeleteMixin):
+>>>>>>> be80f7418991180567f0882902ca4151a635e42d
     """Represents an image in the datastore."""
     __tablename__ = 'keywords'
     __table_args__ = (
