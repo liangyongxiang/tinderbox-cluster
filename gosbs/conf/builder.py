@@ -1,4 +1,6 @@
-# Copyright 1999-2020 Gentoo Authors
+# Copyright 2015 OpenStack Foundation
+# All Rights Reserved.
+#
 #    Licensed under the Apache License, Version 2.0 (the "License"); you may
 #    not use this file except in compliance with the License. You may obtain
 #    a copy of the License at
@@ -13,8 +15,8 @@
 
 from oslo_config import cfg
 
-scheduler_group = cfg.OptGroup(name="scheduler",
-                               title="Scheduler configuration")
+scheduler_group = cfg.OptGroup(name="builder",
+                               title="Builder configuration")
 
 scheduler_opts = [
     cfg.StrOpt(
@@ -23,9 +25,9 @@ scheduler_opts = [
 Explicitly specify the mirror git url.
 """),
     cfg.StrOpt(
-        'db_project_repo',
+        'project',
         help="""
-Explicitly specify the database project repo.
+Explicitly specify the project.
 """),
 ]
 

@@ -17,12 +17,18 @@ from pathlib import Path
 import portage
 
 from oslo_log import log as logging
-
 from gosbs import objects
 import gosbs.conf
 
 CONF = gosbs.conf.CONF
+
 LOG = logging.getLogger(__name__)
+def check_portage(context, project_repopath):
+    if not Path('/etc/portage').is_symlink():
+        Path('/etc/portage').symlink_to(project_repopath + 'etc/portage')
+    else:
+        if Path('/etc/portage').resolve() != project_repopath + 'etc/portage':
+            pass
 
 def check_profile(context, project_repopath, project_metadata_db):
     profile_repo_db = objects.repo.Repo.get_by_uuid(context, project_metadata_db.project_profile_repo_uuid)

@@ -33,7 +33,7 @@ help with a possible future backport issue.
 
 # TODO(sneti): Add default=auto for compute
 upgrade_levels_opts = [
-    cfg.StrOpt('compute',
+    cfg.StrOpt('builder',
         help="""
 Compute RPC API version cap.
 

@@ -20,8 +20,9 @@ CONF = gosbs.conf.CONF
 LOG = logging.getLogger(__name__)
 
 def get_project(context, service_repo_db):
-    project_db = objects.project.Project.get_by_name(context, CONF.scheduler.db_project_repo)
+    project_db = objects.project.Project.get_by_name(context, CONF.builder.project)
     project_metadata_db = objects.project_metadata.ProjectMetadata.get_by_uuid(context, project_db.uuid)
+    print(project_db)
     filters = { 'project_uuid' : project_db.uuid, 
                'repo_uuid' : service_repo_db.repo_uuid,
                }
