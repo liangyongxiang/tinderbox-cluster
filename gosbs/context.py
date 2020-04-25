@@ -15,8 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/context.py
-
 """RequestContext: context for requests that persist through all of nova."""
 
 from contextlib import contextmanager

@@ -12,10 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/objects/flavor.py
-# We have change the code so it will fit what we need.
-# It need more cleaning.
-
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_utils import versionutils
@@ -50,7 +46,7 @@ def _project_build_create(context, values):
         db_project_build.save(context.session)
     except db_exc.DBDuplicateEntry as e:
         if 'project_buildid' in e.columns:
-            raise exception.ImagesIdExists(project_build_id=values['project_buildid'])
+            raise exception.ImagesIdExists(project_build_uuid=values['project_buildid'])
         raise exception.ImagesExists(name=values['name'])
     except Exception as e:
         raise db_exc.DBError(e)
@@ -62,7 +58,7 @@ def _project_build_create(context, values):
 def _project_build_destroy(context, project_build_uuid=None, project_builduuid=None):
     query = context.session.query(models.ProjectsBuilds)
 
-    if project_build_id is not None:
+    if project_build_uuid is not None:
         query.filter(models.ProjectsBuilds.uuid == project_build_uuid).delete()
     else:
         query.filter(models.ProjectsBuilds.uuid == project_builduuid).delete()
@@ -174,9 +170,9 @@ class ProjectBuild(base.NovaObject, base.NovaObjectDictCompat, ):
     @db_api.main_context_manager.writer
     def _save(self, context, values):
         db_project_build = context.session.query(models.ProjectsBuilds).\
-            filter_by(id=self.id).first()
+            filter_by(uuid=self.uuid).first()
         if not db_project_build:
-            raise exception.ImagesNotFound(project_build_id=self.id)
+            raise exception.ImagesNotFound(project_build_uuid=self.uuid)
         db_project_build.update(values)
         db_project_build.save(context.session)
         # Refresh ourselves from the DB object so we get the new updated_at.
@@ -189,8 +185,8 @@ class ProjectBuild(base.NovaObject, base.NovaObjectDictCompat, ):
             self._save(context, updates)
 
     @staticmethod
-    def _project_build_destroy(context, project_build_id=None, project_buildid=None):
-        _project_build_destroy(context, project_build_id=project_build_id, project_buildid=project_buildid)
+    def _project_build_destroy(context, project_build_uuid=None, project_buildid=None):
+        _project_build_destroy(context, project_build_uuid=project_build_uuid, project_builduuid=project_builduuid)
 
     #@base.remotable
     def destroy(self, context):
@@ -200,10 +196,10 @@ class ProjectBuild(base.NovaObject, base.NovaObjectDictCompat, ):
         # delete request with only our name filled out. However, if we have
         # our id property, we should instead delete with that since it's
         # far more specific.
-        if 'id' in self:
-            self._project_build_destroy(context, project_build_id=self.id)
+        if 'uuid' in self:
+            self._project_build_destroy(context, project_build_uuid=self.uuid)
         else:
-            self._project_build_destroy(context, project_buildid=self.project_buildid)
+            self._project_build_destroy(context, project_builduuid=self.project_builduuid)
         #self._from_db_object(context, self, db_project_build)
 
     @base.remotable_classmethod
@@ -214,9 +210,9 @@ class ProjectBuild(base.NovaObject, base.NovaObjectDictCompat, ):
         if 'project_uuid' in filters:
             db_project_build = db_project_build.filter(
                 models.ProjectsBuilds.project_uuid == filters['project_uuid'])
-        if 'repo_uuid' in filters:
+        if 'status' in filters:
             db_project_build = db_project_build.filter(
-                models.ProjectsBuilds.repo_uuid == filters['repo_uuid'])
+                models.ProjectsBuilds.status == filters['status'])
         db_project_build = db_project_build.first()
         if not db_project_build:
             return None
@@ -247,7 +243,7 @@ def _project_build_get_all_from_db(context, inactive, filters, sort_key, sort_di
 
     query = sqlalchemyutils.paginate_query(query, models.ProjectsBuilds,
                                            limit,
-                                           [sort_key, 'id'],
+                                           [sort_key, 'uuid'],
                                            marker=marker_row,
                                            sort_dir=sort_dir)
     return [_dict_with_extra_specs(i) for i in query.all()]
@@ -263,7 +259,7 @@ class ProjectBuildList(base.ObjectListBase, base.NovaObject):
 
     @base.remotable_classmethod
     def get_all(cls, context, inactive=False, filters=None,
-                sort_key='id', sort_dir='asc', limit=None, marker=None):
+                sort_key='uuid', sort_dir='asc', limit=None, marker=None):
         db_project_builds = _project_build_get_all_from_db(context,
                                                  inactive=inactive,
                                                  filters=filters,

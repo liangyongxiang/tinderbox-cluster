@@ -157,7 +157,18 @@ class ProjectsRepos(BASE, NovaBase):
     repoman = Column(Boolean(), default=False)
     qa = Column(Boolean(), default=False)
     auto = Column(Boolean(), default=False)
+
+class ProjectsOptions(BASE, NovaBase):
+    """Represents an image in the datastore."""
+    __tablename__ = 'projects_options'
+    __table_args__ = (
+    )
+    id = Column(Integer, primary_key=True)
+    project_uuid = Column(String(36), ForeignKey('projects.uuid'),
+                default=lambda: str(uuid.uuid4()))
     depclean = Column(Boolean(), default=False)
+    oneshot = Column(Boolean(), default=False)
+    removebin = Column(Boolean(), default=False)
 
 class ProjectsBuilds(BASE, NovaBase, models.TimestampMixin, models.SoftDeleteMixin):
     """Represents an image in the datastore."""
@@ -424,3 +435,37 @@ class ServicesRepos(BASE, NovaBase, models.TimestampMixin, models.SoftDeleteMixi
     auto = Column(Boolean(), default=False)
     status = Column(Enum('failed', 'completed', 'in-progress', 'waiting', 'update_db', 'rebuild_db'),
                             nullable=True)
+
+class LocalBinarys(BASE, NovaBase, models.TimestampMixin):
+    """Represents an image in the datastore."""
+    __tablename__ = 'local_binarys'
+    __table_args__ = (
+    )
+
+    uuid = Column(String(36), primary_key=True,
+                default=lambda: str(uuid.uuid4()))
+    name = Column(String(255))
+    project_uuid = Column(String(36), ForeignKey('projects.uuid'), nullable=False,
+                   default=lambda: str(uuid.uuid4()))
+    ebuild_uuid = Column(String(36), ForeignKey('ebuilds.uuid'), nullable=False,
+                   default=lambda: str(uuid.uuid4()))
+    service_uuid = Column(String(36), ForeignKey('services.uuid'),
+                default=lambda: str(uuid.uuid4()))
+    checksum = Column(String(200))
+    looked = Column(Boolean(), default=False)
+
+class ObjectStorBinarys(BASE, NovaBase, models.TimestampMixin):
+    """Represents an image in the datastore."""
+    __tablename__ = 'objectstor_binarys'
+    __table_args__ = (
+    )
+
+    uuid = Column(String(36), primary_key=True,
+                default=lambda: str(uuid.uuid4()))
+    name = Column(String(255))
+    project_uuid = Column(String(36), ForeignKey('projects.uuid'), nullable=False,
+                   default=lambda: str(uuid.uuid4()))
+    ebuild_uuid = Column(String(36), ForeignKey('ebuilds.uuid'), nullable=False,
+                   default=lambda: str(uuid.uuid4()))
+    checksum = Column(String(200))
+    looked = Column(Boolean(), default=False)

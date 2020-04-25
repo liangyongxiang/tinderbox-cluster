@@ -15,10 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/compute/manager.py
-# We have change the code so it will fit what we need.
-# It need more cleaning.
-
 """Handles all processes relating to instances (guest vms).
 
 The :py:class:`ComputeManager` class is a :py:class:`nova.manager.Manager` that

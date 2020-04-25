@@ -1,9 +1,6 @@
 # Copyright 1999-2020 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
-
 # Origin https://gitweb.gentoo.org/proj/portage.git/tree/pym/portage/api/flag.py?h=public_api
-# Fix so we can use mysettings and myportdb.
-# Add filtring of api, python and ruby.
 
 """Provides support functions for USE flag settings and analysis"""
 
@@ -209,3 +206,17 @@ def get_use_flag_dict(portdir):
             #debug.dprint(data[0].strip())
             #debug.dprint(item[index:])
     return use_dict
+
+def get_build_use(cpv, mysettings, myportdb):
+    (final_use, use_expand_hidden, usemasked, useforced) = get_all_cpv_use(cpv, myportdb, mysettings)
+    iuse_flags = filter_flags(get_iuse(cpv, myportdb), use_expand_hidden, usemasked, useforced, mysettings)
+    final_flags = filter_flags(final_use,  use_expand_hidden, usemasked, useforced, mysettings)
+    iuse_flags2 = reduce_flags(iuse_flags)
+    iuse_flags_list = list(set(iuse_flags2))
+    use_disable = list(set(iuse_flags_list).difference(set(final_flags)))
+    use_flagsDict = {}
+    for x in final_flags:
+        use_flagsDict[x] = True
+    for x in use_disable:
+        use_flagsDict[x] = False
+    return use_flagsDict, usemasked

@@ -12,9 +12,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/objects/flavor.py
-# We have change the code so it will fit what we need.
-# It need more cleaning.
+import pdb
 
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import utils as sqlalchemyutils

@@ -14,8 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/manager.py
-
 """Base Manager class.
 
 Managers are responsible for a certain aspect of the system.  It is a logical
@@ -58,7 +56,7 @@ import six
 
 import gosbs.conf
 from gosbs.db import base
-#from gosbs import profiler
+from gosbs import profiler
 from gosbs import rpc
 
 

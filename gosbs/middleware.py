@@ -12,8 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/middleware.py
-
 from oslo_middleware import cors
 
 

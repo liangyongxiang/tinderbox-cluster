@@ -12,8 +12,6 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/i18n.py
-
 """oslo.i18n integration module.
 
 See https://docs.openstack.org/oslo.i18n/latest/user/index.html .

@@ -15,8 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/config.py
-
 from oslo_log import log
 from oslo_utils import importutils
 

@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/version.py
-
 import pbr.version
 
 from gosbs.i18n import _LE

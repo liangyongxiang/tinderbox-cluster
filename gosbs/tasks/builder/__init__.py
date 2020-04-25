@@ -21,4 +21,5 @@ LOG = logging.getLogger(__name__)
 
 def activete_all_tasks(context, service_uuid):
     # Tasks
-    check_task_db(context, 'update_git', datetime(1, 1, 1, 0, 5, 0, 0), True, service_uuid)
+    check_task_db(context, 'update_git', datetime(1, 1, 1, 0, 1, 0, 0), True, service_uuid)
+    check_task_db(context, 'build_pkg', datetime(1, 1, 1, 0, 3, 0, 0), True, service_uuid)

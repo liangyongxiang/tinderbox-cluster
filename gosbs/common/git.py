@@ -1,24 +1,16 @@
-# Copyright 1999-2020 Gentoo Authors
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
-#
-#         http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
+# Copyright 1998-2019 Gentoo Foundation
+# Distributed under the terms of the GNU General Public License v2
 
 import re
 import git
 import os
 
 from oslo_log import log as logging
+from gosbs import objects
 import gosbs.conf
 
 CONF = gosbs.conf.CONF
+
 LOG = logging.getLogger(__name__)
 
 def fetch(repo):
@@ -43,7 +35,7 @@ def update_git_repo_db(repo_dict):
     if repo_uptodate:
         return True, cp_list
     # We check for dir changes and add the package to a list
-    repo_diff = repo.git.diff('origin', '--name-only'
+    repo_diff = repo.git.diff('origin', '--name-only')
     #write_log(session, 'Git dir diff:\n%s' % (repo_diff,), "debug", config_id, 'sync.git_sync_main')
     for diff_line in repo_diff.splitlines():
         find_search = True
@@ -73,7 +65,7 @@ def create_git_repo(repo_dict):
     try:
         os.mkdir(repo_dict['repo_path'])
     except OSError:  
-        LOG.error("Creation of the directory %s failed" % repo_dict['repo_path'])
+        print ("Creation of the directory %s failed" % repo_dict['repo_path'])
         return False
     try:
         if not repo_dict['history']:
@@ -89,7 +81,7 @@ def check_git_repo_db(repo_dict):
         succes = create_git_repo(repo_dict)
         return succes, None
     succes, cp_list = update_git_repo_db(repo_dict)
-    return succes, cp_list
+    return succes , cp_list
 
 def check_git_repo(repo_dict):
     if not os.path.isdir(repo_dict['repo_path']):

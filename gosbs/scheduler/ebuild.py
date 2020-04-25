@@ -1,20 +1,11 @@
 # Copyright 1999-2020 Gentoo Authors
-#    Licensed under the Apache License, Version 2.0 (the "License"); you may
-#    not use this file except in compliance with the License. You may obtain
-#    a copy of the License at
-#
-#         http://www.apache.org/licenses/LICENSE-2.0
-#
-#    Unless required by applicable law or agreed to in writing, software
-#    distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
-#    WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
-#    License for the specific language governing permissions and limitations
-#    under the License.
+# Distributed under the terms of the GNU General Public License v2
 
 import os
 import git
 import re
 import portage
+import pdb
 from portage.checksum import perform_checksum
 
 from oslo_log import log as logging
@@ -23,6 +14,7 @@ from gosbs import objects
 import gosbs.conf
 
 CONF = gosbs.conf.CONF
+
 LOG = logging.getLogger(__name__)
 
 def get_all_cpv_from_package(myportdb, cp, repo_path):
@@ -84,6 +76,8 @@ def check_use_db(context, use):
 
 def create_cpv_use_db(context, ebuild_version_uuid, ebuild_version_metadata_tree):
     for iuse in ebuild_version_metadata_tree[10].split():
+        print('iuse')
+        print(iuse)
         status = False
         if iuse[0] in ["+"]:
             iuse = iuse[1:]
@@ -139,6 +133,8 @@ def check_restriction_db(context, restriction):
 
 def create_cpv_restriction_db(context, ebuild_version_uuid, ebuild_version_metadata_tree):
     for restriction in ebuild_version_metadata_tree[4].split():
+        print('restriction')
+        print(restriction)
         if restriction in ["!"]:
             restriction = restriction[1:]
         if restriction in ["?"]:
@@ -154,6 +150,7 @@ def create_cpv_metadata_db(context, myportdb, cpv, ebuild_file, ebuild_version_d
     repo_path = CONF.repopath + '/' + repo_db.name + '.git'
     git_commit, git_commit_msg = get_git_log_ebuild(repo_path, ebuild_file)
     ebuild_version_metadata_tree = get_ebuild_metadata(myportdb, cpv, repo_db.name)
+    print(ebuild_version_metadata_tree)
     ebuild_metadata_db = objects.ebuild_metadata.EbuildMetadata()
     ebuild_metadata_db.ebuild_uuid = ebuild_version_db.uuid
     ebuild_metadata_db.commit = git_commit
@@ -176,8 +173,10 @@ def check_cpv_db(context, myportdb, cp, repo_db, package_uuid):
     ebuild_version_tree_list = []
     ebuild_version_tree_dict_new = {}
     succes = True
+    #pdb.set_trace()
     for cpv in sorted(get_all_cpv_from_package(myportdb, cp, repo_path)):
         LOG.debug("Checking %s", cpv)
+        print(cpv)
         ebuild_version_tree = portage.versions.cpv_getversion(cpv)
         package = portage.versions.catpkgsplit(cpv)[1]
         ebuild_file = repo_path + "/" + cp + "/" + package + "-" + ebuild_version_tree + ".ebuild"
@@ -196,6 +195,7 @@ def check_cpv_db(context, myportdb, cp, repo_db, package_uuid):
             succes = create_cpv_metadata_db(context, myportdb, cpv, ebuild_file, ebuild_version_db, repo_db)
             ebuild_version_tree_dict_new[cpv] = ebuild_version_db.uuid
         ebuild_version_tree_list.append(ebuild_version_tree)
+    print('check old ebuilds')
     for ebuild_db in objects.ebuild.EbuildList.get_all(context, filters=filters):
         if not ebuild_db.version in ebuild_version_tree_list:
             LOG.info("Deleting %s in the database", ebuild_db.version)

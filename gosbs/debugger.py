@@ -15,8 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/debugger.py
-
 # NOTE(markmc): this is imported before monkey patching in nova.cmd
 # so we avoid extra imports here
 

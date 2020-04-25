@@ -14,8 +14,6 @@
 #    under the License.
 #
 
-# Origin https://github.com/openstack/nova/blob/master/nova/baserpc.py
-
 """
 Base RPC client and server common to all services.
 """

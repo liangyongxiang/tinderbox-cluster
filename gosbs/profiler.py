@@ -13,8 +13,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/profiler.py
-
 from oslo_utils import importutils
 
 import gosbs.conf

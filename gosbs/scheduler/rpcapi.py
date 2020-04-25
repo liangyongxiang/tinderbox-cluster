@@ -11,10 +11,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/compute/rpcapi.py
-# We have change the code so it will fit what we need.
-# It need more cleaning and work.
-
 """
 Client side of the scheduler RPC API.
 """

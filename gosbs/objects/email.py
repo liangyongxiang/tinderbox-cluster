@@ -12,10 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/objects/flavor.py
-# We have change the code so it fit what we need.
-# I need more cleaning.
-
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_utils import versionutils
@@ -70,7 +66,7 @@ def _email_destroy(context, email_id=None, emailid=None):
 # TODO(berrange): Remove NovaObjectDictCompat
 # TODO(mriedem): Remove NovaPersistentObject in version 2.0
 @base.NovaObjectRegistry.register
-class Email(base.NovaObject, base.NovaObjectDictCompat, base.NovaPersistentObject):
+class Email(base.NovaObject, base.NovaObjectDictCompat):
     # Version 1.0: Initial version
 
     VERSION = '1.0'

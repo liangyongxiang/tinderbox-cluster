@@ -12,10 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/objects/flavor.py
-# We have change the code so it fit what we need.
-# I need more cleaning.
-
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_utils import versionutils
@@ -227,8 +223,8 @@ def _ebuild_restriction_get_all_from_db(context, inactive, filters, sort_key, so
     query = EbuildRestriction._ebuild_restriction_get_query_from_db(context)
 
     if 'ebuild_uuid' in filters:
-            query = query.filter(
-                models.EbuildsRestrictions.ebuild_uuid == filters['ebuild_uuid'])
+        query = query.filter(models.EbuildsRestrictions.ebuild_uuid == filters['ebuild_uuid'])
+
     if not query:
         return None
 

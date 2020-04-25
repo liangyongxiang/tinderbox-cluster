@@ -12,10 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/objects/flavor.py
-# We have change the code so it will fit what we need.
-# It need more cleaning.
-
 from oslo_db import exception as db_exc
 from oslo_db.sqlalchemy import utils as sqlalchemyutils
 from oslo_utils import versionutils
@@ -83,7 +79,6 @@ class ProjectRepo(base.NovaObject, base.NovaObjectDictCompat, ):
         'build' : fields.BooleanField(),
         'test' : fields.BooleanField(),
         'qa' : fields.BooleanField(),
-        'depclean' : fields.BooleanField(),
         'repoman' : fields.BooleanField(),
         }
 

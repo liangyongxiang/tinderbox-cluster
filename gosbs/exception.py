@@ -14,8 +14,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/exception.py
-
 """Nova base exception handling.
 
 Includes decorator for re-raising Nova-type exceptions.

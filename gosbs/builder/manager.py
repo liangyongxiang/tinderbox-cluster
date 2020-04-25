@@ -102,3 +102,13 @@ class BuilderManager(manager.Manager):
                     'service_uuid' : self.service_ref.uuid,
                 }
         run_task(context, filters, self.service_ref)
+
+    @periodic_task.periodic_task
+    def build_pkg_task(self, context):
+        task_name = 'build_pkg'
+        LOG.debug("Runing task %s", task_name)
+        filters = { 'status' : 'waiting', 
+                    'name' : task_name,
+                    'service_uuid' : self.service_ref.uuid,
+                }
+        run_task(context, filters, self.service_ref)

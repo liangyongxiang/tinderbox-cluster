@@ -12,13 +12,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/objects/fields.py
-
 import os
 import re
 
-from cursive import signature_utils
-from oslo_serialization import jsonutils
+#from cursive import signature_utils
+#from oslo_serialization import jsonutils
 from oslo_versionedobjects import fields
 import six
 

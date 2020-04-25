@@ -15,9 +15,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/service.py
-# we removed class WSGIService
-
 """Generic Node base class for all workers that run on hosts."""
 
 import os
@@ -56,7 +53,7 @@ LOG = logging.getLogger(__name__)
 CONF = gosbs.conf.CONF
 
 SERVICE_MANAGERS = {
-    'gosbs-gitmirror': 'gosbs.gitmirror.manager.GitMirrorManager',
+    'gosbs-builder': 'gosbs.builder.manager.BuilderManager',
     'gosbs-scheduler': 'gosbs.scheduler.manager.SchedulerManager',
 }
 

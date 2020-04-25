@@ -12,8 +12,6 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
-# Origin https://github.com/openstack/nova/blob/master/nova/objects/__init__.py
-
 # NOTE(comstud): You may scratch your head as you see code that imports
 # this module and then accesses attributes for objects such as Instance,
 # etc, yet you do not see these attributes in here. Never fear, there is
@@ -37,6 +35,8 @@ def register_all():
     __import__('gosbs.objects.email')
     __import__('gosbs.objects.keyword')
     __import__('gosbs.objects.package')
+    __import__('gosbs.objects.local_package')
+    __import__('gosbs.objects.objectstor_package')
     __import__('gosbs.objects.package_metadata')
     __import__('gosbs.objects.package_email')
     __import__('gosbs.objects.project')
