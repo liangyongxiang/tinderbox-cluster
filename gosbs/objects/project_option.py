@@ -77,6 +77,8 @@ class ProjectOption(base.NovaObject, base.NovaObjectDictCompat):
         'oneshot' : fields.BooleanField(),
         'removebin' : fields.BooleanField(),
         'depclean' : fields.BooleanField(),
+        'usepkg' : fields.BooleanField(),
+        'buildpkg' : fields.BooleanField(),
         }
 
     def __init__(self, *args, **kwargs):

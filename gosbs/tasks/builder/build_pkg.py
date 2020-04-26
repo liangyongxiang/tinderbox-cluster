@@ -125,6 +125,10 @@ def emeerge_cmd_options(context, build_job, project_options_db):
     argscmd = []
     if project_options_db.oneshot:
         argscmd.append('--oneshot')
+    if project_options_db.usepkg:
+        argscmd.append('--usepkg')
+    if project_options_db.buildpkg:
+        argscmd.append('--buildpkg')
     argscmd.append('=' + build_job['cpv'])
     return argscmd
 

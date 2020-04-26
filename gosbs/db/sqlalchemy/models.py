@@ -169,6 +169,8 @@ class ProjectsOptions(BASE, NovaBase):
     depclean = Column(Boolean(), default=False)
     oneshot = Column(Boolean(), default=False)
     removebin = Column(Boolean(), default=False)
+    usepkg = Column(Boolean(), default=False)
+    buildpkg = Column(Boolean(), default=False)
 
 class ProjectsBuilds(BASE, NovaBase, models.TimestampMixin, models.SoftDeleteMixin):
     """Represents an image in the datastore."""
