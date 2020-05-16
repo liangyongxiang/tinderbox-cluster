@@ -94,6 +94,7 @@ from _emerge.UnmergeDepPriority import UnmergeDepPriority
 from _emerge.UseFlagDisplay import pkg_use_display
 from _emerge.UserQuery import UserQuery
 
+from gosbs.portage import create_trees as gosbs_create_trees
 from gosbs.builder.wrapper_depgraph import build_mydepgraph
 
 if sys.hexversion >= 0x3000000:
@@ -2493,7 +2494,7 @@ def load_emerge_config(emerge_config=None, env=None, **kargs):
         v = env.get(envvar)
         if v is not None:
             kwargs[k] = v
-    emerge_config.trees = portage.create_trees(trees=emerge_config.trees,
+    emerge_config.trees = gosbs_create_trees(trees=emerge_config.trees,
                 **kwargs)
 
     for root_trees in emerge_config.trees.values():

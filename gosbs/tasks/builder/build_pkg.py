@@ -9,7 +9,7 @@ from gosbs import objects
 from gosbs._emerge.actions import load_emerge_config
 from gosbs._emerge.main import emerge_main
 from gosbs.common.flags import get_build_use
-from gosbs.common.binary import destroy_local_binary, destroy_objectstor_binary
+from gosbs.builder.binary import destroy_local_binary
 from gosbs.builder.depclean import do_depclean
 import gosbs.conf
 
@@ -119,7 +119,7 @@ def set_use_packages(context, build_job, build_use):
 
 def destroy_binary(context, build_job, mysettings, project_db, service_uuid):
     destroy_local_binary(context, build_job, project_db, service_uuid, mysettings)
-    destroy_objectstor_binary(context, build_job, project_db)
+    #destroy_objectstor_binary(context, build_job, project_db)
 
 def emeerge_cmd_options(context, build_job, project_options_db):
     argscmd = []

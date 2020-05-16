@@ -438,36 +438,85 @@ class ServicesRepos(BASE, NovaBase, models.TimestampMixin, models.SoftDeleteMixi
     status = Column(Enum('failed', 'completed', 'in-progress', 'waiting', 'update_db', 'rebuild_db'),
                             nullable=True)
 
-class LocalBinarys(BASE, NovaBase, models.TimestampMixin):
+class Binarys(BASE, NovaBase, models.TimestampMixin, models.SoftDeleteMixin):
     """Represents an image in the datastore."""
-    __tablename__ = 'local_binarys'
+    __tablename__ = 'binarys'
     __table_args__ = (
     )
 
     uuid = Column(String(36), primary_key=True,
                 default=lambda: str(uuid.uuid4()))
-    name = Column(String(255))
-    project_uuid = Column(String(36), ForeignKey('projects.uuid'), nullable=False,
+    project_uuid = Column(String(36), ForeignKey('projects.uuid'),
                    default=lambda: str(uuid.uuid4()))
-    ebuild_uuid = Column(String(36), ForeignKey('ebuilds.uuid'), nullable=False,
+    ebuild_uuid = Column(String(36), ForeignKey('ebuilds.uuid'),
                    default=lambda: str(uuid.uuid4()))
     service_uuid = Column(String(36), ForeignKey('services.uuid'),
                 default=lambda: str(uuid.uuid4()))
-    checksum = Column(String(200))
+    repository = Column(String(255), nullable=True)
+    cpv = Column(String(255), nullable=True)
+    restrictions = Column(String(255), nullable=True)
+    depend = Column((Text), nullable=True)
+    bdepend = Column((Text), nullable=True)
+    rdepend = Column((Text), nullable=True)
+    pdepend = Column((Text), nullable=True)
+    mtime = Column(Integer)
+    license = Column(String(255), nullable=True)
+    chost = Column(String(255), nullable=True)
+    sha1 = Column(String(255), nullable=True)
+    defined_phases = Column((Text), nullable=True)
+    size = Column(Integer)
+    eapi = Column(String(255), nullable=True)
+    path = Column(String(255), nullable=True)
+    build_id = Column(Integer)
+    slot = Column(String(255), nullable=True)
+    md5 = Column(String(255), nullable=True)
+    build_time = Column(Integer)
+    iuses = Column((Text), nullable=True)
+    uses = Column((Text), nullable=True)
+    provides = Column((Text), nullable=True)
+    keywords = Column((Text), nullable=True)
+    requires = Column((Text), nullable=True)
+    restrictions = Column((Text), nullable=True)
     looked = Column(Boolean(), default=False)
 
-class ObjectStorBinarys(BASE, NovaBase, models.TimestampMixin):
+class BinarysHeaders(BASE, NovaBase, models.TimestampMixin, models.SoftDeleteMixin):
     """Represents an image in the datastore."""
-    __tablename__ = 'objectstor_binarys'
+    __tablename__ = 'binarys_headers'
     __table_args__ = (
     )
 
     uuid = Column(String(36), primary_key=True,
                 default=lambda: str(uuid.uuid4()))
-    name = Column(String(255))
-    project_uuid = Column(String(36), ForeignKey('projects.uuid'), nullable=False,
+    project_uuid = Column(String(36), ForeignKey('projects.uuid'),
                    default=lambda: str(uuid.uuid4()))
-    ebuild_uuid = Column(String(36), ForeignKey('ebuilds.uuid'), nullable=False,
-                   default=lambda: str(uuid.uuid4()))
-    checksum = Column(String(200))
+    service_uuid = Column(String(36), ForeignKey('services.uuid'),
+                default=lambda: str(uuid.uuid4()))
+    repository = Column((Text), nullable=True)
+    arch = Column(String(255), nullable=True)
+    accept_keywords = Column(String(255), nullable=True)
+    accept_license = Column((Text), nullable=True)
+    accept_properties = Column((Text), nullable=True)
+    accept_restrict = Column((Text), nullable=True)
+    cbuild = Column(String(255), nullable=True)
+    config_protect = Column((Text), nullable=True)
+    config_protect_mask = Column((Text), nullable=True)
+    features = Column((Text), nullable=True)
+    gentoo_mirrors = Column((Text), nullable=True)
+    #install_mask = Column((Text), nullable=True)
+    iuse_implicit = Column((Text), nullable=True)
+    use = Column((Text), nullable=True)
+    use_expand = Column((Text), nullable=True)
+    use_expand_hidden = Column((Text), nullable=True)
+    use_expand_implicit = Column((Text), nullable=True)
+    use_expand_unprefixed = Column((Text), nullable=True)
+    use_expand_values_arch = Column((Text), nullable=True)
+    use_expand_values_elibc = Column((Text), nullable=True)
+    use_expand_values_kernel = Column((Text), nullable=True)
+    use_expand_values_userland = Column((Text), nullable=True)
+    elibc = Column(String(255), nullable=True)
+    kernel = Column(String(255), nullable=True)
+    userland = Column(String(255), nullable=True)
+    packages = Column(Integer)
+    profile = Column(String(255), nullable=True)
+    version = Column(String(255), nullable=True)
     looked = Column(Boolean(), default=False)
