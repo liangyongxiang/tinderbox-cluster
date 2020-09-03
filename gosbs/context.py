@@ -20,6 +20,7 @@
 from contextlib import contextmanager
 import copy
 import warnings
+from minio import Minio
 
 import eventlet.queue
 import eventlet.timeout
@@ -29,6 +30,7 @@ from oslo_context import context
 from oslo_db.sqlalchemy import enginefacade
 from oslo_log import log as logging
 from oslo_utils import timeutils
+from openstack import connection
 import six
 
 from gosbs import exception
@@ -36,6 +38,9 @@ from gosbs.i18n import _
 from gosbs import objects
 from gosbs import policy
 from gosbs import utils
+import gosbs.conf
+
+CONF = gosbs.conf.CONF
 
 LOG = logging.getLogger(__name__)
 # TODO(melwitt): This cache should be cleared whenever WSGIService receives a
@@ -558,3 +563,25 @@ def scatter_gather_all_cells(context, fn, *args, **kwargs):
     load_cells()
     return scatter_gather_cells(context, CELLS, CELL_TIMEOUT,
                                 fn, *args, **kwargs)
+
+def get_openstack_connect():
+    openstack_conn = connection.Connection(
+        region_name = CONF.keystone.region_name,
+        auth=dict(
+            auth_url = CONF.keystone.auth_url,
+            username = CONF.keystone.username,
+            password = CONF.keystone.password,
+            project_id = CONF.keystone.project_id,
+            user_domain_id = CONF.keystone.user_domain_name),
+        gosbs_api_version = CONF.keystone.auth_version,
+        identity_interface= CONF.keystone.identity_interface)
+    return openstack_conn
+
+def get_minio_connect():
+    minioclient = Minio(
+        CONF.minio.url,
+        access_key = CONF.minio.username,
+        secret_key = CONF.minio.password,
+        secure = True
+    )
+    return minioclient

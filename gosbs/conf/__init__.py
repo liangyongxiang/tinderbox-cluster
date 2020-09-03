@@ -41,6 +41,7 @@ from gosbs.conf import database
 #from nova.conf import key_manager
 from gosbs.conf import keystone
 #from nova.conf import libvirt
+from gosbs.conf import minio
 #from nova.conf import mks
 from gosbs.conf import netconf
 #from nova.conf import neutron
@@ -88,7 +89,7 @@ database.register_opts(CONF)
 #glance.register_opts(CONF)
 #guestfs.register_opts(CONF)
 #hyperv.register_opts(CONF)
-#mks.register_opts(CONF)
+minio.register_opts(CONF)
 #imagecache.register_opts(CONF)
 #ironic.register_opts(CONF)
 #key_manager.register_opts(CONF)
