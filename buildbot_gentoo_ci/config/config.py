@@ -89,6 +89,7 @@ class GentooCiConfig(util.ComparableMixin):
 
     _known_config_keys = set([
         "db_url",
+        "project"
     ])
 
     compare_attrs = list(_known_config_keys)
@@ -113,6 +114,7 @@ class GentooCiConfig(util.ComparableMixin):
         # and defer the rest to sub-functions, for code clarity
         try:
             config.load_db(config_dict)
+            config.load_project(config_dict)
         finally:
             _errors = None
 
@@ -133,3 +135,11 @@ class GentooCiConfig(util.ComparableMixin):
 
     def load_db(self, config_dict):
         self.db = dict(db_url=self.getDbUrlFromConfig(config_dict))
+
+    def load_project(self, config_dict):
+        if  'project' in config_dict:
+            self.project = dict(
+                project=config_dict['project']
+            )
+        else:
+            error("project are not configured")
