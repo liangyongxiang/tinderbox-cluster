@@ -15,7 +15,7 @@
 # Copyright Buildbot Team Members
 # Origins: buildbot.config.py
 # Modifyed by Gentoo Authors.
-# Copyright 2020 Gentoo Authors
+# Copyright 2021 Gentoo Authors
 
 import datetime
 import inspect
@@ -49,6 +49,7 @@ from buildbot.config import ConfigErrors, error, loadConfigDict
 _errors = None
 
 DEFAULT_DB_URL = 'sqlite:///gentoo.sqlite'
+DEFAULT_REPOSITORY_BASEDIR = 'repository'
 
 #Use GentooCiConfig.loadFromDict
 @implementer(interfaces.IConfigLoader)
@@ -89,7 +90,8 @@ class GentooCiConfig(util.ComparableMixin):
 
     _known_config_keys = set([
         "db_url",
-        "project"
+        "project",
+        "repository_basedir"
     ])
 
     compare_attrs = list(_known_config_keys)
@@ -137,9 +139,12 @@ class GentooCiConfig(util.ComparableMixin):
         self.db = dict(db_url=self.getDbUrlFromConfig(config_dict))
 
     def load_project(self, config_dict):
-        if  'project' in config_dict:
-            self.project = dict(
-                project=config_dict['project']
-            )
+        self.project = {}
+        if 'project' in config_dict:
+            self.project['project'] = config_dict['project']
         else:
             error("project are not configured")
+        if 'repository_basedir' in config_dict:
+            self.project['repository_basedir'] = config_dict['repository_basedir']
+        else:
+            self.project['repository_basedir'] = DEFAULT_REPOSITORY_BASEDIR
