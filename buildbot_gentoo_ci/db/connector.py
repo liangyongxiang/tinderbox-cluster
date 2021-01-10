@@ -32,6 +32,7 @@ from buildbot.util import service
 from buildbot_gentoo_ci.db import model
 from buildbot_gentoo_ci.db import projects
 from buildbot_gentoo_ci.db import repositorys
+from buildbot_gentoo_ci.db import categorys
 
 upgrade_message = textwrap.dedent("""\
 
@@ -73,6 +74,7 @@ class DBConnector(service.ReconfigurableServiceMixin,
         self.model = model.Model(self)
         self.projects = projects.ProjectsConnectorComponent(self)
         self.repositorys = repositorys.RepositorysConnectorComponent(self)
+        self.categorys = categorys.CategorysConnectorComponent(self)
 
     @defer.inlineCallbacks
     def setup(self, config, check_version=True, verbose=True):

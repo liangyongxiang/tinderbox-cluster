@@ -5,7 +5,7 @@ from buildbot.plugins import steps as buildbot_steps
 from buildbot.plugins import util
 
 from buildbot_gentoo_ci.steps import update_db
-#from buildbot_gentoo_ci.steps import category
+from buildbot_gentoo_ci.steps import category
 #from buildbot_gentoo_ci.steps import package
 
 def update_db_check():
@@ -37,7 +37,7 @@ def update_db_cp():
     # else
     #   add category to db step
     #   return category_data
-    #f.addStep(category.CheckCGentooCiProject())
+    f.addStep(category.CheckCGentooCiProject())
     # if package in db
     #   return package_data
     #   add check package path step at end

@@ -138,7 +138,7 @@ class Model(base.DBConnectorComponent):
     )
 
     categorys = sautils.Table(
-        "categories", metadata,
+        "categorys", metadata,
         sa.Column('uuid', sa.String(36), primary_key=True,
                   default=lambda: str(uuid.uuid4())
                   ),
@@ -152,7 +152,7 @@ class Model(base.DBConnectorComponent):
                   ),
         sa.Column('name', sa.String(255), nullable=False),
         sa.Column('category_uuid', sa.String(36),
-                  sa.ForeignKey('categories.uuid', ondelete='CASCADE'),
+                  sa.ForeignKey('categorys.uuid', ondelete='CASCADE'),
                   nullable=False),
         sa.Column('repository_uuid', sa.String(36),
                   sa.ForeignKey('repositorys.uuid', ondelete='CASCADE'),
@@ -175,14 +175,14 @@ class Model(base.DBConnectorComponent):
         sa.Column('deleted_at', sa.Integer, nullable=True),
     )
 
-    ebuildkeywords = sautils.Table(
-        "ebuildkeywords", metadata,
+    ebuilds_keywords = sautils.Table(
+        "ebuilds_keywords", metadata,
         # unique id per project
         sa.Column('id', sa.Integer, primary_key=True),
         # project's name
         sa.Column('keyword_id', sa.Integer,
                   sa.ForeignKey('keywords.id', ondelete='CASCADE')),
-        sa.Column('ebuild_uuid', sa.String(36),
+        sa.Column('ebuilds_uuid', sa.String(36),
                   sa.ForeignKey('ebuilds.uuid', ondelete='CASCADE')),
         sa.Column('status', sa.String(255), nullable=False),
     )
