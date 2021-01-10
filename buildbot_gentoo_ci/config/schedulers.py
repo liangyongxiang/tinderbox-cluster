@@ -1,4 +1,4 @@
-# Copyright 2020 Gentoo Authors
+# Copyright 2021 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 from buildbot.plugins import schedulers, util
@@ -8,7 +8,7 @@ def builderUpdateDbNames(self, props):
     builders = set()
     for f in props.files:
         if f.endswith('.ebuild'):
-            builders.add('update_db_packages')
+            builders.add('update_db_check')
     return list(builders)
 
 @util.renderer
@@ -36,7 +36,7 @@ def gentoo_schedulers():
         name="force",
         buttonName="pushMe!",
         label="My nice Force form",
-        builderNames=['update_db_packages'],
+        builderNames=['update_db_check'],
         # A completely customized property list.  The name of the
         # property is the name of the parameter
         properties=[
@@ -50,7 +50,10 @@ def gentoo_schedulers():
                     default="gentoo", size=80),
             ])
     ])
+    update_cpv_data = schedulers.Triggerable(name="update_cpv_data",
+                               builderNames=["update_cpv_data"])
     s = []
     s.append(test_updatedb)
     #s.append(scheduler_update_db)
+    s.append(update_cpv_data)
     return s

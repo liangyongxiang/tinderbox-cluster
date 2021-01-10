@@ -15,8 +15,7 @@
 # Copyright Buildbot Team Members
 # Origins: buildbot.db.connector.py
 # Modifyed by Gentoo Authors.
-# Copyright 2020 Gentoo Authors
-
+# Copyright 2021 Gentoo Authors
 
 import textwrap
 
@@ -31,6 +30,8 @@ from buildbot.db import pool
 from buildbot.util import service
 
 from buildbot_gentoo_ci.db import model
+from buildbot_gentoo_ci.db import projects
+from buildbot_gentoo_ci.db import repositorys
 
 upgrade_message = textwrap.dedent("""\
 
@@ -70,6 +71,8 @@ class DBConnector(service.ReconfigurableServiceMixin,
     def setServiceParent(self, p):
         yield super().setServiceParent(p)
         self.model = model.Model(self)
+        self.projects = projects.ProjectsConnectorComponent(self)
+        self.repositorys = repositorys.RepositorysConnectorComponent(self)
 
     @defer.inlineCallbacks
     def setup(self, config, check_version=True, verbose=True):

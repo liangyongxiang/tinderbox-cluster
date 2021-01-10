@@ -1,8 +1,8 @@
-# Copyright 2020 Gentoo Authors
+# Copyright 2021 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 from twisted.python import log
-from twisted.internet import reactor, defer
+from twisted.internet import defer
 
 from buildbot import config as master_config
 from buildbot.db import exceptions
@@ -39,5 +39,5 @@ class GentooCiService(BuildbotService):
             yield self.db.setup(self.config)
         except exceptions.DatabaseNotReadyError:
             # (message was already logged)
-            reactor.stop()
+            self.master.reactor.stop()
             return

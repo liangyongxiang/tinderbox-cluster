@@ -49,7 +49,7 @@ from buildbot.config import ConfigErrors, error, loadConfigDict
 _errors = None
 
 DEFAULT_DB_URL = 'sqlite:///gentoo.sqlite'
-DEFAULT_REPOSITORY_BASEDIR = 'repository'
+DEFAULT_REPOSITORY_BASEDIR = '/srv/repository'
 
 #Use GentooCiConfig.loadFromDict
 @implementer(interfaces.IConfigLoader)
