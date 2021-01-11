@@ -1,5 +1,6 @@
 # Copyright 2021 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
+
 import os
 
 from portage import config as portage_config
@@ -36,16 +37,19 @@ class GetDataGentooCiProject(BuildStep):
         if self.profile_repository_data is None:
             log.err('No data for repository in the database')
             return FAILURE
+        #self.repository = self.getProperty("repository")
+        self.repository = 'gentoo'
+        self.repository_data = yield self.gentooci.db.repositorys.getRepositoryByName(self.repository)
         print(self.project_data)
         print(self.project_repository_data)
         print(self.profile_repository_data)
         print(self.getProperty("cpv_changes"))
-        print(self.getProperty("repository"))
+        print(self.repository_data)
         self.setProperty("project_data", self.project_data, 'project_data')
         self.setProperty("project_repository_data", self.project_repository_data, 'project_repository_data')
         self.setProperty("profile_repository_data", self.profile_repository_data, 'profile_repository_data')
         self.setProperty("cpv_changes", self.getProperty("cpv_changes"), 'cpv_changes')
-        self.setProperty("repository", self.getProperty("repository"), 'repository')
+        self.setProperty("repository_data", self.repository_data, 'repository_data')
         return SUCCESS
 
 class CheckPathGentooCiProject(BuildStep):
@@ -59,18 +63,17 @@ class CheckPathGentooCiProject(BuildStep):
         self.repository_basedir = self.gentooci.config.project['repository_basedir']
         self.profile_repository_data = self.getProperty("profile_repository_data")
         self.project_repository_data = self.getProperty("project_repository_data")
-        #self.repository = self.getProperty("repository")
-        self.repository = 'gentoo'
+        self.repository_data = self.getProperty("repository_data")
         self.project_data = self.getProperty("project_data")
         self.project_path = yield os.path.join(self.repository_basedir, self.project_repository_data['name'] + '.git')
-        self.repository_path = yield os.path.join(self.repository_basedir, self.repository + '.git')
+        self.repository_path = yield os.path.join(self.repository_basedir, self.repository_data['name'] + '.git')
         self.portage_path = yield os.path.join(self.project_path, self.project_data['name'], 'etc/portage')
         success = True
         for x in [
                   os.path.join(self.repository_basedir, self.profile_repository_data['name'] + '.git'),
                   self.project_path,
                   self.portage_path,
-                  os.path.join(self.portage_path, 'make.profile')
+                  os.path.join(self.portage_path, 'make.profile'),
                   self.repository_path
                   # check the path of make.profile is project_data['profile']
                  ]:
@@ -84,7 +87,7 @@ class CheckPathGentooCiProject(BuildStep):
         self.setProperty("project_data", self.project_data, 'project_data')
         self.setProperty("project_repository_data", self.project_repository_data, 'project_repository_data')
         self.setProperty("cpv_changes", self.getProperty("cpv_changes"), 'cpv_changes')
-        self.setProperty("repository", self.repository, 'repository')
+        self.setProperty("repository_data", self.repository_data, 'repository_data')
         return SUCCESS
 
 class CheckProjectGentooCiProject(BuildStep):
@@ -110,7 +113,7 @@ class CheckProjectGentooCiProject(BuildStep):
         self.setProperty("config_root", self.config_root, 'config_root')
         self.setProperty("project_data", self.project_data, 'project_data')
         self.setProperty("cpv_changes", self.getProperty("cpv_changes"), 'cpv_changes')
-        self.setProperty("repository", self.getProperty("repository"), 'repository')
+        self.setProperty("repository_data", self.getProperty("repository_data"), 'repository')
         return SUCCESS
 
 class CheckCPVGentooCiProject(BuildStep):
@@ -119,15 +122,12 @@ class CheckCPVGentooCiProject(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
-        self.config_root = self.getProperty("config_root")
         #self.cpv_changes = self.getProperty("cpv_changes")
         self.cpv_changes = []
-        self.project_data = self.getProperty("project_data")
         self.cpv_changes.append('dev-lang/python-3.8')
         self.cpv_changes.append('dev-python/prust-3.9')
         print(self.cpv_changes)
-        self.repository = self.getProperty("repository")
-        print(self.repository)
+        print(self.getProperty("repository_data"))
         # check if cpv_change is a string or a list
         if isinstance(self.cpv_changes, list):
             self.cpv_list = self.cpv_changes
@@ -150,9 +150,9 @@ class CheckCPVGentooCiProject(BuildStep):
                         updateSourceStamp=False,
                         set_properties={
                             'cpv' : cpv,
-                            'config_root' : self.config_root,
-                            'project_data' : self.project_data,
-                            'repository' : self.repository
+                            'config_root' : self.getProperty("config_root"),
+                            'project_data' : self.getProperty("project_data"),
+                            'repository_data' : self.getProperty("repository_data"),
                         }
                     )
                 )

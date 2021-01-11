@@ -6,7 +6,7 @@ from buildbot.plugins import util
 
 from buildbot_gentoo_ci.steps import update_db
 from buildbot_gentoo_ci.steps import category
-#from buildbot_gentoo_ci.steps import package
+from buildbot_gentoo_ci.steps import package
 
 def update_db_check():
     f = util.BuildFactory()
@@ -44,7 +44,8 @@ def update_db_cp():
     # else
     #   add package to db step
     #   return package_data
-    #f.addStep(package.CheckPGentooCiProject())
+    f.addStep(package.CheckPGentooCiProject())
     # Make a for loop and trigger new builders with v from cpv
     #   return package_data, cpv, repository, project_data, config_root
+    #f.addStep(package.TriggerVGentooCiProject())
     return f
