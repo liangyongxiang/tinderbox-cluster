@@ -7,6 +7,7 @@ from buildbot.plugins import util
 from buildbot_gentoo_ci.steps import update_db
 from buildbot_gentoo_ci.steps import category
 from buildbot_gentoo_ci.steps import package
+from buildbot_gentoo_ci.steps import version
 
 def update_db_check():
     f = util.BuildFactory()
@@ -45,7 +46,36 @@ def update_db_cp():
     #   add package to db step
     #   return package_data
     f.addStep(package.CheckPGentooCiProject())
-    # Make a for loop and trigger new builders with v from cpv
-    #   return package_data, cpv, repository, project_data, config_root
-    #f.addStep(package.TriggerVGentooCiProject())
+    # Trigger new builders with v from cpv
+    #   return package_data, cpv, repository_data, project_data, config_root
+    f.addStep(package.TriggerCheckVGentooCiProject())
+    return f
+
+def update_db_v():
+    f = util.BuildFactory()
+    # FIXME: 3
+    # if version in db
+    #   return version_data
+    f.addStep(version.GetVData())
+    #   check path and hash
+    f.addStep(version.CheckPathHash())
+    #   if not path
+    #       if not hash
+    #           add deleted stage att end
+    #           add version to db stage
+    #           add version metadata to db
+    #           add version to build check
+    #   else
+    #       add deleted stage att end
+    #       add version to build check stage att end
+    # else
+    #   add version to db
+    #   add version metadata to db
+    #   add version to build check
+    f.addStep(version.CheckV())
+    return f
+
+def build_request_check():
+    f = util.BuildFactory()
+    # FIXME: 4
     return f

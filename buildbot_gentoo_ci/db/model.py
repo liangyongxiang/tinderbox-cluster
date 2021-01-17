@@ -131,10 +131,10 @@ class Model(base.DBConnectorComponent):
 
     keywords = sautils.Table(
         "keywords", metadata,
-        # unique id per project
+        # unique uuid per keyword
         sa.Column('id', sa.Integer, primary_key=True),
         # project's name
-        sa.Column('keyword', sa.String(255), nullable=False),
+        sa.Column('name', sa.String(255), nullable=False),
     )
 
     categorys = sautils.Table(
@@ -158,11 +158,11 @@ class Model(base.DBConnectorComponent):
                   sa.ForeignKey('repositorys.uuid', ondelete='CASCADE'),
                   nullable=False),
         sa.Column('deleted', sa.Boolean, default=False),
-        sa.Column('deleted_at', sa.Integer, nullable=True),
+        sa.Column('deleted_at', sa.DateTime, nullable=True),
     )
 
-    ebuilds = sautils.Table(
-        "ebuilds", metadata,
+    versions = sautils.Table(
+        "versions", metadata,
         sa.Column('uuid', sa.String(36), primary_key=True,
                   default=lambda: str(uuid.uuid4()),
                   ),
@@ -170,21 +170,23 @@ class Model(base.DBConnectorComponent):
         sa.Column('package_uuid', sa.String(36),
                   sa.ForeignKey('packages.uuid', ondelete='CASCADE'),
                   nullable=False),
-        sa.Column('ebuild_hash', sa.String(255), nullable=False),
+        sa.Column('file_hash', sa.String(255), nullable=False),
         sa.Column('deleted', sa.Boolean, default=False),
-        sa.Column('deleted_at', sa.Integer, nullable=True),
+        sa.Column('deleted_at', sa.DateTime, nullable=True),
     )
 
-    ebuilds_keywords = sautils.Table(
-        "ebuilds_keywords", metadata,
+    versions_keywords = sautils.Table(
+        "versions_keywords", metadata,
         # unique id per project
-        sa.Column('id', sa.Integer, primary_key=True),
+        sa.Column('uuid', sa.String(36), primary_key=True,
+                  default=lambda: str(uuid.uuid4()),
+                  ),
         # project's name
         sa.Column('keyword_id', sa.Integer,
                   sa.ForeignKey('keywords.id', ondelete='CASCADE')),
-        sa.Column('ebuilds_uuid', sa.String(36),
-                  sa.ForeignKey('ebuilds.uuid', ondelete='CASCADE')),
-        sa.Column('status', sa.String(255), nullable=False),
+        sa.Column('versions_uuid', sa.String(36),
+                  sa.ForeignKey('versions.uuid', ondelete='CASCADE')),
+        sa.Column('status', sa.Enum('stable','unstable','negative','all'), nullable=False),
     )
 
     # Tables related to users

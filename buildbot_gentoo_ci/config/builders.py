@@ -22,4 +22,20 @@ def gentoo_builders(b=[]):
         factory=buildfactorys.update_db_cp()
         )
     )
+    # FIXME: get workers from db
+    # Use multiplay workers
+    b.append(util.BuilderConfig(
+        name='update_v_data',
+        workername='updatedb_1',
+        factory=buildfactorys.update_db_v()
+        )
+    )
+    # FIXME: get workers from db
+    # Use multiplay workers
+    b.append(util.BuilderConfig(
+        name='build_request_data',
+        workername='updatedb_1',
+        factory=buildfactorys.build_request_check()
+        )
+    )
     return b

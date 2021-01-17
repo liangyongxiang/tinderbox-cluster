@@ -52,8 +52,14 @@ def gentoo_schedulers():
     ])
     update_cpv_data = schedulers.Triggerable(name="update_cpv_data",
                                builderNames=["update_cpv_data"])
+    update_v_data = schedulers.Triggerable(name="update_v_data",
+                               builderNames=["update_v_data"])
+    build_request_data = schedulers.Triggerable(name="build_request_data",
+                               builderNames=["build_request_data"])
     s = []
     s.append(test_updatedb)
     #s.append(scheduler_update_db)
     s.append(update_cpv_data)
+    s.append(update_v_data)
+    s.append(build_request_data)
     return s

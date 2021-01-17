@@ -101,7 +101,7 @@ class CheckProjectGentooCiProject(BuildStep):
         self.project_repository_data = self.getProperty("project_repository_data")
         self.project_data = self.getProperty("project_data")
         self.project_path = yield os.path.join(self.repository_basedir, self.project_repository_data['name'] + '.git')
-        self.config_root = yield os.path.join(self.project_path, self.project_data['name'])
+        self.config_root = yield os.path.join(self.project_path, self.project_data['name'], '')
         self.make_conf_file = yield os.path.join(self.config_root, 'etc/portage', '') + 'make.conf'
         try:
             getconfig(self.make_conf_file, tolerant=0, allow_sourcing=True, expand=True)
@@ -124,8 +124,8 @@ class CheckCPVGentooCiProject(BuildStep):
     def run(self):
         #self.cpv_changes = self.getProperty("cpv_changes")
         self.cpv_changes = []
-        self.cpv_changes.append('dev-lang/python-3.8')
-        self.cpv_changes.append('dev-python/prust-3.9')
+        self.cpv_changes.append('dev-lang/python-3.9.1')
+        self.cpv_changes.append('dev-python/scrypt-0.8.16')
         print(self.cpv_changes)
         print(self.getProperty("repository_data"))
         # check if cpv_change is a string or a list
