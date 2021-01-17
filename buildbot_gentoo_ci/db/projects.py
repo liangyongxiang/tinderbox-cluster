@@ -53,6 +53,32 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
         res = yield self.db.pool.do(thd)
         return res
 
+    @defer.inlineCallbacks
+    def getProjectByUuid(self, uuid):
+        def thd(conn):
+            tbl = self.db.model.projects
+            q = tbl.select()
+            q = q.where(tbl.c.uuid == uuid)
+            res = conn.execute(q)
+            row = res.fetchone()
+            if not row:
+                return None
+            return self._row2dict(conn, row)
+        res = yield self.db.pool.do(thd)
+        return res
+
+    @defer.inlineCallbacks
+    def getProjectRepositorysByUuid(self, uuid, auto=True):
+        def thd(conn):
+            tbl = self.db.model.projects_repositorys
+            q = tbl.select()
+            q = q.where(tbl.c.repository_uuid == uuid)
+            q = q.where(tbl.c.auto == auto)
+            return [self._row2dict_projects_repositorys(conn, row)
+                for row in conn.execute(q).fetchall()]
+        res = yield self.db.pool.do(thd)
+        return res
+
     def _row2dict(self, conn, row):
         return dict(
             uuid=row.uuid,
@@ -62,8 +88,17 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             profile=row.profile,
             profile_repository_uuid=row.profile_repository_uuid,
             keyword_id=row.keyword_id,
-            unstable=row.unstable,
+            status=row.status,
             auto=row.auto,
             enabled=row.enabled,
             created_by=row.created_by
+            )
+
+    def _row2dict_projects_repositorys(self, conn, row):
+        return dict(
+            id=row.id,
+            project_uuid=row.project_uuid,
+            repository_uuid=row.repository_uuid,
+            auto=row.auto,
+            pkgcheck=row.pkgcheck
             )

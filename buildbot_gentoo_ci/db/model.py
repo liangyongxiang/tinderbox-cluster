@@ -109,7 +109,7 @@ class Model(base.DBConnectorComponent):
         sa.Column('keyword_id', sa.Integer,
                   sa.ForeignKey('keywords.id', ondelete='CASCADE'),
                   nullable=False),
-        sa.Column('unstable', sa.Boolean, default=False),
+        sa.Column('status', sa.Enum('stable','unstable','all'), nullable=False),
         sa.Column('auto', sa.Boolean, default=False),
         sa.Column('enabled', sa.Boolean, default=False),
         sa.Column('created_by', sa.Integer,
@@ -121,12 +121,14 @@ class Model(base.DBConnectorComponent):
     projects_repositorys = sautils.Table(
         "projects_repositorys", metadata,
         sa.Column('id', sa.Integer, primary_key=True),
-        sa.Column('projects_uuid', sa.String(36),
+        sa.Column('project_uuid', sa.String(36),
                   sa.ForeignKey('projects.uuid', ondelete='CASCADE'),
                   nullable=False),
         sa.Column('repository_uuid', sa.String(36),
                   sa.ForeignKey('repositorys.uuid', ondelete='CASCADE'),
                   nullable=False),
+        sa.Column('auto', sa.Boolean, default=False),
+        sa.Column('pkgcheck', sa.Boolean, default=False),
     )
 
     keywords = sautils.Table(

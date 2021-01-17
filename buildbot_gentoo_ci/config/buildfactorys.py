@@ -8,6 +8,7 @@ from buildbot_gentoo_ci.steps import update_db
 from buildbot_gentoo_ci.steps import category
 from buildbot_gentoo_ci.steps import package
 from buildbot_gentoo_ci.steps import version
+from buildbot_gentoo_ci.steps import builders
 
 def update_db_check():
     f = util.BuildFactory()
@@ -78,4 +79,15 @@ def update_db_v():
 def build_request_check():
     f = util.BuildFactory()
     # FIXME: 4
+    # get project_data
+    # check what tests to do
+    # triggger build request
+    f.addStep(builders.GetProjectRepositoryData())
+    return f
+
+def run_build_request():
+    f = util.BuildFactory()
+    # FIXME: 5
+    # Check if all is setup on the worker
+    f.addStep(builders.SetupBuildWorker())
     return f

@@ -194,7 +194,7 @@ class TriggerBuildCheck(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
-        yield steps.Trigger(
+        yield self.build.addStepsAfterCurrentStep([steps.Trigger(
                 schedulerNames=['build_request_data'],
                         waitForFinish=False,
                         updateSourceStamp=False,
@@ -204,7 +204,7 @@ class TriggerBuildCheck(BuildStep):
                             'version_keyword_dict' : self.getProperty('version_keyword_dict'),
                             'repository_data' : self.getProperty("repository_data"),
                         }
-                )
+                )])
         return SUCCESS
 
 class DeleteOldVersion(BuildStep):
