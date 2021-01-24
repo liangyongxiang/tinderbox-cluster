@@ -131,6 +131,17 @@ class Model(base.DBConnectorComponent):
         sa.Column('pkgcheck', sa.Boolean, default=False),
     )
 
+    # projects etc/portage settings
+    projects_portage = sautils.Table(
+        "projects_portage", metadata,
+        sa.Column('id', sa.Integer, primary_key=True),
+        sa.Column('project_uuid', sa.String(36),
+                  sa.ForeignKey('projects.uuid', ondelete='CASCADE'),
+                  nullable=False),
+        sa.Column('directorys', sa.Enum('make.profile'), nullable=False),
+        sa.Column('value', sa.String(255), nullable=False),
+    )
+
     keywords = sautils.Table(
         "keywords", metadata,
         # unique uuid per keyword

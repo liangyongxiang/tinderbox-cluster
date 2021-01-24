@@ -1,6 +1,8 @@
 # Copyright 2021 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
+import os
+
 from twisted.internet import defer
 from twisted.python import log
 
@@ -32,7 +34,6 @@ class TriggerRunBuildRequest(BuildStep):
                             'cpv' : self.getProperty("cpv"),
                             'version_data' : self.getProperty("version_data"),
                             'projectrepository_data' : self.getProperty('projectrepository_data'),
-                            'repository_data' : self.getProperty("repository_data"),
                             'use_data' : self.getProperty("use_data"),
                             'fullcheck' : self.getProperty("fullcheck"),
                         }
@@ -79,9 +80,43 @@ class GetProjectRepositoryData(BuildStep):
                         yield self.build.addStepsAfterCurrentStep([TriggerRunBuildRequest()])
         return SUCCESS
 
-class SetupBuildWorker(BuildStep):
+class UpdateProfileRepo(BuildStep):
     
-    name = 'SetupBuildWorker'
+    name = 'UpdateProfileRepo'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        # set this in config
+        self.portage_repos_path = '/var/db/repos/'
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        print('build this %s' % self.getProperty("cpv"))
+        self.setProperty('portage_repos_path', self.portage_repos_path, 'portage_repos_path')
+        projectrepository_data = self.getProperty('projectrepository_data')
+        print(projectrepository_data)
+        repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(projectrepository_data['repository_uuid'])
+        project_data = yield self.gentooci.db.projects.getProjectByUuid(projectrepository_data['project_uuid'])
+        self.setProperty('project_data', project_data, 'project_data')
+        self.profile_repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(project_data['profile_repository_uuid'])
+        profile_repository_path = yield os.path.join(self.portage_repos_path, self.profile_repository_data['name'])
+        yield self.build.addStepsAfterCurrentStep([
+            steps.Git(repourl=self.profile_repository_data['mirror_url'],
+                            mode='incremental',
+                            submodules=True,
+                            workdir=os.path.join(profile_repository_path, ''))
+            ])
+        return SUCCESS
+
+class SetMakeProfile(BuildStep):
+
+    name = 'SetMakeProfile'
     description = 'Running'
     descriptionDone = 'Ran'
     descriptionSuffix = None
@@ -94,5 +129,19 @@ class SetupBuildWorker(BuildStep):
     @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        print('build this %s' % self.getProperty("cpv"))
+        portage_repos_path = self.getProperty('portage_repos_path')
+        project_data = self.getProperty('project_data')
+        profile_repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(project_data['profile_repository_uuid'])
+        makeprofiles_paths = []
+        makeprofiles_data = yield self.gentooci.db.projects.getProjectPortageByUuidAndDirectory(project_data['uuid'], 'make.profile')
+        for makeprofile in makeprofiles_data:
+            makeprofile_path = yield os.path.join(portage_repos_path, profile_repository_data['name'], 'profiles', makeprofile['value'], '')
+            makeprofiles_paths.append('../../..' + makeprofile_path)
+        separator = '\n'
+        makeprofile_path_string = separator.join(makeprofiles_paths)
+        yield self.build.addStepsAfterCurrentStep([
+            steps.StringDownload(makeprofile_path_string + separator,
+                                workerdest="make.profile/parent",
+                                workdir='/etc/portage/')
+            ])
         return SUCCESS

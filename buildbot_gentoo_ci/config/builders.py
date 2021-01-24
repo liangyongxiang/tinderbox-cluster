@@ -42,7 +42,7 @@ def gentoo_builders(b=[]):
     # Use multiplay workers
     b.append(util.BuilderConfig(
         name='run_build_request',
-        workername='updatedb_1',
+        workername='bot-test',
         factory=buildfactorys.run_build_request()
         )
     )

@@ -88,6 +88,20 @@ def build_request_check():
 def run_build_request():
     f = util.BuildFactory()
     # FIXME: 5
-    # Check if all is setup on the worker
-    f.addStep(builders.SetupBuildWorker())
+    # update repo for the profile
+    f.addStep(builders.UpdateProfileRepo())
+    # Clean and add new /etc/portage
+    f.addStep(buildbot_steps.RemoveDirectory(dir="portage",
+                                workdir='/etc/'))
+    f.addStep(buildbot_steps.MakeDirectory(dir="portage",
+                                workdir='/etc/'))
+    # setup the profile
+    f.addStep(buildbot_steps.MakeDirectory(dir="make.profile",
+                                workdir='/etc/portage/'))
+    f.addStep(builders.SetMakeProfile())
+    # setup repo.conf dir
+    #f.addStep(buildbot_steps.MakeDirectory(dir="repo.conf",
+                                workdir='/etc/portage/'))
+    # check if we have all repository's in repos.conf listed in project_repository's
+    # update all repos listed in project_repository's
     return f
