@@ -80,7 +80,19 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
         return res
 
     @defer.inlineCallbacks
-    def getProjectPortageByUuidAndDirectory(self, uuid, directory):
+    def getRepositorysByProjectUuid(self, uuid, auto=True):
+        def thd(conn):
+            tbl = self.db.model.projects_repositorys
+            q = tbl.select()
+            q = q.where(tbl.c.project_uuid == uuid)
+            q = q.where(tbl.c.auto == auto)
+            return [self._row2dict_projects_repositorys(conn, row)
+                for row in conn.execute(q).fetchall()]
+        res = yield self.db.pool.do(thd)
+        return res
+
+    @defer.inlineCallbacks
+    def getAllProjectPortageByUuidAndDirectory(self, uuid, directory):
         def thd(conn):
             tbl = self.db.model.projects_portage
             q = tbl.select()
@@ -88,6 +100,21 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             q = q.where(tbl.c.directorys == directory)
             return [self._row2dict_projects_portage(conn, row)
                 for row in conn.execute(q).fetchall()]
+        res = yield self.db.pool.do(thd)
+        return res
+
+    @defer.inlineCallbacks
+    def getProjectPortageByUuidAndDirectory(self, uuid, directory):
+        def thd(conn):
+            tbl = self.db.model.projects_portage
+            q = tbl.select()
+            q = q.where(tbl.c.project_uuid == uuid)
+            q = q.where(tbl.c.directorys == directory)
+            res = conn.execute(q)
+            row = res.fetchone()
+            if not row:
+                return None
+            return self._row2dict_projects_portage(conn, row)
         res = yield self.db.pool.do(thd)
         return res
 

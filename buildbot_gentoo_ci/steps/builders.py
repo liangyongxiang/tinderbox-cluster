@@ -80,9 +80,9 @@ class GetProjectRepositoryData(BuildStep):
                         yield self.build.addStepsAfterCurrentStep([TriggerRunBuildRequest()])
         return SUCCESS
 
-class UpdateProfileRepo(BuildStep):
+class SetupPropertys(BuildStep):
     
-    name = 'UpdateProfileRepo'
+    name = 'SetupPropertys'
     description = 'Running'
     descriptionDone = 'Ran'
     descriptionSuffix = None
@@ -101,17 +101,8 @@ class UpdateProfileRepo(BuildStep):
         self.setProperty('portage_repos_path', self.portage_repos_path, 'portage_repos_path')
         projectrepository_data = self.getProperty('projectrepository_data')
         print(projectrepository_data)
-        repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(projectrepository_data['repository_uuid'])
         project_data = yield self.gentooci.db.projects.getProjectByUuid(projectrepository_data['project_uuid'])
         self.setProperty('project_data', project_data, 'project_data')
-        self.profile_repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(project_data['profile_repository_uuid'])
-        profile_repository_path = yield os.path.join(self.portage_repos_path, self.profile_repository_data['name'])
-        yield self.build.addStepsAfterCurrentStep([
-            steps.Git(repourl=self.profile_repository_data['mirror_url'],
-                            mode='incremental',
-                            submodules=True,
-                            workdir=os.path.join(profile_repository_path, ''))
-            ])
         return SUCCESS
 
 class SetMakeProfile(BuildStep):
@@ -133,7 +124,7 @@ class SetMakeProfile(BuildStep):
         project_data = self.getProperty('project_data')
         profile_repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(project_data['profile_repository_uuid'])
         makeprofiles_paths = []
-        makeprofiles_data = yield self.gentooci.db.projects.getProjectPortageByUuidAndDirectory(project_data['uuid'], 'make.profile')
+        makeprofiles_data = yield self.gentooci.db.projects.getAllProjectPortageByUuidAndDirectory(project_data['uuid'], 'make.profile')
         for makeprofile in makeprofiles_data:
             makeprofile_path = yield os.path.join(portage_repos_path, profile_repository_data['name'], 'profiles', makeprofile['value'], '')
             makeprofiles_paths.append('../../..' + makeprofile_path)
@@ -143,5 +134,88 @@ class SetMakeProfile(BuildStep):
             steps.StringDownload(makeprofile_path_string + separator,
                                 workerdest="make.profile/parent",
                                 workdir='/etc/portage/')
+            ])
+        return SUCCESS
+
+class SetReposConf(BuildStep):
+
+    name = 'SetReposConf'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        portage_repos_path = self.getProperty('portage_repos_path')
+        project_data = self.getProperty('project_data')
+        # setup the default.conf
+        repos_conf_data = yield self.gentooci.db.projects.getProjectPortageByUuidAndDirectory(project_data['uuid'], 'repos.conf')
+        if repos_conf_data is None:
+            print('Default repo is not set in repos.conf')
+            return FAILURE
+        # check if repos_conf_data['value'] is vaild repo name
+        separator = '\n'
+        default_conf = []
+        default_conf.append('[DEFAULT]')
+        default_conf.append('main-repo = ' + repos_conf_data['value'])
+        default_conf.append('auto-sync = no')
+        default_conf_string = separator.join(default_conf)
+        yield self.build.addStepsAfterCurrentStep([
+            steps.StringDownload(default_conf_string + separator,
+                                workerdest="repos.conf/default.conf",
+                                workdir='/etc/portage/')
+            ])
+        # add all repos that project have in projects_repositorys to repos.conf/reponame.conf
+        projects_repositorys_data = yield self.gentooci.db.projects.getRepositorysByProjectUuid(project_data['uuid'])
+        for project_repository_data in projects_repositorys_data:
+            repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(project_repository_data['repository_uuid'])
+            repository_path = yield os.path.join(portage_repos_path, repository_data['name'])
+            repository_conf = []
+            repository_conf.append('[' + repository_data['name'] + ']')
+            repository_conf.append('location = ' + repository_path)
+            repository_conf.append('sync-uri = ' + repository_data['mirror_url'])
+            repository_conf.append('sync-type = git')
+            repository_conf.append('auto-sync = no')
+            repository_conf_string = separator.join(repository_conf)
+            yield self.build.addStepsAfterCurrentStep([
+                steps.StringDownload(repository_conf_string + separator,
+                                workerdest='repos.conf/' + repository_data['name'] + '.conf',
+                                workdir='/etc/portage/')
+                ])
+        return SUCCESS
+
+class UpdateRepos(BuildStep):
+
+    name = 'UpdateRepos'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        portage_repos_path = self.getProperty('portage_repos_path')
+        project_data = self.getProperty('project_data')
+        # update/add all repos that in project_repository for the project
+        projects_repositorys_data = yield self.gentooci.db.projects.getRepositorysByProjectUuid(project_data['uuid'])
+        for project_repository_data in projects_repositorys_data:
+            repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(project_repository_data['repository_uuid'])
+            repository_path = yield os.path.join(portage_repos_path, repository_data['name'])
+            yield self.build.addStepsAfterCurrentStep([
+            steps.Git(repourl=repository_data['mirror_url'],
+                            mode='incremental',
+                            submodules=True,
+                            workdir=os.path.join(repository_path, ''))
             ])
         return SUCCESS

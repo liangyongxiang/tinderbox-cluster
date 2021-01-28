@@ -138,7 +138,8 @@ class Model(base.DBConnectorComponent):
         sa.Column('project_uuid', sa.String(36),
                   sa.ForeignKey('projects.uuid', ondelete='CASCADE'),
                   nullable=False),
-        sa.Column('directorys', sa.Enum('make.profile'), nullable=False),
+        # FIXME: directorys should be moved to own table
+        sa.Column('directorys', sa.Enum('make.profile', 'repos.conf'), nullable=False),
         sa.Column('value', sa.String(255), nullable=False),
     )
 
