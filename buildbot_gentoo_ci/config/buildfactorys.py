@@ -88,6 +88,7 @@ def build_request_check():
 def run_build_request():
     f = util.BuildFactory()
     # FIXME: 5
+    # Move the etc/portage stuff to is own file
     # set needed Propertys
     f.addStep(builders.SetupPropertys())
     # Clean and add new /etc/portage
@@ -105,4 +106,6 @@ def run_build_request():
     f.addStep(builders.SetReposConf())
     # update the repositorys listed in project_repository
     f.addStep(builders.UpdateRepos())
+    # setup make.conf
+    f.addStep(builders.SetMakeConf())
     return f

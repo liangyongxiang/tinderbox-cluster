@@ -36,6 +36,7 @@ from buildbot_gentoo_ci.db import categorys
 from buildbot_gentoo_ci.db import packages
 from buildbot_gentoo_ci.db import versions
 from buildbot_gentoo_ci.db import keywords
+from buildbot_gentoo_ci.db import portages
 
 upgrade_message = textwrap.dedent("""\
 
@@ -81,6 +82,7 @@ class DBConnector(service.ReconfigurableServiceMixin,
         self.packages = packages.PackagesConnectorComponent(self)
         self.versions = versions.VersionsConnectorComponent(self)
         self.keywords = keywords.KeywordsConnectorComponent(self)
+        self.portages = portages.PortagesConnectorComponent(self)
 
     @defer.inlineCallbacks
     def setup(self, config, check_version=True, verbose=True):

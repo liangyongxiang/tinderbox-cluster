@@ -118,6 +118,18 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
         res = yield self.db.pool.do(thd)
         return res
 
+    @defer.inlineCallbacks
+    def getProjectMakeConfById(self, uuid, id):
+        def thd(conn):
+            tbl = self.db.model.projects_portages_makeconf
+            q = tbl.select()
+            q = q.where(tbl.c.project_uuid == uuid)
+            q = q.where(tbl.c.makeconf_id == id)
+            return [self._row2dict_projects_portages_makeconf(conn, row)
+                for row in conn.execute(q).fetchall()]
+        res = yield self.db.pool.do(thd)
+        return res
+
     def _row2dict(self, conn, row):
         return dict(
             uuid=row.uuid,
@@ -148,4 +160,13 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             project_uuid=row.project_uuid,
             directorys=row.directorys,
             value=row.value
+            )
+
+    def _row2dict_projects_portages_makeconf(self, conn, row):
+        return dict(
+            id=row.id,
+            project_uuid=row.project_uuid,
+            makeconf_id=row.makeconf_id,
+            value=row.value,
+            build_id=0
             )

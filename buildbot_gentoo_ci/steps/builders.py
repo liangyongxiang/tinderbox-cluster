@@ -219,3 +219,98 @@ class UpdateRepos(BuildStep):
                             workdir=os.path.join(repository_path, ''))
             ])
         return SUCCESS
+
+class SetMakeConf(BuildStep):
+
+    name = 'SetMakeConf'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        #FIXME: Make a dict before we pass it to the make.conf
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        project_data = self.getProperty('project_data')
+        makeconf_variables_data = yield self.gentooci.db.portages.getVariables()
+        separator1 = '\n'
+        separator2 = ' '
+        makeconf_list = []
+        for k in makeconf_variables_data:
+            makeconf_variables_values_data = yield self.gentooci.db.projects.getProjectMakeConfById(project_data['uuid'], k['id'])
+            makeconf_variable_list = []
+            # we add some default values
+            #FIXME:
+            # we could set them in a config variables
+            # FEATURES
+            if k['variable'] == 'FEATURES':
+                makeconf_variable_list.append('xattr')
+                makeconf_variable_list.append('cgroup')
+                makeconf_variable_list.append('-news')
+                makeconf_variable_list.append('-collision-protect')
+            # EMERGE_DEFAULT_OPTS
+            if k['variable'] == 'EMERGE_DEFAULT_OPTS':
+                makeconf_variable_list.append('--buildpkg=y')
+                makeconf_variable_list.append('--rebuild-if-new-rev=y')
+                makeconf_variable_list.append('--rebuilt-binaries=y')
+                makeconf_variable_list.append('--usepkg=y')
+                makeconf_variable_list.append('--nospinner')
+                makeconf_variable_list.append('--color=n')
+                makeconf_variable_list.append('--ask=n')
+            # CFLAGS
+            if k['variable'] == 'CFLAGS' or k['variable'] == 'FCFLAGS':
+                makeconf_variable_list.append('-O2')
+                makeconf_variable_list.append('-pipe')
+                makeconf_variable_list.append('-march=native')
+                makeconf_variable_list.append('-fno-diagnostics-color')
+                #FIXME:
+                # Depend on worker we may have to add a diffrent march
+            if k['variable'] == 'CXXFLAGS':
+                makeconf_variable_list.append('${CFLAGS}')
+            if k['variable'] == 'FFLAGS':
+                makeconf_variable_list.append('${FCFLAGS}')
+            if k['variable'] == 'ACCEPT_PROPERTIES':
+                makeconf_variable_list.append('-interactive')
+            if k['variable'] == 'ACCEPT_RESTRICT':
+                makeconf_variable_list.append('-fetch')
+            for v in makeconf_variables_values_data:
+                if v['build_id'] is 0:
+                    makeconf_variable_list.append(v['value'])
+            if k['variable'] == 'ACCEPT_LICENSE' and makeconf_variable_list != []:
+                makeconf_variable_list.append('ACCEPT_LICENSE="*"')
+            if makeconf_variable_list != []:
+                makeconf_variable_string = k['variable'] + '="' + separator2.join(makeconf_variable_list) + '"'
+                makeconf_list.append(makeconf_variable_string)
+        # add hardcoded variables and values
+        #FIXME:
+        # we could set them in a config variables
+        makeconf_list.append('LC_MESSAGES=C')
+        makeconf_list.append('NOCOLOR="true"')
+        makeconf_list.append('GCC_COLORS=""')
+        makeconf_list.append('PORTAGE_TMPFS="/dev/shm"')
+        makeconf_list.append('CLEAN_DELAY=0')
+        makeconf_list.append('NOCOLOR=true')
+        makeconf_list.append('PORT_LOGDIR="/var/cache/portage/logs"')
+        makeconf_list.append('PKGDIR="/var/cache/portage/packages"')
+        makeconf_list.append('PORTAGE_ELOG_CLASSES="qa"')
+        makeconf_list.append('PORTAGE_ELOG_SYSTEM="save"')
+        # add ACCEPT_KEYWORDS from the project_data info
+        keyword_data = yield self.gentooci.db.keywords.getKeywordById(project_data['keyword_id'])
+        if project_data['status'] == 'unstable':
+            makeconf_keyword = '~' + keyword_data['name']
+        else:
+            makeconf_keyword = keyword_data['name']
+        makeconf_list.append('ACCEPT_KEYWORDS="' + makeconf_keyword + '"')
+        makeconf_string = separator1.join(makeconf_list)
+        print(makeconf_string)
+        yield self.build.addStepsAfterCurrentStep([
+            steps.StringDownload(makeconf_string + separator1,
+                                workerdest="make.conf",
+                                workdir='/etc/portage/')
+            ])
+        return SUCCESS
