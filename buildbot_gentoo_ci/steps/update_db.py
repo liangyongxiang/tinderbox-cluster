@@ -124,7 +124,7 @@ class CheckCPVGentooCiProject(BuildStep):
     def run(self):
         #self.cpv_changes = self.getProperty("cpv_changes")
         self.cpv_changes = []
-        self.cpv_changes.append('dev-lang/python-3.9.1-r1')
+        self.cpv_changes.append('dev-python/django-3.1.5')
         self.cpv_changes.append('dev-python/scrypt-0.8.16')
         print(self.cpv_changes)
         print(self.getProperty("repository_data"))

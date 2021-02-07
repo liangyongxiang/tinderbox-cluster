@@ -108,4 +108,39 @@ def run_build_request():
     f.addStep(builders.UpdateRepos())
     # setup make.conf
     f.addStep(builders.SetMakeConf())
+    # setup package.*
+    #f.addStep(portages.SetPackageUse())
+    # setup env
+    # setup files in /etc if needed
+    # run --regen if needed on repo
+    # update packages before any tests
+    # run pretend on packages update on worker
+    shell_commad_list = [
+                    'emerge',
+                    '-uDNv',
+                    '--changed-deps',
+                    '--changed-use',
+                    '--pretend',
+                    '@world'
+                    ]
+    f.addStep(buildbot_steps.SetPropertyFromCommandNewStyle(
+                        command=shell_commad_list,
+                        strip=True,
+                        extract_fn=builders.PersOutputOfEmerge,
+                        workdir='/'
+                        ))
+    #   look at the log to see if we need to do stuff
+    #   run update package on worker
+    #   check log
+    # run pretend @preserved-rebuild if needed
+    #   look at the log to see if we need to do stuff
+    #   run @preserved-rebuild
+    #   check log
+    # run depclean if set
+    #   depclean pretend
+    #   look at the log to see if we need to do stuff
+    #   depclean
+    #   check log
+    # setup make.conf if build id has changes make.conf as dict from SetMakeConf
+    # setup package.* env if build id has changes
     return f

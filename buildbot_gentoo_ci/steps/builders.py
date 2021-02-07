@@ -2,6 +2,7 @@
 # Distributed under the terms of the GNU General Public License v2
 
 import os
+import re
 
 from twisted.internet import defer
 from twisted.python import log
@@ -10,6 +11,56 @@ from buildbot.process.buildstep import BuildStep
 from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
 from buildbot.plugins import steps
+
+def PersOutputOfEmerge(rc, stdout, stderr):
+    emerge_output = {}
+    emerge_output['rc'] = rc
+    package_dict = {}
+    print(stderr)
+    for line in stdout.split('\n'):
+        # package list
+        subdict = {}
+        if line.startswith('[ebuild'):
+            # split the line
+            # if binaries
+            if line.startswith('[ebuild'):
+                subdict['binary'] = False
+            else:
+                subdict['binary'] = True
+            # action [ N ] stuff
+            subdict['action'] = line[8:15].replace(' ', '')
+            # cpv
+            cpv_split = re.search('] (.+?) ', line).group(1).split(':')
+            cpv = cpv_split[0]
+            # repository
+            # slot
+            if cpv_split[1] == '':
+                subdict['slot'] = None
+                subdict['repository'] = cpv_split[2]
+            else:
+                subdict['slot'] = cpv_split[1]
+                subdict['repository'] = cpv_split[3]
+            # if action U version cpv
+            if 'U' in subdict['action']:
+                subdict['old_version'] = re.search(' \[(.+?)] ', line).group(1).split(':')
+            else:
+                subdict['old_version'] = None
+            # Use list
+            if 'USE=' in line:
+                subdict['use'] = re.search('USE="(.+?)" ', line).group(1).split(' ')
+            else:
+                subdict['use'] = None
+            # PYTHON_TARGETS list
+            if 'PYTHON_TARGETS=' in line:
+                subdict['python_targets'] = re.search('PYTHON_TARGETS="(.+?)" ', line).group(1).split(' ')
+            else:
+                subdict['python_targets'] = None
+            # CPU_FLAGS_X86 list
+            package_dict[cpv] = subdict
+        #FIXME: Handling of stderr output
+    return {
+        'emerge_output' : emerge_output
+        }
 
 class TriggerRunBuildRequest(BuildStep):
     
@@ -259,6 +310,7 @@ class SetMakeConf(BuildStep):
                 makeconf_variable_list.append('--rebuild-if-new-rev=y')
                 makeconf_variable_list.append('--rebuilt-binaries=y')
                 makeconf_variable_list.append('--usepkg=y')
+                makeconf_variable_list.append('--binpkg-respect-use=y')
                 makeconf_variable_list.append('--nospinner')
                 makeconf_variable_list.append('--color=n')
                 makeconf_variable_list.append('--ask=n')
@@ -279,7 +331,7 @@ class SetMakeConf(BuildStep):
             if k['variable'] == 'ACCEPT_RESTRICT':
                 makeconf_variable_list.append('-fetch')
             for v in makeconf_variables_values_data:
-                if v['build_id'] is 0:
+                if v['build_id'] == 0:
                     makeconf_variable_list.append(v['value'])
             if k['variable'] == 'ACCEPT_LICENSE' and makeconf_variable_list != []:
                 makeconf_variable_list.append('ACCEPT_LICENSE="*"')

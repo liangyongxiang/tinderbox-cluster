@@ -216,7 +216,7 @@ class Model(base.DBConnectorComponent):
         # project's name
         sa.Column('keyword_id', sa.Integer,
                   sa.ForeignKey('keywords.id', ondelete='CASCADE')),
-        sa.Column('versions_uuid', sa.String(36),
+        sa.Column('version_uuid', sa.String(36),
                   sa.ForeignKey('versions.uuid', ondelete='CASCADE')),
         sa.Column('status', sa.Enum('stable','unstable','negative','all'), nullable=False),
     )
