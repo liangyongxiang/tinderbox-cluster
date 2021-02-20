@@ -130,6 +130,20 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
         res = yield self.db.pool.do(thd)
         return res
 
+    @defer.inlineCallbacks
+    def getProjectEmergeOptionsByUuid(self, uuid):
+        def thd(conn):
+            tbl = self.db.model.projects_emerge_options
+            q = tbl.select()
+            q = q.where(tbl.c.project_uuid == uuid)
+            res = conn.execute(q)
+            row = res.fetchone()
+            if not row:
+                return None
+            return self._row2dict_projects_emerge_options(conn, row)
+        res = yield self.db.pool.do(thd)
+        return res
+
     def _row2dict(self, conn, row):
         return dict(
             uuid=row.uuid,
@@ -169,4 +183,13 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             makeconf_id=row.makeconf_id,
             value=row.value,
             build_id=0
+            )
+
+    def _row2dict_projects_emerge_options(self, conn, row):
+        return dict(
+            id=row.id,
+            project_uuid=row.project_uuid,
+            oneshot=row.oneshot,
+            depclean=row.depclean,
+            preserved_libs=row.preserved_libs
             )

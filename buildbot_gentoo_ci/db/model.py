@@ -161,6 +161,17 @@ class Model(base.DBConnectorComponent):
         sa.Column('value', sa.String(255), nullable=False),
     )
 
+    projects_emerge_options = sautils.Table(
+        "projects_emerge_options", metadata,
+        sa.Column('id', sa.Integer, primary_key=True),
+        sa.Column('project_uuid', sa.String(36),
+                  sa.ForeignKey('projects.uuid', ondelete='CASCADE'),
+                  nullable=False),
+        sa.Column('oneshot', sa.Boolean, default=True),
+        sa.Column('depclean', sa.Boolean, default=True),
+        sa.Column('preserved_libs', sa.Boolean, default=True),
+    )
+
     keywords = sautils.Table(
         "keywords", metadata,
         # unique uuid per keyword

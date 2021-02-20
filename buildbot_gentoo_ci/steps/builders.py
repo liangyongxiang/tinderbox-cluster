@@ -15,13 +15,15 @@ from buildbot.plugins import steps
 def PersOutputOfEmerge(rc, stdout, stderr):
     emerge_output = {}
     emerge_output['rc'] = rc
+    emerge_output['preserved_libs'] = False
+    emerge_output['depclean'] = False
     package_dict = {}
     print(stderr)
+    # split the lines
     for line in stdout.split('\n'):
         # package list
         subdict = {}
-        if line.startswith('[ebuild'):
-            # split the line
+        if line.startswith('[ebuild') or line.startswith('[binary'):
             # if binaries
             if line.startswith('[ebuild'):
                 subdict['binary'] = False
@@ -57,7 +59,18 @@ def PersOutputOfEmerge(rc, stdout, stderr):
                 subdict['python_targets'] = None
             # CPU_FLAGS_X86 list
             package_dict[cpv] = subdict
-        #FIXME: Handling of stderr output
+        if line.startswith('>>>'):
+            #FIXME: Handling of >>> output
+            pass
+        if line.startswith('!!!'):
+            #FIXME: Handling of !!! output
+            if line.startswith('!!! existing preserved libs'):
+                pass
+        #FIXME: Handling of depclean output dict of packages that get removed or saved
+    # split the lines
+    #FIXME: Handling of stderr output
+    for line in stderr.split('\n'):
+        pass
     return {
         'emerge_output' : emerge_output
         }
@@ -154,6 +167,8 @@ class SetupPropertys(BuildStep):
         print(projectrepository_data)
         project_data = yield self.gentooci.db.projects.getProjectByUuid(projectrepository_data['project_uuid'])
         self.setProperty('project_data', project_data, 'project_data')
+        self.setProperty('preserved_libs', False, 'preserved-libs')
+        self.setProperty('depclean', False, 'depclean')
         return SUCCESS
 
 class SetMakeProfile(BuildStep):
@@ -311,6 +326,7 @@ class SetMakeConf(BuildStep):
                 makeconf_variable_list.append('--rebuilt-binaries=y')
                 makeconf_variable_list.append('--usepkg=y')
                 makeconf_variable_list.append('--binpkg-respect-use=y')
+                makeconf_variable_list.append('--binpkg-changed-deps=y')
                 makeconf_variable_list.append('--nospinner')
                 makeconf_variable_list.append('--color=n')
                 makeconf_variable_list.append('--ask=n')
@@ -365,4 +381,137 @@ class SetMakeConf(BuildStep):
                                 workerdest="make.conf",
                                 workdir='/etc/portage/')
             ])
+        return SUCCESS
+
+class RunEmerge(BuildStep):
+
+    name = 'RunEmerge'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, step=None,**kwargs):
+        self.step = step
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        project_data = self.getProperty('project_data')
+        projects_emerge_options = yield self.gentooci.db.projects.getProjectEmergeOptionsByUuid(project_data['uuid'])
+        shell_commad_list = [
+                    'emerge',
+                    '-v'
+                    ]
+        aftersteps_list = []
+        if self.step == 'pre-update':
+            shell_commad_list.append('-uDN')
+            shell_commad_list.append('--changed-deps')
+            shell_commad_list.append('--changed-use')
+            shell_commad_list.append('--pretend')
+            shell_commad_list.append('@world')
+            aftersteps_list.append(
+                steps.SetPropertyFromCommandNewStyle(
+                        command=shell_commad_list,
+                        strip=True,
+                        extract_fn=PersOutputOfEmerge,
+                        workdir='/'
+                ))
+            aftersteps_list.append(CheckEmergeLogs('pre-update'))
+
+        if self.step == 'update':
+            shell_commad_list.append('-uDNq')
+            shell_commad_list.append('--changed-deps')
+            shell_commad_list.append('--changed-use')
+            shell_commad_list.append('@world')
+            aftersteps_list.append(
+                steps.SetPropertyFromCommandNewStyle(
+                        command=shell_commad_list,
+                        strip=True,
+                        extract_fn=PersOutputOfEmerge,
+                        workdir='/',
+                        timeout=None
+                ))
+            aftersteps_list.append(CheckEmergeLogs('update'))
+
+        if self.step == 'preserved-libs' and self.getProperty('preserved_libs'):
+            shell_commad_list.append('-q')
+            shell_commad_list.append('@preserved-rebuild')
+            aftersteps_list.append(
+                steps.SetPropertyFromCommandNewStyle(
+                        command=shell_commad_list,
+                        strip=True,
+                        extract_fn=PersOutputOfEmerge,
+                        workdir='/',
+                        timeout=None
+                ))
+            aftersteps_list.append(CheckEmergeLogs('preserved-libs'))
+            self.setProperty('preserved_libs', False, 'preserved-libs')
+
+        if self.step == 'pre-depclean' and projects_emerge_options['depclean']:
+            shell_commad_list.append('--pretend')
+            shell_commad_list.append('--depclean')
+            aftersteps_list.append(
+                steps.SetPropertyFromCommandNewStyle(
+                        command=shell_commad_list,
+                        strip=True,
+                        extract_fn=PersOutputOfEmerge,
+                        workdir='/'
+                ))
+            aftersteps_list.append(CheckEmergeLogs('depclean'))
+            self.setProperty('depclean', False, 'depclean')
+
+        if self.step == 'depclean' and self.getProperty('depclean') and projects_emerge_options['depclean']:
+            shell_commad_list.append('-q')
+            shell_commad_list.append('--depclean')
+            aftersteps_list.append(
+                steps.SetPropertyFromCommandNewStyle(
+                        command=shell_commad_list,
+                        strip=True,
+                        extract_fn=PersOutputOfEmerge,
+                        workdir='/'
+                ))
+            aftersteps_list.append(CheckEmergeLogs('depclean'))
+        if not self.step is None:
+            yield self.build.addStepsAfterCurrentStep(aftersteps_list)
+        return SUCCESS
+
+class CheckEmergeLogs(BuildStep):
+
+    name = 'CheckLogs'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, step=None,**kwargs):
+        self.step = step
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        project_data = self.getProperty('project_data')
+        projects_emerge_options = yield self.gentooci.db.projects.getProjectEmergeOptionsByUuid(project_data['uuid'])
+        emerge_output = self.getProperty('emerge_output')
+        shell_commad_list = [
+                    'emerge',
+                    '-v'
+                    ]
+        aftersteps_list = []
+
+        #FIXME: Prosees the logs and do stuff
+        # preserved-libs
+        if emerge_output['preserved_libs'] and projects_emerge_options['preserved_libs']:
+            self.setProperty('preserved_libs', True, 'preserved-libs')
+        # depclean
+        # FIXME: check if don't remove needed stuff.
+        if emerge_output['depclean'] and projects_emerge_options['depclean']:
+            self.setProperty('depclean', True, 'depclean')
+
+        if not self.step is None:
+            yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS
