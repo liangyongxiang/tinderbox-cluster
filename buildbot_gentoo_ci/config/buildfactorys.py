@@ -92,13 +92,15 @@ def run_build_request():
     # set needed Propertys
     f.addStep(builders.SetupPropertys())
     # Clean and add new /etc/portage
+    #FIXME: Is don't like symlinks
     f.addStep(buildbot_steps.RemoveDirectory(dir="portage",
                                 workdir='/etc/'))
     f.addStep(buildbot_steps.MakeDirectory(dir="portage",
                                 workdir='/etc/'))
     # setup the profile
-    f.addStep(buildbot_steps.MakeDirectory(dir="make.profile",
-                                workdir='/etc/portage/'))
+    #NOTE: pkgcheck do not support it as a dir
+    #f.addStep(buildbot_steps.MakeDirectory(dir="make.profile",
+    #                            workdir='/etc/portage/'))
     f.addStep(builders.SetMakeProfile())
     # setup repos.conf dir
     f.addStep(buildbot_steps.MakeDirectory(dir="repos.conf",
@@ -132,4 +134,9 @@ def run_build_request():
     #   check log
     # setup make.conf if build id has changes make.conf as dict from SetMakeConf
     # setup package.* env if build id has changes
+    # setup pkgcheck.conf if needed
+    #f.addStep(builders.SetPkgCheckConf())
+    # run pkgcheck if wanted
+    #   check log
+    f.addStep(builders.RunPkgCheck())
     return f

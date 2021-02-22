@@ -160,12 +160,16 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             )
 
     def _row2dict_projects_repositorys(self, conn, row):
+        if row.pkgcheck == 'none':
+            pkgcheck = False
+        else:
+            pkgcheck=row.pkgcheck
         return dict(
             id=row.id,
             project_uuid=row.project_uuid,
             repository_uuid=row.repository_uuid,
             auto=row.auto,
-            pkgcheck=row.pkgcheck
+            pkgcheck=pkgcheck
             )
 
     def _row2dict_projects_portage(self, conn, row):

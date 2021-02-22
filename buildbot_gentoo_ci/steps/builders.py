@@ -4,6 +4,8 @@
 import os
 import re
 
+from portage.versions import catpkgsplit
+
 from twisted.internet import defer
 from twisted.python import log
 
@@ -73,6 +75,26 @@ def PersOutputOfEmerge(rc, stdout, stderr):
         pass
     return {
         'emerge_output' : emerge_output
+        }
+
+def PersOutputOfPkgCheck(rc, stdout, stderr):
+    pkgcheck_output = {}
+    pkgcheck_output['rc'] = rc
+    #FIXME: Handling of stdout output
+    pkgcheck_xml_list = []
+    # split the lines
+    for line in stdout.split('\n'):
+        #  pkgcheck output list
+        if line.startswith('<checks'):
+            pkgcheck_xml_list.append(line)
+        if line.startswith('<result'):
+            pkgcheck_xml_list.append(line)
+        if line.startswith('</checks'):
+            pkgcheck_xml_list.append(line)
+    pkgcheck_output['pkgcheck_xml'] = pkgcheck_xml_list
+    #FIXME: Handling of stderr output
+    return {
+        'pkgcheck_output' : pkgcheck_output
         }
 
 class TriggerRunBuildRequest(BuildStep):
@@ -190,16 +212,31 @@ class SetMakeProfile(BuildStep):
         project_data = self.getProperty('project_data')
         profile_repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(project_data['profile_repository_uuid'])
         makeprofiles_paths = []
+        #NOTE: pkgcheck don't support make.profile as a dir
+        # we only support one line in db
         makeprofiles_data = yield self.gentooci.db.projects.getAllProjectPortageByUuidAndDirectory(project_data['uuid'], 'make.profile')
         for makeprofile in makeprofiles_data:
             makeprofile_path = yield os.path.join(portage_repos_path, profile_repository_data['name'], 'profiles', makeprofile['value'], '')
-            makeprofiles_paths.append('../../..' + makeprofile_path)
-        separator = '\n'
-        makeprofile_path_string = separator.join(makeprofiles_paths)
+        #    makeprofiles_paths.append('../../..' + makeprofile_path)
+        #separator = '\n'
+        #makeprofile_path_string = separator.join(makeprofiles_paths)
+        # yield self.build.addStepsAfterCurrentStep([
+        #    steps.StringDownload(makeprofile_path_string + separator,
+        #                        workerdest="make.profile/parent",
+        #                        workdir='/etc/portage/')
+        #    ])
+        #NOTE: pkgcheck profile link
+        shell_commad_list = [
+                    'ln',
+                    '-s'
+                    ]
+        shell_commad_list.append(makeprofile_path)
+        shell_commad_list.append('/etc/portage/make.profile')
         yield self.build.addStepsAfterCurrentStep([
-            steps.StringDownload(makeprofile_path_string + separator,
-                                workerdest="make.profile/parent",
-                                workdir='/etc/portage/')
+            steps.ShellCommandNewStyle(
+                        command=shell_commad_list,
+                        workdir='/'
+                )
             ])
         return SUCCESS
 
@@ -514,4 +551,75 @@ class CheckEmergeLogs(BuildStep):
 
         if not self.step is None:
             yield self.build.addStepsAfterCurrentStep(aftersteps_list)
+        return SUCCESS
+
+class RunPkgCheck(BuildStep):
+
+    name = 'RunPkgCheck'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        projectrepository_data = self.getProperty('projectrepository_data')
+        if not projectrepository_data['pkgcheck']:
+            return SUCCESS
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        project_data = self.getProperty('project_data')
+        portage_repos_path = self.getProperty('portage_repos_path')
+        repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(projectrepository_data['repository_uuid'])
+        repository_path = yield os.path.join(portage_repos_path, repository_data['name'])
+        cpv = self.getProperty("cpv")
+        c = yield catpkgsplit(cpv)[0]
+        p = yield catpkgsplit(cpv)[1]
+        shell_commad_list = [
+                    'pkgcheck',
+                    'scan',
+                    '-v'
+                    ]
+        shell_commad_list.append('-R')
+        shell_commad_list.append('XmlReporter')
+        aftersteps_list = []
+        if projectrepository_data['pkgcheck'] == 'full':
+            pkgcheck_workdir = yield os.path.join(repository_path, '')
+        else:
+            pkgcheck_workdir = yield os.path.join(repository_path, c, p, '')
+        aftersteps_list.append(
+            steps.SetPropertyFromCommandNewStyle(
+                        command=shell_commad_list,
+                        strip=True,
+                        extract_fn=PersOutputOfPkgCheck,
+                        workdir=pkgcheck_workdir
+            ))
+        aftersteps_list.append(CheckPkgCheckLogs())
+        yield self.build.addStepsAfterCurrentStep(aftersteps_list)
+        return SUCCESS
+
+class CheckPkgCheckLogs(BuildStep):
+
+    name = 'CheckPkgCheckLogs'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    #@defer.inlineCallbacks
+    def run(self):
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        project_data = self.getProperty('project_data')
+        pkgcheck_output = self.getProperty('pkgcheck_output')
+        print(pkgcheck_output)
+        #FIXME:
+        # Perse the logs
+        # tripp irc request with pkgcheck info
         return SUCCESS

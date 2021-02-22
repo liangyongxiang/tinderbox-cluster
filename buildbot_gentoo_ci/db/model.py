@@ -128,7 +128,7 @@ class Model(base.DBConnectorComponent):
                   sa.ForeignKey('repositorys.uuid', ondelete='CASCADE'),
                   nullable=False),
         sa.Column('auto', sa.Boolean, default=False),
-        sa.Column('pkgcheck', sa.Boolean, default=False),
+        sa.Column('pkgcheck', sa.Enum('package','full','none'), default='none'),
     )
 
     # projects etc/portage settings
