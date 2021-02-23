@@ -139,4 +139,15 @@ def run_build_request():
     # run pkgcheck if wanted
     #   check log
     f.addStep(builders.RunPkgCheck())
+    # check cpv match
+    f.addStep(builders.RunEmerge(step='match'))
+    # Add the needed steps for build
+    f.addStep(builders.RunBuild())
+    # clean up the worker
+    f.addStep(builders.RunEmerge(step='pre-depclean'))
+    #   look at the log to see if we need to do stuff
+    #   depclean
+    f.addStep(builders.RunEmerge(step='depclean'))
+    f.addStep(builders.RunEmerge(step='preserved-libs'))
+    f.addStep(builders.RunEmerge(step='depclean'))
     return f

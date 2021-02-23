@@ -21,6 +21,7 @@ def PersOutputOfEmerge(rc, stdout, stderr):
     emerge_output['depclean'] = False
     package_dict = {}
     print(stderr)
+    emerge_output['stderr'] = stderr
     # split the lines
     for line in stdout.split('\n'):
         # package list
@@ -69,6 +70,7 @@ def PersOutputOfEmerge(rc, stdout, stderr):
             if line.startswith('!!! existing preserved libs'):
                 pass
         #FIXME: Handling of depclean output dict of packages that get removed or saved
+    emerge_output['package'] = package_dict
     # split the lines
     #FIXME: Handling of stderr output
     for line in stderr.split('\n'):
@@ -191,6 +193,7 @@ class SetupPropertys(BuildStep):
         self.setProperty('project_data', project_data, 'project_data')
         self.setProperty('preserved_libs', False, 'preserved-libs')
         self.setProperty('depclean', False, 'depclean')
+        self.setProperty('cpv_build', False, 'cpv_build')
         return SUCCESS
 
 class SetMakeProfile(BuildStep):
@@ -511,7 +514,51 @@ class RunEmerge(BuildStep):
                         workdir='/'
                 ))
             aftersteps_list.append(CheckEmergeLogs('depclean'))
-        if not self.step is None:
+
+        if self.step == 'match':
+            cpv = self.getProperty("cpv")
+            c = yield catpkgsplit(cpv)[0]
+            p = yield catpkgsplit(cpv)[1]
+            shell_commad_list.append('-pO')
+            shell_commad_list.append(c + '/' + p)
+            aftersteps_list.append(
+                steps.SetPropertyFromCommandNewStyle(
+                        command=shell_commad_list,
+                        strip=True,
+                        extract_fn=PersOutputOfEmerge,
+                        workdir='/',
+                        timeout=None
+                ))
+            aftersteps_list.append(CheckEmergeLogs('match'))
+
+        if self.step == 'pre-build':
+            shell_commad_list.append('-p')
+            shell_commad_list.append('=' + self.getProperty('cpv'))
+            aftersteps_list.append(
+                steps.SetPropertyFromCommandNewStyle(
+                        command=shell_commad_list,
+                        strip=True,
+                        extract_fn=PersOutputOfEmerge,
+                        workdir='/',
+                        timeout=None
+                ))
+            aftersteps_list.append(CheckEmergeLogs('pre-build'))
+
+        if self.step == 'build':
+            shell_commad_list.append('-q')
+            shell_commad_list.append('-1')
+            shell_commad_list.append('=' + self.getProperty('cpv'))
+            aftersteps_list.append(
+                steps.SetPropertyFromCommandNewStyle(
+                        command=shell_commad_list,
+                        strip=True,
+                        extract_fn=PersOutputOfEmerge,
+                        workdir='/',
+                        timeout=None
+                ))
+            aftersteps_list.append(CheckEmergeLogs('build'))
+
+        if not self.step is None and aftersteps_list != []:
             yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS
 
@@ -549,7 +596,18 @@ class CheckEmergeLogs(BuildStep):
         if emerge_output['depclean'] and projects_emerge_options['depclean']:
             self.setProperty('depclean', True, 'depclean')
 
-        if not self.step is None:
+        # FIXME: check if cpv match
+        if self.step == 'match'and self.getProperty('projectrepository_data')['build']:
+            if emerge_output['package'][self.getProperty('cpv')]:
+                self.setProperty('cpv_build', True, 'cpv_build')
+            print(self.getProperty('cpv_build'))
+
+        #FIXME:
+        # update package.* if needed and rerun pre-build max X times
+        if self.step == 'pre-build':
+            print(emerge_output)
+
+        if not self.step is None and aftersteps_list != []:
             yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS
 
@@ -622,4 +680,26 @@ class CheckPkgCheckLogs(BuildStep):
         #FIXME:
         # Perse the logs
         # tripp irc request with pkgcheck info
+        return SUCCESS
+
+class RunBuild(BuildStep):
+
+    name = 'RunBuild'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        if not self.getProperty('cpv_build'):
+            return SUCCESS
+        aftersteps_list = []
+        aftersteps_list.append(RunEmerge(step='pre-build'))
+        aftersteps_list.append(RunEmerge(step='build'))
+        yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS

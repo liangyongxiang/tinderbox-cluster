@@ -169,7 +169,8 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             project_uuid=row.project_uuid,
             repository_uuid=row.repository_uuid,
             auto=row.auto,
-            pkgcheck=pkgcheck
+            pkgcheck=pkgcheck,
+            build=row.build
             )
 
     def _row2dict_projects_portage(self, conn, row):
