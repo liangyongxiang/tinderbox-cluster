@@ -122,13 +122,15 @@ def run_build_request():
     #   run update package on worker
     f.addStep(builders.RunEmerge(step='update'))
     #   check log
-    # run pretend @preserved-rebuild if needed
-    f.addStep(builders.RunEmerge(step='preserved-libs'))
-    #   check log
     # run depclean if set
     #   depclean pretend
     f.addStep(builders.RunEmerge(step='pre-depclean'))
     #   look at the log to see if we need to do stuff
+    #   depclean
+    f.addStep(builders.RunEmerge(step='depclean'))
+    # run @preserved-rebuild if needed
+    f.addStep(builders.RunEmerge(step='preserved-libs'))
+    #   check log
     #   depclean
     f.addStep(builders.RunEmerge(step='depclean'))
     #   check log
@@ -146,7 +148,7 @@ def run_build_request():
     # clean up the worker
     f.addStep(builders.RunEmerge(step='pre-depclean'))
     #   look at the log to see if we need to do stuff
-    #   depclean
+    #   run depclean and preserved-libs
     f.addStep(builders.RunEmerge(step='depclean'))
     f.addStep(builders.RunEmerge(step='preserved-libs'))
     f.addStep(builders.RunEmerge(step='depclean'))
