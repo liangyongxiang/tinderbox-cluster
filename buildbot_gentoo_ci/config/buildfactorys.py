@@ -92,7 +92,11 @@ def run_build_request():
     # set needed Propertys
     f.addStep(builders.SetupPropertys())
     # Clean and add new /etc/portage
-    #FIXME: Is don't like symlinks
+    #NOTE: remove the symlink befor the dir
+    f.addStep(buildbot_steps.ShellCommandNewStyle(
+                        command=['rm', 'make.profile'],
+                        workdir='/etc/portage/'
+                        ))
     f.addStep(buildbot_steps.RemoveDirectory(dir="portage",
                                 workdir='/etc/'))
     f.addStep(buildbot_steps.MakeDirectory(dir="portage",
