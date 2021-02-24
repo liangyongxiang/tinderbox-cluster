@@ -475,6 +475,8 @@ class RunEmerge(BuildStep):
                         timeout=None
                 ))
             aftersteps_list.append(CheckEmergeLogs('update'))
+            if projects_emerge_options['preserved_libs']:
+                self.setProperty('preserved_libs', True, 'preserved-libs')
 
         if self.step == 'preserved-libs' and self.getProperty('preserved_libs'):
             shell_commad_list.append('-q')
@@ -501,9 +503,8 @@ class RunEmerge(BuildStep):
                         workdir='/'
                 ))
             aftersteps_list.append(CheckEmergeLogs('depclean'))
-            self.setProperty('depclean', False, 'depclean')
 
-        if self.step == 'depclean' and self.getProperty('depclean') and projects_emerge_options['depclean']:
+        if self.step == 'depclean' and self.getProperty('depclean'):
             shell_commad_list.append('-q')
             shell_commad_list.append('--depclean')
             aftersteps_list.append(
@@ -520,6 +521,8 @@ class RunEmerge(BuildStep):
             c = yield catpkgsplit(cpv)[0]
             p = yield catpkgsplit(cpv)[1]
             shell_commad_list.append('-pO')
+            # don't use bin for match
+            shell_commad_list.append('--usepkg=n')
             shell_commad_list.append(c + '/' + p)
             aftersteps_list.append(
                 steps.SetPropertyFromCommandNewStyle(
@@ -546,7 +549,8 @@ class RunEmerge(BuildStep):
 
         if self.step == 'build':
             shell_commad_list.append('-q')
-            shell_commad_list.append('-1')
+            if projects_emerge_options['oneshot']:
+                shell_commad_list.append('-1')
             shell_commad_list.append('=' + self.getProperty('cpv'))
             aftersteps_list.append(
                 steps.SetPropertyFromCommandNewStyle(
@@ -557,6 +561,8 @@ class RunEmerge(BuildStep):
                         timeout=None
                 ))
             aftersteps_list.append(CheckEmergeLogs('build'))
+            if projects_emerge_options['preserved_libs']:
+                self.setProperty('preserved_libs', True, 'preserved-libs')
 
         if not self.step is None and aftersteps_list != []:
             yield self.build.addStepsAfterCurrentStep(aftersteps_list)
@@ -598,7 +604,7 @@ class CheckEmergeLogs(BuildStep):
 
         # FIXME: check if cpv match
         if self.step == 'match'and self.getProperty('projectrepository_data')['build']:
-            if emerge_output['package'][self.getProperty('cpv')]:
+            if self.getProperty('cpv') in emerge_output['package']:
                 self.setProperty('cpv_build', True, 'cpv_build')
             print(self.getProperty('cpv_build'))
 
@@ -701,5 +707,7 @@ class RunBuild(BuildStep):
         aftersteps_list = []
         aftersteps_list.append(RunEmerge(step='pre-build'))
         aftersteps_list.append(RunEmerge(step='build'))
+        self.setProperty('depclean', False, 'depclean')
+        self.setProperty('preserved_libs', False, 'preserved-libs')
         yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS
