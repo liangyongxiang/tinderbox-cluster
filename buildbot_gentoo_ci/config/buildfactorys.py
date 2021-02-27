@@ -106,15 +106,15 @@ def run_build_request():
     #NOTE: pkgcheck do not support it as a dir
     #f.addStep(buildbot_steps.MakeDirectory(dir="make.profile",
     #                            workdir='/etc/portage/'))
-    f.addStep(builders.SetMakeProfile())
+    f.addStep(portage.SetMakeProfile())
     # setup repos.conf dir
     f.addStep(buildbot_steps.MakeDirectory(dir="repos.conf",
                                 workdir='/etc/portage/'))
-    f.addStep(builders.SetReposConf())
+    f.addStep(portage.SetReposConf())
     # update the repositorys listed in project_repository
     f.addStep(builders.UpdateRepos())
     # setup make.conf
-    f.addStep(builders.SetMakeConf())
+    f.addStep(portage.SetMakeConf())
     # setup env
     f.addStep(portage.SetEnvDefault())
     # setup package.*
