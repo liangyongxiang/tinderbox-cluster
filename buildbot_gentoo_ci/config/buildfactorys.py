@@ -9,6 +9,7 @@ from buildbot_gentoo_ci.steps import category
 from buildbot_gentoo_ci.steps import package
 from buildbot_gentoo_ci.steps import version
 from buildbot_gentoo_ci.steps import builders
+from buildbot_gentoo_ci.steps import portage
 
 def update_db_check():
     f = util.BuildFactory()
@@ -114,9 +115,10 @@ def run_build_request():
     f.addStep(builders.UpdateRepos())
     # setup make.conf
     f.addStep(builders.SetMakeConf())
-    # setup package.*
-    #f.addStep(portages.SetPackageUse())
     # setup env
+    f.addStep(portage.SetEnvDefault())
+    # setup package.*
+    #f.addStep(portage.SetPackageDefault())
     # setup files in /etc if needed
     # run --regen if needed on repo
     # update packages before any tests

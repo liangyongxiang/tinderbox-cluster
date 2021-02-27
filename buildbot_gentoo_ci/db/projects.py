@@ -131,6 +131,28 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
         return res
 
     @defer.inlineCallbacks
+    def getProjectPortageEnvByUuid(self, uuid):
+        def thd(conn):
+            tbl = self.db.model.projects_portages_env
+            q = tbl.select()
+            q = q.where(tbl.c.project_uuid == uuid)
+            return [self._row2dict_projects_portages_env(conn, row)
+                for row in conn.execute(q).fetchall()]
+        res = yield self.db.pool.do(thd)
+        return res
+
+    @defer.inlineCallbacks
+    def getProjectPortagePackageByUuid(self, uuid):
+        def thd(conn):
+            tbl = self.db.model.projects_portages_package
+            q = tbl.select()
+            q = q.where(tbl.c.project_uuid == uuid)
+            return [self._row2dict_projects_portages_package(conn, row)
+                for row in conn.execute(q).fetchall()]
+        res = yield self.db.pool.do(thd)
+        return res
+
+    @defer.inlineCallbacks
     def getProjectEmergeOptionsByUuid(self, uuid):
         def thd(conn):
             tbl = self.db.model.projects_emerge_options
@@ -188,6 +210,28 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             makeconf_id=row.makeconf_id,
             value=row.value,
             build_id=0
+            )
+
+    def _row2dict_projects_portages_env(self, conn, row):
+        return dict(
+            id=row.id,
+            project_uuid=row.project_uuid,
+            makeconf_id=row.makeconf_id,
+            name=row.name,
+            value=row.value
+            )
+
+    def _row2dict_projects_portages_package(self, conn, row):
+        if row.value2 == '':
+            value2 = None
+        else:
+            value2 = row.value2
+        return dict(
+            id=row.id,
+            project_uuid=row.project_uuid,
+            directorys=row.directorys,
+            value1=row.value1,
+            value2=value2
             )
 
     def _row2dict_projects_emerge_options(self, conn, row):

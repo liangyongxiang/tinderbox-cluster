@@ -139,7 +139,6 @@ class Model(base.DBConnectorComponent):
         sa.Column('project_uuid', sa.String(36),
                   sa.ForeignKey('projects.uuid', ondelete='CASCADE'),
                   nullable=False),
-        # FIXME: directorys should be moved to own table
         sa.Column('directorys', sa.Enum('make.profile', 'repos.conf'), nullable=False),
         sa.Column('value', sa.String(255), nullable=False),
     )
@@ -160,6 +159,32 @@ class Model(base.DBConnectorComponent):
                   sa.ForeignKey('portages_makeconf.id', ondelete='CASCADE'),
                   nullable=False),
         sa.Column('value', sa.String(255), nullable=False),
+    )
+
+    # projects etc/portage/env settings
+    projects_portages_env = sautils.Table(
+        "projects_portages_env", metadata,
+        sa.Column('id', sa.Integer, primary_key=True),
+        sa.Column('project_uuid', sa.String(36),
+                  sa.ForeignKey('projects.uuid', ondelete='CASCADE'),
+                  nullable=False),
+        sa.Column('makeconf_id', sa.String(255),
+                  sa.ForeignKey('portages_makeconf.id', ondelete='CASCADE'),
+                  nullable=False),
+        sa.Column('name', sa.String(255), nullable=False),
+        sa.Column('value', sa.String(255), nullable=False),
+    )
+
+    # projects etc/portage/package.* settings
+    projects_portage_package = sautils.Table(
+        "projects_portage_package", metadata,
+        sa.Column('id', sa.Integer, primary_key=True),
+        sa.Column('project_uuid', sa.String(36),
+                  sa.ForeignKey('projects.uuid', ondelete='CASCADE'),
+                  nullable=False),
+        sa.Column('directorys', sa.Enum('use', 'accept_keywords', 'env'), nullable=False),
+        sa.Column('value1', sa.String(255), nullable=False),
+        sa.Column('value2', sa.String(255), nullable=True),
     )
 
     projects_emerge_options = sautils.Table(

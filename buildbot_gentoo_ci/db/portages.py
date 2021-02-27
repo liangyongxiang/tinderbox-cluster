@@ -36,6 +36,20 @@ class PortagesConnectorComponent(base.DBConnectorComponent):
         res = yield self.db.pool.do(thd)
         return res
 
+    @defer.inlineCallbacks
+    def getVariableById(self, id):
+        def thd(conn):
+            tbl = self.db.model.portages_makeconf
+            q = tbl.select()
+            q = q.where(tbl.c.id == id)
+            res = conn.execute(q)
+            row = res.fetchone()
+            if not row:
+                return None
+            return self._row2dict(conn, row)
+        res = yield self.db.pool.do(thd)
+        return res
+
     def _row2dict(self, conn, row):
         return dict(
             id=row.id,
