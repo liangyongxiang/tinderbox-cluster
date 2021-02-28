@@ -255,6 +255,11 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('--changed-use')
             shell_commad_list.append('--pretend')
             shell_commad_list.append('@world')
+            # don't build bin for virtual and acct-*
+            shell_commad_list.append('--buildpkg-exclude')
+            shell_commad_list.append('virtual')
+            shell_commad_list.append('--buildpkg-exclude')
+            shell_commad_list.append('acct-*')
             aftersteps_list.append(
                 steps.SetPropertyFromCommandNewStyle(
                         command=shell_commad_list,
@@ -269,6 +274,11 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('--changed-deps')
             shell_commad_list.append('--changed-use')
             shell_commad_list.append('@world')
+            # don't build bin for virtual and acct-*
+            shell_commad_list.append('--buildpkg-exclude')
+            shell_commad_list.append('virtual')
+            shell_commad_list.append('--buildpkg-exclude')
+            shell_commad_list.append('acct-*')
             aftersteps_list.append(
                 steps.SetPropertyFromCommandNewStyle(
                         command=shell_commad_list,
@@ -338,8 +348,19 @@ class RunEmerge(BuildStep):
             aftersteps_list.append(CheckEmergeLogs('match'))
 
         if self.step == 'pre-build':
+            cpv = self.getProperty("cpv")
+            c = yield catpkgsplit(cpv)[0]
+            p = yield catpkgsplit(cpv)[1]
             shell_commad_list.append('-p')
             shell_commad_list.append('=' + self.getProperty('cpv'))
+            # we don't use the bin for the requsted cpv
+            shell_commad_list.append('--usepkg-exclude')
+            shell_commad_list.append(c + '/' + p)
+            # don't build bin for virtual and acct-*
+            shell_commad_list.append('--buildpkg-exclude')
+            shell_commad_list.append('virtual')
+            shell_commad_list.append('--buildpkg-exclude')
+            shell_commad_list.append('acct-*')
             aftersteps_list.append(
                 steps.SetPropertyFromCommandNewStyle(
                         command=shell_commad_list,
@@ -351,10 +372,21 @@ class RunEmerge(BuildStep):
             aftersteps_list.append(CheckEmergeLogs('pre-build'))
 
         if self.step == 'build':
+            cpv = self.getProperty("cpv")
+            c = yield catpkgsplit(cpv)[0]
+            p = yield catpkgsplit(cpv)[1]
             shell_commad_list.append('-q')
             if projects_emerge_options['oneshot']:
                 shell_commad_list.append('-1')
             shell_commad_list.append('=' + self.getProperty('cpv'))
+            # we don't use the bin for the requsted cpv
+            shell_commad_list.append('--usepkg-exclude')
+            shell_commad_list.append(c + '/' + p)
+            # don't build bin for virtual and acct-*
+            shell_commad_list.append('--buildpkg-exclude')
+            shell_commad_list.append('virtual')
+            shell_commad_list.append('--buildpkg-exclude')
+            shell_commad_list.append('acct-*')
             aftersteps_list.append(
                 steps.SetPropertyFromCommandNewStyle(
                         command=shell_commad_list,
