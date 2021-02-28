@@ -3,6 +3,7 @@
 
 import re
 import os
+import git
 
 from portage.xml.metadata import MetaDataXML
 from portage.checksum import perform_checksum
@@ -61,10 +62,12 @@ class AddVersion(BuildStep):
         self.version_data['name'] = self.getProperty("version")
         self.version_data['package_uuid'] = self.getProperty("package_data")['uuid']
         self.version_data['file_hash'] = self.getProperty("ebuild_file_hash")
+        self.version_data['commit_id'] = self.getProperty("commit_id")
         self.version_data['uuid'] = yield self.gentooci.db.versions.addVersion(
                                             self.version_data['name'],
                                             self.version_data['package_uuid'],
-                                            self.version_data['file_hash']
+                                            self.version_data['file_hash'],
+                                            self.version_data['commit_id']
                                             )
         print(self.version_data)
         self.setProperty("version_data", self.version_data, 'version_data')
@@ -96,6 +99,33 @@ class GetAuxMetadata(BuildStep):
         self.setProperty('aux_metadata', auxdb_list, 'aux_metadata')
         yield self.myportdb.close_caches()
         yield portdbapi.portdbapi_instances.remove(self.myportdb)
+        return SUCCESS
+
+class GetCommitdata(BuildStep):
+
+    name = 'GetCommitdata'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        #FIXME: Could be a better way to get the log
+        git_log_ebuild = ''
+        g = git.Git(self.getProperty("repository_path"))
+        index = 1
+        git_log_dict = {}
+        git_log = yield g.log('-n 1', self.getProperty("ebuild_file"))
+        print(git_log)
+        for line in git_log.splitlines():
+            git_log_dict[index] = line
+            index = index + 1
+        self.setProperty('commit_id', re.sub('commit ', '', git_log_dict[1]), 'commit_id')
         return SUCCESS
 
 class AddVersionKeyword(BuildStep):
@@ -178,6 +208,7 @@ class CheckPathHash(BuildStep):
             self.ebuild_file_hash = None
         self.setProperty('ebuild_file', self.ebuild_file, 'ebuild_file')
         self.setProperty('ebuild_file_hash', self.ebuild_file_hash, 'ebuild_file_hash')
+        self.setProperty('repository_path', self.repository_path, 'repository_path')
         return SUCCESS
 
 class TriggerBuildCheck(BuildStep):
@@ -248,6 +279,7 @@ class CheckV(BuildStep):
             addStepVData.append(DeleteOldVersion())
         if self.getProperty("ebuild_file") is not None and self.getProperty("old_version_data") is not None:
             if self.getProperty("ebuild_file_hash") != self.getProperty("old_version_data")['file_hash']:
+                addStepVData.append(GetCommitdata())
                 addStepVData.append(AddVersion())
                 addStepVData.append(GetAuxMetadata())
                 addStepVData.append(AddVersionKeyword())
@@ -256,6 +288,7 @@ class CheckV(BuildStep):
             else:
                 return SUCCESS
         if self.getProperty("ebuild_file") is not None and self.getProperty("old_version_data") is None:
+            addStepVData.append(GetCommitdata())
             addStepVData.append(AddVersion())
             addStepVData.append(GetAuxMetadata())
             addStepVData.append(AddVersionKeyword())

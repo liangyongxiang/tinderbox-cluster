@@ -240,6 +240,7 @@ class Model(base.DBConnectorComponent):
                   sa.ForeignKey('packages.uuid', ondelete='CASCADE'),
                   nullable=False),
         sa.Column('file_hash', sa.String(255), nullable=False),
+        sa.Column('commit_id', sa.String(255), nullable=False),
         sa.Column('deleted', sa.Boolean, default=False),
         sa.Column('deleted_at', sa.DateTime, nullable=True),
     )

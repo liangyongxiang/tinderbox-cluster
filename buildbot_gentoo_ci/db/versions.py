@@ -56,14 +56,15 @@ class VersionsConnectorComponent(base.DBConnectorComponent):
         return res
 
     @defer.inlineCallbacks
-    def addVersion(self, name, package_uuid, file_hash):
+    def addVersion(self, name, package_uuid, file_hash, commit_id):
         def thd(conn, no_recurse=False):
             try:
                 tbl = self.db.model.versions
                 q = tbl.insert()
                 r = conn.execute(q, dict(name=name,
                                          package_uuid=package_uuid,
-                                         file_hash=file_hash))
+                                         file_hash=file_hash,
+                                         commit_id=commit_id))
             except (sa.exc.IntegrityError, sa.exc.ProgrammingError):
                 uuid = None
             else:
@@ -107,6 +108,7 @@ class VersionsConnectorComponent(base.DBConnectorComponent):
             name=row.name,
             package_uuid=row.package_uuid,
             file_hash=row.file_hash,
+            commit_id=row.commit_id,
             deleted=row.deleted,
             deleted_at=row.deleted_at
             )
