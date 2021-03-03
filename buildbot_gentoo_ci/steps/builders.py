@@ -124,6 +124,7 @@ class TriggerRunBuildRequest(BuildStep):
                             'projectrepository_data' : self.getProperty('projectrepository_data'),
                             'use_data' : self.getProperty("use_data"),
                             'fullcheck' : self.getProperty("fullcheck"),
+                            'project_build_data' : None
                         }
                 )])
         return SUCCESS
@@ -194,6 +195,28 @@ class SetupPropertys(BuildStep):
         self.setProperty('preserved_libs', False, 'preserved-libs')
         self.setProperty('depclean', False, 'depclean')
         self.setProperty('cpv_build', False, 'cpv_build')
+        print(self.getProperty("buildnumber"))
+        if self.getProperty('project_build_data') is None:
+            project_build_data = {}
+            project_build_data['project_uuid'] = project_data['uuid']
+            project_build_data['version_uuid'] = self.getProperty("version_data")['uuid']
+            project_build_data['status'] = 'in-progress'
+            project_build_data['requested'] = False
+            project_build_data['buildbot_build_id'] = self.getProperty("buildnumber")
+            project_build_data['id'], project_build_data['build_id'] = yield self.gentooci.db.builds.addBuild(
+                                                                                            project_build_data)
+        else:
+            project_build_data = self.getProperty('project_build_data')
+            yield self.gentooci.db.builds.setSatusBuilds(
+                                                    project_build_data['build_id'],
+                                                    project_build_data['project_uuid'],
+                                                    'in-progress')
+            yield self.gentooci.db.builds.setBuildbotBuildIdBuilds(
+                                                    project_build_data['build_id'],
+                                                    project_build_data['project_uuid'],
+                                                    self.getProperty("buildnumber"))
+        self.setProperty('project_build_data', project_build_data, 'project_build_data')
+        print(self.getProperty("project_build_data"))
         return SUCCESS
 
 class UpdateRepos(BuildStep):
@@ -545,4 +568,28 @@ class RunBuild(BuildStep):
         self.setProperty('depclean', False, 'depclean')
         self.setProperty('preserved_libs', False, 'preserved-libs')
         yield self.build.addStepsAfterCurrentStep(aftersteps_list)
+        return SUCCESS
+
+class setBuildStatus(BuildStep):
+
+    name = 'setBuildStatus'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        project_build_data = self.getProperty('project_build_data')
+        if project_build_data['status'] == 'in-progress':
+            yield self.gentooci.db.builds.setSatusBuilds(
+                                                    project_build_data['build_id'],
+                                                    project_build_data['project_uuid'],
+                                                    'completed')
+            self.setProperty('project_build_data', project_build_data, 'project_build_data')
         return SUCCESS

@@ -158,4 +158,5 @@ def run_build_request():
     f.addStep(builders.RunEmerge(step='depclean'))
     f.addStep(builders.RunEmerge(step='preserved-libs'))
     f.addStep(builders.RunEmerge(step='depclean'))
+    f.addStep(builders.setBuildStatus())
     return f

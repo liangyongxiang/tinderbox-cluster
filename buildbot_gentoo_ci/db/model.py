@@ -198,6 +198,25 @@ class Model(base.DBConnectorComponent):
         sa.Column('preserved_libs', sa.Boolean, default=True),
     )
 
+    projects_builds = sautils.Table(
+        "projects_builds", metadata,
+        sa.Column('id', sa.Integer, primary_key=True),
+        sa.Column('build_id', sa.Integer),
+        sa.Column('project_uuid', sa.String(36),
+                  sa.ForeignKey('projects.uuid', ondelete='CASCADE'),
+                  nullable=False),
+        sa.Column('version_uuid', sa.String(36),
+                  sa.ForeignKey('versions.uuid', ondelete='CASCADE'),
+                  nullable=False),
+        sa.Column('buildbot_build_id', sa.Integer),
+        sa.Column('status', sa.Enum('failed','completed','in-progress','waiting', 'warning'), nullable=False),
+        sa.Column('requested', sa.Boolean, default=False),
+        sa.Column('created_at', sa.DateTime, nullable=True),
+        sa.Column('updated_at', sa.DateTime, nullable=True),
+        sa.Column('deleted', sa.Boolean, default=False),
+        sa.Column('deleted_at', sa.DateTime, nullable=True),
+    )
+
     keywords = sautils.Table(
         "keywords", metadata,
         # unique uuid per keyword
