@@ -25,16 +25,18 @@ from buildbot.db import base
 
 class RepositorysConnectorComponent(base.DBConnectorComponent):
 
-    def getRepositorys(self):
+    @defer.inlineCallbacks
+    def getAllRepositorysByEnableAuto(self):
         def thd(conn):
             tbl = self.db.model.repositorys
             q = tbl.select()
             q = q.where(tbl.c.enable == 1,
                     tbl.c.auto == 1
                     )
-            r = conn.execute(q)
-            return [dict(row) for row in r.fetchall()]
-        return self.db.pool.do(thd)
+            return [self._row2dict(conn, row)
+                for row in conn.execute(q).fetchall()]
+        res = yield self.db.pool.do(thd)
+        return res
 
     @defer.inlineCallbacks
     def getRepositoryByName(self, name):
@@ -64,18 +66,19 @@ class RepositorysConnectorComponent(base.DBConnectorComponent):
         res = yield self.db.pool.do(thd)
         return res
 
-    def getRepositorysGitPoller(self):
+    @defer.inlineCallbacks
+    def getGitPollerByUuid(self, uuid):
         def thd(conn):
-            tblr = self.db.model.repositorys
-            tblrg = self.db.model.repository_gitpuller
-            from_clause = tblr.join(tblg, tblr.c.uuid == tblrg.c.repository_uuid)
-            q = sa.select([tblrg]).select_from(
-                from_clause).where(tblr.c.enabled == 1,
-                    tblr.c.auto == 1
-                    )
-            r = conn.execute(q)
-            return [dict(row) for row in r.fetchall()]
-        return self.db.pool.do(thd)
+            tbl = self.db.model.repositorys_gitpullers
+            q = tbl.select()
+            q = q.where(tbl.c.repository_uuid == uuid)
+            res = conn.execute(q)
+            row = res.fetchone()
+            if not row:
+                return None
+            return self._row2dict_gitpuller(conn, row)
+        res = yield self.db.pool.do(thd)
+        return res
 
     def _row2dict(self, conn, row):
         return dict(
@@ -85,5 +88,18 @@ class RepositorysConnectorComponent(base.DBConnectorComponent):
             mirror_url=row.mirror_url,
             auto=row.auto,
             enabled=row.enabled,
-            ebuild=row.ebuild
+            ebuild=row.ebuild,
+            type=row.type
+            )
+
+    def _row2dict_gitpuller(self, conn, row):
+        return dict(
+            id=row.id,
+            repository_uuid=row.repository_uuid,
+            project=row.project,
+            url=row.url,
+            branches=row.branches,
+            poll_interval=row.poll_interval,
+            poll_random_delay_min=row.poll_random_delay_min,
+            poll_random_delay_max=row.poll_random_delay_max
             )

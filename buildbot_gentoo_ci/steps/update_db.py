@@ -37,18 +37,22 @@ class GetDataGentooCiProject(BuildStep):
         if self.profile_repository_data is None:
             log.err('No data for repository in the database')
             return FAILURE
-        #self.repository = self.getProperty("repository")
-        self.repository = 'gentoo'
-        self.repository_data = yield self.gentooci.db.repositorys.getRepositoryByName(self.repository)
         print(self.project_data)
         print(self.project_repository_data)
         print(self.profile_repository_data)
-        print(self.getProperty("cpv_changes"))
-        print(self.repository_data)
+        print(self.getProperty("git_changes"))
+        print(self.getProperty("repository"))
+        repository = False
+        self.repository_data = False
+        if self.getProperty("repository").endswith('.git'):
+            for v in self.getProperty("repository").split('/'):
+                if v.endswith('.git'):
+                    repository = v[:-4]
+        if repository:
+            self.repository_data = yield self.gentooci.db.repositorys.getRepositoryByName(repository)
         self.setProperty("project_data", self.project_data, 'project_data')
         self.setProperty("project_repository_data", self.project_repository_data, 'project_repository_data')
         self.setProperty("profile_repository_data", self.profile_repository_data, 'profile_repository_data')
-        self.setProperty("cpv_changes", self.getProperty("cpv_changes"), 'cpv_changes')
         self.setProperty("repository_data", self.repository_data, 'repository_data')
         return SUCCESS
 
@@ -82,12 +86,9 @@ class CheckPathGentooCiProject(BuildStep):
                 is_dir  = False
                 success = False
             print("isdir(%s): %s" %(x, is_dir))
+        print(self.getProperty("builddir"))
         if not success:
             return FAILURE
-        self.setProperty("project_data", self.project_data, 'project_data')
-        self.setProperty("project_repository_data", self.project_repository_data, 'project_repository_data')
-        self.setProperty("cpv_changes", self.getProperty("cpv_changes"), 'cpv_changes')
-        self.setProperty("repository_data", self.repository_data, 'repository_data')
         return SUCCESS
 
 class CheckProjectGentooCiProject(BuildStep):
@@ -111,9 +112,6 @@ class CheckProjectGentooCiProject(BuildStep):
             print("project portage conf has error %s" %(str(e)))
             return FAILURE
         self.setProperty("config_root", self.config_root, 'config_root')
-        self.setProperty("project_data", self.project_data, 'project_data')
-        self.setProperty("cpv_changes", self.getProperty("cpv_changes"), 'cpv_changes')
-        self.setProperty("repository_data", self.getProperty("repository_data"), 'repository')
         return SUCCESS
 
 class CheckCPVGentooCiProject(BuildStep):
@@ -122,41 +120,46 @@ class CheckCPVGentooCiProject(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
-        #self.cpv_changes = self.getProperty("cpv_changes")
-        self.cpv_changes = []
-        self.cpv_changes.append('dev-python/django-3.1.7')
-        self.cpv_changes.append('dev-python/scrypt-0.8.16')
-        print(self.cpv_changes)
-        print(self.getProperty("repository_data"))
-        # check if cpv_change is a string or a list
-        if isinstance(self.cpv_changes, list):
-            self.cpv_list = self.cpv_changes
-        else:
-            self.cpv_list = []
-            self.cpv_list.append(self.cpv_changes)
+        self.git_changes = self.getProperty("git_changes")
+        print(self.git_changes)
+        # check if git_change is a string or a list
+        if not isinstance(self.git_changes, list):
+            return FAILURE
         self.success = True
         addStepUpdateCPVData = []
-        for cpv in sorted(self.cpv_list):
-            # check that cpv is valied
-            if catpkgsplit(cpv) is None:
-                log.msg("%s is not vaild package name" % cpv)
-                self.success = False
-            else:
-                # call update_cpv_data
-                addStepUpdateCPVData.append(
-                    steps.Trigger(
-                        schedulerNames=['update_cpv_data'],
-                        waitForFinish=False,
-                        updateSourceStamp=False,
-                        set_properties={
-                            'cpv' : cpv,
-                            'config_root' : self.getProperty("config_root"),
-                            'project_data' : self.getProperty("project_data"),
-                            'repository_data' : self.getProperty("repository_data"),
-                        }
-                    )
-                )
-        yield self.build.addStepsAfterCurrentStep(addStepUpdateCPVData)
+        for change_data in self.git_changes:
+            # make a trigger for all cpv in the list
+            for cpv in change_data['cpvs']:
+                # check that cpv is valied
+                if catpkgsplit(cpv) is None:
+                    log.msg("%s is not vaild package name" % cpv)
+                    self.success = False
+                else:
+                    if change_data['repository'] != self.getProperty("repository_data")['name']:
+                        log.msg("%s don't match" % change_data['repository'])
+                        self.success = False
+                    else:
+                        revision_data = {}
+                        revision_data['author'] = change_data['author']
+                        revision_data['committer']  = change_data['committer']
+                        revision_data['comments'] = change_data['comments']
+                        revision_data['revision'] = change_data['revision']
+                        # call update_cpv_data
+                        addStepUpdateCPVData.append(
+                            steps.Trigger(
+                                schedulerNames=['update_cpv_data'],
+                                waitForFinish=False,
+                                updateSourceStamp=False,
+                                set_properties={
+                                    'cpv' : cpv,
+                                    'config_root' : self.getProperty("config_root"),
+                                    'project_data' : self.getProperty("project_data"),
+                                    'repository_data' : self.getProperty("repository_data"),
+                                    'revision_data' : revision_data,
+                                }
+                            )
+                        )
+            yield self.build.addStepsAfterCurrentStep(addStepUpdateCPVData)
         if self.success is False:
             return FAILURE
         return SUCCESS

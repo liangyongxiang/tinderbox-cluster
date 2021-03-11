@@ -4,7 +4,7 @@
 from buildbot.plugins import schedulers, util
 
 @util.renderer
-def builderUpdateDbNames(self, props):
+def builderUpdateDbNames(props):
     builders = set()
     for f in props.files:
         if f.endswith('.ebuild'):
@@ -12,22 +12,38 @@ def builderUpdateDbNames(self, props):
     return list(builders)
 
 @util.renderer
-def cpvUpdateDb(props):
-    cpv_changes = []
-    for f in props.files:
-        if f.endswith('.ebuild'):
-            cppv = f.split('.eb', 0)
-            cpv = cppv.split('/', 0) + '/' + cppv.split('/', 2)
-            if not cpv in cpv_changes:
-                cpv_changes.append(cpv)
-    return cpv_changes
+def gitUpdateDb(props):
+    git_changes = []
+    print(props.changes)
+    for k in props.changes:
+        change_data = {}
+        print(k)
+        change_data['cpvs'] = []
+        for v in k['files']:
+            if v.endswith('.ebuild'):
+                c = v.split('/')[0]
+                pv = v.split('/')[2][:-7]
+                cpv = c + '/' + pv
+                print(cpv)
+                change_data['cpvs'].append(cpv)
+        if k['repository'].endswith('.git'):
+            for v in k['repository'].split('/'):
+                if v.endswith('.git'):
+                    change_data['repository'] = v[:-4]
+        change_data['author'] = k['author']
+        change_data['committer'] = k['committer']
+        change_data['comments'] = k['comments']
+        change_data['revision'] = k['revision']
+        git_changes.append(change_data)
+    print(git_changes)
+    return git_changes
 
 def gentoo_schedulers():
     scheduler_update_db = schedulers.SingleBranchScheduler(
         name='scheduler_update_db',
         treeStableTimer=60,
         properties = {
-                        'cpv_changes' : cpvUpdateDb,
+                        'git_changes' : gitUpdateDb,
                     },
         builderNames = builderUpdateDbNames,
         change_filter=util.ChangeFilter(branch='master'),
@@ -60,7 +76,7 @@ def gentoo_schedulers():
                                builderNames=["run_build_request"])
     s = []
     s.append(test_updatedb)
-    #s.append(scheduler_update_db)
+    s.append(scheduler_update_db)
     s.append(update_cpv_data)
     s.append(update_v_data)
     s.append(build_request_data)

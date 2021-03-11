@@ -71,14 +71,15 @@ class Model(base.DBConnectorComponent):
         # description of the repository
         sa.Column('description', sa.Text, nullable=True),
         sa.Column('mirror_url', sa.String(255), nullable=True),
+        sa.Column('type', sa.Enum('gitpuller'), nullable=False, default='gitpuller'),
         sa.Column('auto', sa.Boolean, default=False),
         sa.Column('enabled', sa.Boolean, default=False),
         sa.Column('ebuild', sa.Boolean, default=False),
     )
 
     # Use by GitPoller
-    repository_gitpuller = sautils.Table(
-        "repository_gitpuller", metadata,
+    repositorys_gitpullers = sautils.Table(
+        "repositorys_gitpullers", metadata,
         # unique id per repository
         sa.Column('id', sa.Integer, primary_key=True),
         sa.Column('repository_uuid', sa.String(36),
@@ -86,7 +87,10 @@ class Model(base.DBConnectorComponent):
                   nullable=False),
         sa.Column('project', sa.String(255), nullable=False, default='gentoo'),
         sa.Column('url', sa.String(255), nullable=False),
-        sa.Column('branche', sa.String(255), nullable=False, default='master'),
+        sa.Column('branches', sa.String(255), nullable=False, default='all'),
+        sa.Column('poll_interval', sa.Integer, nullable=False, default=600),
+        sa.Column('poll_random_delay_min', sa.Integer, nullable=False, default=600),
+        sa.Column('poll_random_delay_max', sa.Integer, nullable=False, default=600),
     )
 
     projects = sautils.Table(
