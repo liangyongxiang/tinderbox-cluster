@@ -15,20 +15,21 @@ def update_db_check():
     f = util.BuildFactory()
     # FIXME: 1
     # Get base project data from db
-    #   return project_repository, profile_repository,
-    #       project
+    #   return profile_repository, project
     f.addStep(update_db.GetDataGentooCiProject())
-    # Check if base project repo is cloned
-    # Check if profile repo is cloned
-    # check if the profile link is there
-    # check if the repository is cloned
-    f.addStep(update_db.CheckPathGentooCiProject())
-    # check if etc/portage has no error
-    #   return config_root
-    f.addStep(update_db.CheckProjectGentooCiProject())
-    # Make a for loop and trigger new builders with cpv from cpv_changes
-    #   return cpv, repository, project_data, config_root
-    f.addStep(update_db.CheckCPVGentooCiProject())
+    # Check if needed path is there
+    f.addStep(update_db.CheckPath())
+    # update the repos
+    f.addStep(update_db.UpdateRepos())
+    # setup the profile
+    f.addStep(portage.SetMakeProfileLocal())
+    # setup repos.conf dir
+    f.addStep(portage.SetReposConfLocal())
+    # setup make.conf
+    f.addStep(portage.SetMakeConfLocal())
+    # Make a for loop and trigger new builders with cpv from git_changes
+    #   return cpv, repository, project_data
+    f.addStep(update_db.TriggerCheckForCPV())
     return f
 
 def update_db_cp():

@@ -2,6 +2,7 @@
 # Distributed under the terms of the GNU General Public License v2
 
 import os
+import pygit2
 
 from portage import config as portage_config
 from portage.versions import catpkgsplit
@@ -15,8 +16,6 @@ from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
 from buildbot.plugins import steps
 
-#from buildbot_gentoo_ci.steps.updatedb_functions import category
-
 class GetDataGentooCiProject(BuildStep):
 
     def __init__(self, **kwargs):
@@ -29,16 +28,11 @@ class GetDataGentooCiProject(BuildStep):
         if self.project_data is None:
             log.err('No data for project in the database')
             return FAILURE
-        self.project_repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(self.project_data['project_repository_uuid'])
-        if self.project_repository_data is None:
-            log.err('No data for repository in the database')
-            return FAILURE
         self.profile_repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(self.project_data['profile_repository_uuid'])
         if self.profile_repository_data is None:
             log.err('No data for repository in the database')
             return FAILURE
         print(self.project_data)
-        print(self.project_repository_data)
         print(self.profile_repository_data)
         print(self.getProperty("git_changes"))
         print(self.getProperty("repository"))
@@ -51,12 +45,18 @@ class GetDataGentooCiProject(BuildStep):
         if repository:
             self.repository_data = yield self.gentooci.db.repositorys.getRepositoryByName(repository)
         self.setProperty("project_data", self.project_data, 'project_data')
-        self.setProperty("project_repository_data", self.project_repository_data, 'project_repository_data')
         self.setProperty("profile_repository_data", self.profile_repository_data, 'profile_repository_data')
         self.setProperty("repository_data", self.repository_data, 'repository_data')
         return SUCCESS
 
-class CheckPathGentooCiProject(BuildStep):
+class CheckPath(BuildStep):
+
+    name = 'CheckPath'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -65,58 +65,109 @@ class CheckPathGentooCiProject(BuildStep):
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.repository_basedir = self.gentooci.config.project['repository_basedir']
-        self.profile_repository_data = self.getProperty("profile_repository_data")
-        self.project_repository_data = self.getProperty("project_repository_data")
-        self.repository_data = self.getProperty("repository_data")
-        self.project_data = self.getProperty("project_data")
-        self.project_path = yield os.path.join(self.repository_basedir, self.project_repository_data['name'] + '.git')
-        self.repository_path = yield os.path.join(self.repository_basedir, self.repository_data['name'] + '.git')
-        self.portage_path = yield os.path.join(self.project_path, self.project_data['name'], 'etc/portage')
-        success = True
-        for x in [
-                  os.path.join(self.repository_basedir, self.profile_repository_data['name'] + '.git'),
-                  self.project_path,
-                  self.portage_path,
-                  os.path.join(self.portage_path, 'make.profile'),
-                  self.repository_path
-                  # check the path of make.profile is project_data['profile']
-                 ]:
-            is_dir = True
-            if not os.path.isdir(x):
-                is_dir  = False
-                success = False
-            print("isdir(%s): %s" %(x, is_dir))
+        self.portage_path = 'portage'
+        self.profile_path = yield os.path.join(self.portage_path, 'make.profile')
+        self.repos_path = yield os.path.join(self.portage_path, 'repos.conf')
+        print(os.getcwd())
         print(self.getProperty("builddir"))
-        if not success:
-            return FAILURE
+        yield os.chdir(self.getProperty("builddir"))
+        success = True
+        print(os.getcwd())
+        for x in [
+                  self.profile_path,
+                  self.repos_path,
+                  self.repository_basedir
+                 ]:
+            if not os.path.isdir(x):
+                os.makedirs(x)
         return SUCCESS
 
-class CheckProjectGentooCiProject(BuildStep):
+class UpdateRepos(BuildStep):
+
+    name = 'UpdateRepos'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    # Origin: https://github.com/MichaelBoselowitz/pygit2-examples/blob/master/examples.py#L54
+    # Modifyed by Gentoo Authors.
+    @defer.inlineCallbacks
+    def gitPull(self, repo, remote_name='origin', branch='master'):
+        for remote in repo.remotes:
+            if remote.name == remote_name:
+                yield remote.fetch()
+                remote_master_id = yield repo.lookup_reference('refs/remotes/origin/%s' % (branch)).target
+                merge_result, _ = yield repo.merge_analysis(remote_master_id)
+                # Up to date, do nothing
+                if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
+                    return
+                # We can just fastforward
+                elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
+                    yield repo.checkout_tree(repo.get(remote_master_id))
+                    try:
+                        master_ref = yield repo.lookup_reference('refs/heads/%s' % (branch))
+                        yield master_ref.set_target(remote_master_id)
+                    except KeyError:
+                        yield repo.create_branch(branch, repo.get(remote_master_id))
+                    yield repo.head.set_target(remote_master_id)
+                elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
+                    yield repo.merge(remote_master_id)
+
+                    if repo.index.conflicts is not None:
+                        for conflict in repo.index.conflicts:
+                            print('Conflicts found in:', conflict[0].path)
+                        raise AssertionError('Conflicts, ahhhhh!!')
+
+                    user = yield repo.default_signature
+                    tree = yield repo.index.write_tree()
+                    commit = yield repo.create_commit('HEAD',
+                                            user,
+                                            user,
+                                            'Merge!',
+                                            tree,
+                                            [repo.head.target, remote_master_id])
+                    # We need to do this or git CLI will think we are still merging.
+                    yield repo.state_cleanup()
+                else:
+                    raise AssertionError('Unknown merge analysis result')
 
     @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.repository_basedir = self.gentooci.config.project['repository_basedir']
-        self.project_repository_data = self.getProperty("project_repository_data")
-        self.project_data = self.getProperty("project_data")
-        self.project_path = yield os.path.join(self.repository_basedir, self.project_repository_data['name'] + '.git')
-        self.config_root = yield os.path.join(self.project_path, self.project_data['name'], '')
-        self.make_conf_file = yield os.path.join(self.config_root, 'etc/portage', '') + 'make.conf'
-        try:
-            getconfig(self.make_conf_file, tolerant=0, allow_sourcing=True, expand=True)
-            mysettings = portage_config(config_root = self.config_root)
-            mysettings.validate()
-        except ParseError as e:
-            print("project portage conf has error %s" %(str(e)))
-            return FAILURE
-        self.setProperty("config_root", self.config_root, 'config_root')
+        self.profile_repository_path = yield os.path.join(self.repository_basedir, self.getProperty("profile_repository_data")['name'])
+        repo_path = yield pygit2.discover_repository(self.profile_repository_path)
+        print(repo_path)
+        if repo_path is None:
+            yield pygit2.clone_repository(self.getProperty("profile_repository_data")['mirror_url'], self.profile_repository_path)
+        else:
+            repo = yield pygit2.Repository(repo_path)
+            yield self.gitPull(repo)
+        if self.getProperty("profile_repository_data")['name'] != self.getProperty("repository_data")['name']:
+            self.repository_path = yield os.path.join(self.repository_basedir, self.getProperty("repository_data")['name'])
+            repo_path = yield pygit2.discover_repository(self.repository_path)
+            if repo_path is None:
+                yield pygit2.clone_repository(self.getProperty("profile_repository_data")['mirror_url'], self.repository_path)
+            else:
+                repo = yield pygit2.Repository(repo_path)
+                yield self.gitPull(repo)
         return SUCCESS
 
-class CheckCPVGentooCiProject(BuildStep):
+class TriggerCheckForCPV(BuildStep):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    name = 'TriggerCheckForCPV'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
 
     @defer.inlineCallbacks
     def run(self):
@@ -152,7 +203,6 @@ class CheckCPVGentooCiProject(BuildStep):
                                 updateSourceStamp=False,
                                 set_properties={
                                     'cpv' : cpv,
-                                    'config_root' : self.getProperty("config_root"),
                                     'project_data' : self.getProperty("project_data"),
                                     'repository_data' : self.getProperty("repository_data"),
                                     'revision_data' : revision_data,

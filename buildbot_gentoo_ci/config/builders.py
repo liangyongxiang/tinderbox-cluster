@@ -9,6 +9,7 @@ def gentoo_builders(b=[]):
     b.append(util.BuilderConfig(
         name='update_db_check',
         workername='updatedb_1',
+        workerbuilddir='builds',
         factory=buildfactorys.update_db_check()
         )
     )
@@ -19,6 +20,7 @@ def gentoo_builders(b=[]):
     b.append(util.BuilderConfig(
         name='update_cpv_data',
         workername='updatedb_1',
+        workerbuilddir='builds',
         factory=buildfactorys.update_db_cp()
         )
     )
@@ -27,6 +29,7 @@ def gentoo_builders(b=[]):
     b.append(util.BuilderConfig(
         name='update_v_data',
         workername='updatedb_1',
+        workerbuilddir='builds',
         factory=buildfactorys.update_db_v()
         )
     )

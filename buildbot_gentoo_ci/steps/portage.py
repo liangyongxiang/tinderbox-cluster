@@ -11,6 +11,15 @@ from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
 from buildbot.plugins import steps
 
+@defer.inlineCallbacks
+def WriteTextToFile(path, text_list):
+    separator = '\n'
+    text_string = separator.join(text_list)
+    with open(path, "a") as f:
+        yield f.write(text_string)
+        yield f.write(separator)
+        yield f.close
+
 class SetMakeProfile(BuildStep):
 
     name = 'SetMakeProfile'
@@ -291,4 +300,101 @@ class SetEnvDefault(BuildStep):
                                 workdir='/etc/portage/env/')
             ])
         yield self.build.addStepsAfterCurrentStep(aftersteps_list)
+        return SUCCESS
+
+class SetMakeProfileLocal(BuildStep):
+
+    name = 'SetMakeProfileLocal'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        parent_path = yield os.path.join('portage', 'make.profile', 'parent')
+        if os.path.isfile(parent_path):
+            return SUCCESS
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        self.repository_basedir = self.gentooci.config.project['repository_basedir']
+        makeprofiles_paths = []
+        makeprofiles_data = yield self.gentooci.db.projects.getAllProjectPortageByUuidAndDirectory(self.getProperty('project_data')['uuid'], 'make.profile')
+        for makeprofile in makeprofiles_data:
+            makeprofile_path = yield os.path.join(self.repository_basedir, self.getProperty("profile_repository_data")['name'], 'profiles', makeprofile['value'], '')
+            makeprofiles_paths.append('../../' + makeprofile_path)
+        yield WriteTextToFile(parent_path, makeprofiles_paths)
+        return SUCCESS
+
+class SetReposConfLocal(BuildStep):
+
+    name = 'SetReposConfLocal'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        repos_conf_path = yield os.path.join('portage', 'repos.conf')
+        repos_conf_default_path = yield os.path.join(repos_conf_path, 'default.conf')
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        self.repository_basedir = self.gentooci.config.project['repository_basedir']
+        if not os.path.isfile(repos_conf_default_path):
+            # setup the default.conf
+            repos_conf_data = yield self.gentooci.db.projects.getProjectPortageByUuidAndDirectory(self.getProperty('project_data')['uuid'], 'repos.conf')
+            if repos_conf_data is None:
+                print('Default repo is not set in repos.conf')
+                return FAILURE
+            default_conf = []
+            default_conf.append('[DEFAULT]')
+            default_conf.append('main-repo = ' + repos_conf_data['value'])
+            default_conf.append('auto-sync = no')
+            yield WriteTextToFile(repos_conf_default_path, default_conf)
+        repos_conf_repository_path = yield os.path.join(repos_conf_path, self.getProperty("repository_data")['name'] + '.conf')
+        if not os.path.isfile(repos_conf_repository_path):
+            repository_path = yield os.path.join(self.repository_basedir, self.getProperty("repository_data")['name'])
+            repository_conf = []
+            repository_conf.append('[' + self.getProperty("repository_data")['name'] + ']')
+            repository_conf.append('location = ' + repository_path)
+            repository_conf.append('sync-uri = ' + self.getProperty("repository_data")['mirror_url'])
+            repository_conf.append('sync-type = git')
+            repository_conf.append('auto-sync = no')
+            yield WriteTextToFile(repos_conf_repository_path, repository_conf)
+        return SUCCESS
+
+class SetMakeConfLocal(BuildStep):
+
+    name = 'SetMakeConfLocal'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        make_conf_path = yield os.path.join('portage', 'make.conf')
+        if os.path.isfile(make_conf_path):
+            return SUCCESS
+        makeconf_list = []
+        makeconf_list.append('CFLAGS=""')
+        makeconf_list.append('CXXFLAGS=""')
+        makeconf_list.append('ACCEPT_LICENSE="*"')
+        makeconf_list.append('USE=""')
+        makeconf_list.append('ACCEPT_KEYWORDS="~amd64 amd64"')
+        makeconf_list.append('EMERGE_DEFAULT_OPTS=""')
+        makeconf_list.append('ABI_X86="32 64"')
+        makeconf_list.append('FEATURES=""')
+        yield WriteTextToFile(make_conf_path, makeconf_list)
         return SUCCESS
