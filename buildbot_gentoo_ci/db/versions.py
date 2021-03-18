@@ -24,7 +24,7 @@ from twisted.internet import defer
 
 from buildbot.db import base
 from buildbot.util import epoch2datetime
-
+from buildbot.util import datetime2epoch
 class VersionsConnectorComponent(base.DBConnectorComponent):
 
     @defer.inlineCallbacks
@@ -110,5 +110,5 @@ class VersionsConnectorComponent(base.DBConnectorComponent):
             file_hash=row.file_hash,
             commit_id=row.commit_id,
             deleted=row.deleted,
-            deleted_at=row.deleted_at
+            deleted_at=datetime2epoch(row.deleted_at)
             )
