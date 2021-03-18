@@ -20,6 +20,13 @@ class AddPackage(BuildStep):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+    name = 'AddPackage'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
     @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
@@ -34,16 +41,18 @@ class AddPackage(BuildStep):
                                             )
         print(self.package_data)
         self.setProperty("package_data", self.package_data, 'package_data')
-        self.setProperty("config_root", self.getProperty("config_root"), 'config_root')
-        self.setProperty("project_data", self.getProperty("project_data"), 'project_data')
-        self.setProperty("repository_data", self.getProperty("repository_data"), 'repository_data')
-        self.setProperty("category_data", self.getProperty("category_data"), 'category_data')
-        self.setProperty("cpv", self.getProperty("cpv"), 'cpv')
         return SUCCESS
 
-class CheckPGentooCiProject(BuildStep):
+class CheckP(BuildStep):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    name = 'CheckP'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
 
     @defer.inlineCallbacks
     def run(self):
@@ -51,11 +60,6 @@ class CheckPGentooCiProject(BuildStep):
         self.package = yield catpkgsplit(self.getProperty("cpv"))[1]
         print(self.package)
         self.package_data = yield self.gentooci.db.packages.getPackageByName(self.package)
-        self.setProperty("config_root", self.getProperty("config_root"), 'config_root')
-        self.setProperty("project_data", self.getProperty("project_data"), 'project_data')
-        self.setProperty("repository_data", self.getProperty("repository_data"), 'repository_data')
-        self.setProperty("category_data", self.getProperty("category_data"), 'category_data')
-        self.setProperty("cpv", self.getProperty("cpv"), 'cpv')
         print(self.package_data)
         if self.package_data is None:
             self.setProperty("package", self.package, 'package')
@@ -66,9 +70,16 @@ class CheckPGentooCiProject(BuildStep):
         #yield self.build.addStepsAfterLastStep([CheckPathPackage()])
         return SUCCESS
 
-class TriggerCheckVGentooCiProject(BuildStep):
+class TriggerCheckForV(BuildStep):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    name = 'TriggerCheckForV'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
 
     @defer.inlineCallbacks
     def run(self):
@@ -81,17 +92,12 @@ class TriggerCheckVGentooCiProject(BuildStep):
                         set_properties={
                             'cpv' : self.getProperty("cpv"),
                             'package_data' : self.getProperty("package_data"),
-                            'config_root' : self.getProperty("config_root"),
                             'repository_data' : self.getProperty("repository_data"),
                             'category_data' : self.getProperty("category_data"),
+                            'revision_data' : self.getProperty("revision_data"),
+                            'project_data' : self.getProperty("project_data"),
                         }
                     )
                 )
         yield self.build.addStepsAfterCurrentStep(addStepUpdateVData)
-        self.setProperty("config_root", self.getProperty("config_root"), 'config_root')
-        self.setProperty("project_data", self.getProperty("project_data"), 'project_data')
-        self.setProperty("repository_data", self.getProperty("repository_data"), 'repository_data')
-        self.setProperty("category_data", self.getProperty("category_data"), 'category_data')
-        self.setProperty("package_data", self.getProperty("package_data"), 'package_data')
-        self.setProperty("cpv", self.getProperty("cpv"), 'cpv')
         return SUCCESS

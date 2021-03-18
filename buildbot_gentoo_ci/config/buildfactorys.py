@@ -41,17 +41,17 @@ def update_db_cp():
     # else
     #   add category to db step
     #   return category_data
-    f.addStep(category.CheckCGentooCiProject())
+    f.addStep(category.CheckC())
     # if package in db
     #   return package_data
     #   add check package path step at end
     # else
     #   add package to db step
     #   return package_data
-    f.addStep(package.CheckPGentooCiProject())
+    f.addStep(package.CheckP())
     # Trigger new builders with v from cpv
-    #   return package_data, cpv, repository_data, project_data, config_root
-    f.addStep(package.TriggerCheckVGentooCiProject())
+    #   return package_data, cpv, repository_data, project_data
+    f.addStep(package.TriggerCheckForV())
     return f
 
 def update_db_v():

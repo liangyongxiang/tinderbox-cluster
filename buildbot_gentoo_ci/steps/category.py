@@ -18,6 +18,13 @@ class AddCategory(BuildStep):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+    name = 'AddCategory'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
     @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
@@ -26,27 +33,25 @@ class AddCategory(BuildStep):
         self.category_data['uuid'] = yield self.gentooci.db.categorys.addCategory(self.category_data['name'])
         print(self.category_data)
         self.setProperty("category_data", self.category_data, 'category_data')
-        self.setProperty("config_root", self.getProperty("config_root"), 'config_root')
-        self.setProperty("project_data", self.getProperty("project_data"), 'project_data')
-        self.setProperty("repository_data", self.getProperty("repository_data"), 'repository_data')
-        self.setProperty("cpv", self.getProperty("cpv"), 'cpv')
         return SUCCESS
 
-class CheckCGentooCiProject(BuildStep):
+class CheckC(BuildStep):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+    name = 'CheckC'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
 
     @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.category = yield self.getProperty("cpv").split('/')[0]
         print(self.category)
-        print(self.getProperty("repository"))
         self.category_data = yield self.gentooci.db.categorys.getCategoryByName(self.category)
-        self.setProperty("config_root", self.getProperty("config_root"), 'config_root')
-        self.setProperty("project_data", self.getProperty("project_data"), 'project_data')
-        self.setProperty("repository_data", self.getProperty("repository_data"), 'repository_data')
-        self.setProperty("cpv", self.getProperty("cpv"), 'cpv')
         print(self.category_data)
         if self.category_data is None:
             self.setProperty("category", self.category, 'category')
