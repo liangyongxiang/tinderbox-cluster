@@ -2,6 +2,14 @@
 # Distributed under the terms of the GNU General Public License v2
 
 import os
+import io
+
+from portage import config as portage_config
+from portage import auxdbkeys
+from portage import _encodings
+from portage import _unicode_encode
+from portage import _parse_eapi_ebuild_head, eapi_is_supported
+from portage.versions import cpv_getversion, pkgsplit, catpkgsplit
 
 from twisted.internet import defer
 from twisted.python import log
@@ -11,6 +19,8 @@ from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
 from buildbot.plugins import steps
 
+from buildbot_gentoo_ci.steps import master as master_steps
+
 @defer.inlineCallbacks
 def WriteTextToFile(path, text_list):
     separator = '\n'
@@ -19,6 +29,33 @@ def WriteTextToFile(path, text_list):
         yield f.write(text_string)
         yield f.write(separator)
         yield f.close
+
+def PersOutputOfEbuildSH(rc, stdout, stderr):
+    metadata = None
+    metadata_lines = stdout.splitlines()
+    metadata_valid = True
+    NoSplit = []
+    NoSplit.append('DESCRIPTION')
+    if len(auxdbkeys) != len(metadata_lines):
+        # Don't trust bash's returncode if the
+        # number of lines is incorrect.
+        return {
+            'auxdb' : metadata
+            }
+    else:
+        metadata_tmp = dict(zip(auxdbkeys, metadata_lines))
+    metadata = {}
+    for k, v in metadata_tmp.items():
+        if v == '':
+            metadata[k] = None
+        else:
+            if ' ' in v and k not in NoSplit:
+                metadata[k] = v.split(' ')
+            else:
+                metadata[k] = v
+    return {
+        'auxdb' : metadata
+        }
 
 class SetMakeProfile(BuildStep):
 
@@ -316,7 +353,7 @@ class SetMakeProfileLocal(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
-        parent_path = yield os.path.join('portage', 'make.profile', 'parent')
+        parent_path = yield os.path.join('etc','portage', 'make.profile', 'parent')
         if os.path.isfile(parent_path):
             return SUCCESS
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
@@ -325,7 +362,7 @@ class SetMakeProfileLocal(BuildStep):
         makeprofiles_data = yield self.gentooci.db.projects.getAllProjectPortageByUuidAndDirectory(self.getProperty('project_data')['uuid'], 'make.profile')
         for makeprofile in makeprofiles_data:
             makeprofile_path = yield os.path.join(self.repository_basedir, self.getProperty("profile_repository_data")['name'], 'profiles', makeprofile['value'], '')
-            makeprofiles_paths.append('../../' + makeprofile_path)
+            makeprofiles_paths.append('../../../' + makeprofile_path)
         yield WriteTextToFile(parent_path, makeprofiles_paths)
         return SUCCESS
 
@@ -343,7 +380,7 @@ class SetReposConfLocal(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
-        repos_conf_path = yield os.path.join('portage', 'repos.conf')
+        repos_conf_path = yield os.path.join('etc', 'portage', 'repos.conf')
         repos_conf_default_path = yield os.path.join(repos_conf_path, 'default.conf')
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.repository_basedir = self.gentooci.config.project['repository_basedir']
@@ -360,7 +397,7 @@ class SetReposConfLocal(BuildStep):
             yield WriteTextToFile(repos_conf_default_path, default_conf)
         repos_conf_repository_path = yield os.path.join(repos_conf_path, self.getProperty("repository_data")['name'] + '.conf')
         if not os.path.isfile(repos_conf_repository_path):
-            repository_path = yield os.path.join(self.repository_basedir, self.getProperty("repository_data")['name'])
+            repository_path = yield os.path.join(self.getProperty("builddir"), self.repository_basedir, self.getProperty("repository_data")['name'])
             repository_conf = []
             repository_conf.append('[' + self.getProperty("repository_data")['name'] + ']')
             repository_conf.append('location = ' + repository_path)
@@ -384,7 +421,7 @@ class SetMakeConfLocal(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
-        make_conf_path = yield os.path.join('portage', 'make.conf')
+        make_conf_path = yield os.path.join('etc', 'portage', 'make.conf')
         if os.path.isfile(make_conf_path):
             return SUCCESS
         makeconf_list = []
@@ -397,4 +434,87 @@ class SetMakeConfLocal(BuildStep):
         makeconf_list.append('ABI_X86="32 64"')
         makeconf_list.append('FEATURES=""')
         yield WriteTextToFile(make_conf_path, makeconf_list)
+        return SUCCESS
+
+class SetEnvForEbuildSH(BuildStep):
+
+    name = 'SetEnvForEbuildSH'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def getEapiFromFile(self):
+        with io.open(_unicode_encode(self.getProperty("ebuild_file"),
+            encoding=_encodings['fs'], errors='strict'),
+            mode='r', encoding=_encodings['repo.content'],
+            errors='replace') as f:
+            _eapi, _eapi_lineno = _parse_eapi_ebuild_head(f)
+
+        return _eapi
+
+    @defer.inlineCallbacks
+    def run(self):
+        addStepEbuildSH = []
+        ebuild_commands = []
+        ebuild_env = {}
+        config_root = yield os.path.join(self.getProperty("builddir"), '')
+        mysettings = yield portage_config(config_root = config_root)
+
+        #Get EAPI from file and add it to env
+        eapi = yield self.getEapiFromFile()
+        print(eapi)
+        if eapi is None or not eapi_is_supported(eapi):
+            print('invalid eapi')
+            eapi = '0'
+        print(eapi_is_supported(eapi))
+        ebuild_env['EAPI'] = eapi
+
+        #FIXME: check manifest on ebuild_file
+
+        #Setup ENV
+        category = yield catpkgsplit(self.getProperty("cpv"))[0]
+        package = yield catpkgsplit(self.getProperty("cpv"))[1]
+        version = yield catpkgsplit(self.getProperty("cpv"))[2]
+        revision = yield catpkgsplit(self.getProperty("cpv"))[3]
+        portage_bin_path = mysettings["PORTAGE_BIN_PATH"]
+        ebuild_sh_path = yield os.path.join(portage_bin_path, 'ebuild.sh')
+        #ebuild_env['PORTAGE_DEBUG'] = '1'
+        ebuild_env['EBUILD_PHASE'] = 'depend'
+        ebuild_env['CATEGORY'] = category
+        ebuild_env['P'] = package + '-' + version
+        ebuild_env['PN'] = package
+        ebuild_env['PR'] = revision
+        ebuild_env['PV'] = version
+        if revision == 'r0':
+            ebuild_env['PF'] = ebuild_env['P']
+            ebuild_env['PVR'] = version
+        else:
+            ebuild_env['PF'] = ebuild_env['P'] + '-' + revision
+            ebuild_env['PVR'] = version + '-' + revision
+        ebuild_env['PORTAGE_BIN_PATH'] = portage_bin_path
+        ebuild_env['EBUILD'] = self.getProperty("ebuild_file")
+        ebuild_env['PORTAGE_PIPE_FD'] = '1'
+        ebuild_env['WORKDIR'] = yield os.path.join(mysettings["PORTAGE_TMPDIR"], 'portage', category, ebuild_env['PF'], 'work')
+        ebuild_env['PORTAGE_ECLASS_LOCATIONS'] = self.getProperty("repository_path")
+
+        #FIXME: use sandbox if in FEATURES
+        ebuild_commands.append(ebuild_sh_path)
+        ebuild_commands.append('depend')
+
+        addStepEbuildSH.append(master_steps.MasterSetPropertyFromCommand(
+                                                            name = 'RunEbuildSH',
+                                                            haltOnFailure = True,
+                                                            flunkOnFailure = True,
+                                                            command=ebuild_commands,
+                                                            env=ebuild_env,
+                                                            workdir=self.getProperty("builddir"),
+                                                            strip=True,
+                                                            extract_fn=PersOutputOfEbuildSH
+                                                            ))
+        yield self.build.addStepsAfterCurrentStep(addStepEbuildSH)
         return SUCCESS

@@ -7,10 +7,7 @@ import git
 
 from portage.xml.metadata import MetaDataXML
 from portage.checksum import perform_checksum
-from portage.versions import cpv_getversion, pkgsplit
-from portage import auxdbkeys
-from portage import config as portage_config
-from portage import portdbapi
+from portage.versions import cpv_getversion, pkgsplit, catpkgsplit
 
 from twisted.internet import defer
 from twisted.python import log
@@ -19,6 +16,8 @@ from buildbot.process.buildstep import BuildStep
 from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
 from buildbot.plugins import steps
+
+from buildbot_gentoo_ci.steps import portage as portage_steps
 
 class GetVData(BuildStep):
     
@@ -34,6 +33,8 @@ class GetVData(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
+        # set cwd to builddir
+        yield os.chdir(self.getProperty("builddir"))
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.version = yield cpv_getversion(self.getProperty("cpv"))
         print(self.version)
@@ -73,33 +74,7 @@ class AddVersion(BuildStep):
         self.setProperty("version_data", self.version_data, 'version_data')
         return SUCCESS
 
-class GetAuxMetadata(BuildStep):
-    
-    name = 'GetAuxMetadata'
-    description = 'Running'
-    descriptionDone = 'Ran'
-    descriptionSuffix = None
-    haltOnFailure = True
-    flunkOnFailure = True
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    @defer.inlineCallbacks
-    def run(self):
-        self.mysettings = yield portage_config(config_root = self.getProperty("config_root"))
-        self.myportdb = yield portdbapi(mysettings=self.mysettings)
-        try:
-            auxdb_list = yield self.myportdb.aux_get(self.getProperty("cpv"), auxdbkeys, myrepo=self.getProperty("repository_data")['name'])
-        except:
-            print("Failed to get aux data for %s" % self.getProperty("cpv"))
-            yield self.myportdb.close_caches()
-            yield portdbapi.portdbapi_instances.remove(self.myportdb)
-            return FAILURE
-        self.setProperty('aux_metadata', auxdb_list, 'aux_metadata')
-        yield self.myportdb.close_caches()
-        yield portdbapi.portdbapi_instances.remove(self.myportdb)
-        return SUCCESS
 
 class GetCommitdata(BuildStep):
 
@@ -113,19 +88,10 @@ class GetCommitdata(BuildStep):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    @defer.inlineCallbacks
+    #@defer.inlineCallbacks
     def run(self):
-        #FIXME: Could be a better way to get the log
-        git_log_ebuild = ''
-        g = git.Git(self.getProperty("repository_path"))
-        index = 1
-        git_log_dict = {}
-        git_log = yield g.log('-n 1', self.getProperty("ebuild_file"))
-        print(git_log)
-        for line in git_log.splitlines():
-            git_log_dict[index] = line
-            index = index + 1
-        self.setProperty('commit_id', re.sub('commit ', '', git_log_dict[1]), 'commit_id')
+        print(self.getProperty("revision_data"))
+        self.setProperty('commit_id', self.getProperty("revision_data")['revision'], 'commit_id')
         return SUCCESS
 
 class AddVersionKeyword(BuildStep):
@@ -158,7 +124,10 @@ class AddVersionKeyword(BuildStep):
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.version_keyword_dict = {}
-        for keyword in self.getProperty("aux_metadata")[8].split():
+        auxdb = self.getProperty("auxdb")['KEYWORDS']
+        if auxdb is None:
+            auxdb = []
+        for keyword in auxdb:
             status = 'stable'
             if keyword[0] in ["~"]:
                 keyword = keyword[1:]
@@ -178,6 +147,8 @@ class AddVersionKeyword(BuildStep):
                                                 version_keyword_data['keyword_id'],
                                                 version_keyword_data['status'])
             self.version_keyword_dict[keyword] = version_keyword_data
+        if self.version_keyword_dict == {}:
+            self.version_keyword_dict = None
         self.setProperty('version_keyword_dict', self.version_keyword_dict, 'version_keyword_dict')
         return SUCCESS
 
@@ -197,7 +168,7 @@ class CheckPathHash(BuildStep):
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.repository_basedir = self.gentooci.config.project['repository_basedir']
-        self.repository_path = yield os.path.join(self.repository_basedir, self.getProperty("repository_data")['name'] + '.git')
+        self.repository_path = yield os.path.join(self.repository_basedir, self.getProperty("repository_data")['name'])
         self.cp_path = yield pkgsplit(self.getProperty("cpv"))[0]
         self.file_name = yield self.getProperty("package_data")['name'] + '-' + self.getProperty("version") + '.ebuild'
         self.ebuild_file = yield os.path.join(self.repository_path, self.cp_path, self.file_name)
@@ -274,14 +245,17 @@ class CheckV(BuildStep):
         self.old_version_data = self.getProperty("old_version_data")
         self.ebuild_file = self.getProperty("ebuild_file")
         addStepVData = []
+        print(self.ebuild_file)
+        print(self.old_version_data)
+        print(self.getProperty("ebuild_file_hash"))
         if self.getProperty("ebuild_file") is None and self.getProperty("old_version_data") is not None:
             addStepVData.append(TriggerBuildCheck())
             addStepVData.append(DeleteOldVersion())
         if self.getProperty("ebuild_file") is not None and self.getProperty("old_version_data") is not None:
             if self.getProperty("ebuild_file_hash") != self.getProperty("old_version_data")['file_hash']:
                 addStepVData.append(GetCommitdata())
+                addStepVData.append(portage_steps.SetEnvForEbuildSH())
                 addStepVData.append(AddVersion())
-                addStepVData.append(GetAuxMetadata())
                 addStepVData.append(AddVersionKeyword())
                 addStepVData.append(TriggerBuildCheck())
                 addStepVData.append(DeleteOldVersion())
@@ -289,8 +263,8 @@ class CheckV(BuildStep):
                 return SUCCESS
         if self.getProperty("ebuild_file") is not None and self.getProperty("old_version_data") is None:
             addStepVData.append(GetCommitdata())
+            addStepVData.append(portage_steps.SetEnvForEbuildSH())
             addStepVData.append(AddVersion())
-            addStepVData.append(GetAuxMetadata())
             addStepVData.append(AddVersionKeyword())
             addStepVData.append(TriggerBuildCheck())
         yield self.build.addStepsAfterCurrentStep(addStepVData)
