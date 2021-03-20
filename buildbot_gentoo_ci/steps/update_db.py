@@ -65,7 +65,7 @@ class CheckPath(BuildStep):
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.repository_basedir = self.gentooci.config.project['repository_basedir']
-        self.portage_path = 'portage'
+        self.portage_path = yield os.path.join('etc', 'portage')
         self.profile_path = yield os.path.join(self.portage_path, 'make.profile')
         self.repos_path = yield os.path.join(self.portage_path, 'repos.conf')
         print(os.getcwd())
@@ -74,10 +74,11 @@ class CheckPath(BuildStep):
         success = True
         print(os.getcwd())
         for x in [
-                  self.profile_path,
-                  self.repos_path,
-                  self.repository_basedir
-                 ]:
+                self.portage_path,
+                self.profile_path,
+                self.repos_path,
+                self.repository_basedir
+                ]:
             if not os.path.isdir(x):
                 os.makedirs(x)
         return SUCCESS
@@ -96,48 +97,52 @@ class UpdateRepos(BuildStep):
 
     # Origin: https://github.com/MichaelBoselowitz/pygit2-examples/blob/master/examples.py#L54
     # Modifyed by Gentoo Authors.
-    @defer.inlineCallbacks
     def gitPull(self, repo, remote_name='origin', branch='master'):
         for remote in repo.remotes:
             if remote.name == remote_name:
-                yield remote.fetch()
-                remote_master_id = yield repo.lookup_reference('refs/remotes/origin/%s' % (branch)).target
-                merge_result, _ = yield repo.merge_analysis(remote_master_id)
+                remote.fetch()
+                remote_master_id = repo.lookup_reference('refs/remotes/origin/%s' % (branch)).target
+                print(remote_master_id)
+                merge_result, _ = repo.merge_analysis(remote_master_id)
+                print(merge_result)
                 # Up to date, do nothing
                 if merge_result & pygit2.GIT_MERGE_ANALYSIS_UP_TO_DATE:
+                    print('UP_TO_DATE')
                     return
                 # We can just fastforward
                 elif merge_result & pygit2.GIT_MERGE_ANALYSIS_FASTFORWARD:
-                    yield repo.checkout_tree(repo.get(remote_master_id))
+                    print('FASTFORWARD')
+                    repo.checkout_tree(repo.get(remote_master_id))
                     try:
-                        master_ref = yield repo.lookup_reference('refs/heads/%s' % (branch))
-                        yield master_ref.set_target(remote_master_id)
+                        master_ref = repo.lookup_reference('refs/heads/%s' % (branch))
+                        master_ref.set_target(remote_master_id)
                     except KeyError:
-                        yield repo.create_branch(branch, repo.get(remote_master_id))
-                    yield repo.head.set_target(remote_master_id)
+                        repo.create_branch(branch, repo.get(remote_master_id))
+                    repo.head.set_target(remote_master_id)
                 elif merge_result & pygit2.GIT_MERGE_ANALYSIS_NORMAL:
-                    yield repo.merge(remote_master_id)
-
+                    print('NORMAL')
+                    repo.merge(remote_master_id)
                     if repo.index.conflicts is not None:
                         for conflict in repo.index.conflicts:
                             print('Conflicts found in:', conflict[0].path)
                         raise AssertionError('Conflicts, ahhhhh!!')
 
-                    user = yield repo.default_signature
-                    tree = yield repo.index.write_tree()
-                    commit = yield repo.create_commit('HEAD',
+                    user = repo.default_signature
+                    tree = repo.index.write_tree()
+                    commit = repo.create_commit('HEAD',
                                             user,
                                             user,
                                             'Merge!',
                                             tree,
                                             [repo.head.target, remote_master_id])
                     # We need to do this or git CLI will think we are still merging.
-                    yield repo.state_cleanup()
+                    repo.state_cleanup()
                 else:
                     raise AssertionError('Unknown merge analysis result')
 
     @defer.inlineCallbacks
     def run(self):
+        #FIXME check HEAD agenst local and worker local tree so we don't gitpull evrytime
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.repository_basedir = self.gentooci.config.project['repository_basedir']
         self.profile_repository_path = yield os.path.join(self.repository_basedir, self.getProperty("profile_repository_data")['name'])
