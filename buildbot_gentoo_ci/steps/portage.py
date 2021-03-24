@@ -190,6 +190,8 @@ class SetMakeConf(BuildStep):
                 makeconf_variable_list.append('cgroup')
                 makeconf_variable_list.append('-news')
                 makeconf_variable_list.append('-collision-protect')
+                makeconf_variable_list.append('split-log')
+                makeconf_variable_list.append('compress-build-logs')
             # EMERGE_DEFAULT_OPTS
             if k['variable'] == 'EMERGE_DEFAULT_OPTS':
                 makeconf_variable_list.append('--buildpkg=y')
@@ -201,6 +203,8 @@ class SetMakeConf(BuildStep):
                 makeconf_variable_list.append('--nospinner')
                 makeconf_variable_list.append('--color=n')
                 makeconf_variable_list.append('--ask=n')
+                makeconf_variable_list.append('--quiet-build=y')
+                makeconf_variable_list.append('--quiet-fail=y')
             # CFLAGS
             if k['variable'] == 'CFLAGS' or k['variable'] == 'FCFLAGS':
                 makeconf_variable_list.append('-O2')
@@ -236,8 +240,10 @@ class SetMakeConf(BuildStep):
         makeconf_list.append('NOCOLOR=true')
         makeconf_list.append('PORT_LOGDIR="/var/cache/portage/logs"')
         makeconf_list.append('PKGDIR="/var/cache/portage/packages"')
-        makeconf_list.append('PORTAGE_ELOG_CLASSES="qa"')
-        makeconf_list.append('PORTAGE_ELOG_SYSTEM="save"')
+        makeconf_list.append('DISTDIR="/var/cache/portage/distfiles"')
+        makeconf_list.append('PORTAGE_ELOG_CLASSES="*"')
+        # We need echo:info to get the logfile name
+        makeconf_list.append('PORTAGE_ELOG_SYSTEM="save echo:info"')
         # add ACCEPT_KEYWORDS from the project_data info
         keyword_data = yield self.gentooci.db.keywords.getKeywordById(project_data['keyword_id'])
         if project_data['status'] == 'unstable':

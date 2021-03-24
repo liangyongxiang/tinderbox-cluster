@@ -49,4 +49,12 @@ def gentoo_builders(b=[]):
         factory=buildfactorys.run_build_request()
         )
     )
+    # FIXME: get workers from db
+    # Use multiplay workers
+    b.append(util.BuilderConfig(
+        name='parse_build_log',
+        workername='updatedb_1',
+        factory=buildfactorys.parse_build_log()
+        )
+    )
     return b

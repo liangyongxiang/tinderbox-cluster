@@ -20,22 +20,26 @@ def PersOutputOfEmerge(rc, stdout, stderr):
     emerge_output['preserved_libs'] = False
     emerge_output['depclean'] = False
     package_dict = {}
+    log_path_list = []
     print(stderr)
     emerge_output['stderr'] = stderr
     # split the lines
     for line in stdout.split('\n'):
         # package list
         subdict = {}
-        if line.startswith('[ebuild') or line.startswith('[binary'):
+        subdict2 = {}
+        if line.startswith('[ebuild') or line.startswith('[binary') or line.startswith('[nomerge'):
             # if binaries
-            if line.startswith('[ebuild'):
+            if line.startswith('[ebuild') or line.startswith('[nomerge'):
                 subdict['binary'] = False
             else:
                 subdict['binary'] = True
             # action [ N ] stuff
             subdict['action'] = line[8:15].replace(' ', '')
             # cpv
+            #FIXME: We my have more then one spece betvine ] and cpv
             cpv_split = re.search('] (.+?) ', line).group(1).split(':')
+            print(cpv_split)
             cpv = cpv_split[0]
             # repository
             # slot
@@ -69,8 +73,12 @@ def PersOutputOfEmerge(rc, stdout, stderr):
             #FIXME: Handling of !!! output
             if line.startswith('!!! existing preserved libs'):
                 pass
+        if line.startswith(' * '):
+            if line.endswith('.log.gz'):
+                log_path_list.append(line.split(' ')[4])
         #FIXME: Handling of depclean output dict of packages that get removed or saved
     emerge_output['package'] = package_dict
+    emerge_output['log_paths'] = log_path_list
     # split the lines
     #FIXME: Handling of stderr output
     for line in stderr.split('\n'):
@@ -192,10 +200,14 @@ class SetupPropertys(BuildStep):
         projectrepository_data = self.getProperty('projectrepository_data')
         print(projectrepository_data)
         project_data = yield self.gentooci.db.projects.getProjectByUuid(projectrepository_data['project_uuid'])
+        repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(projectrepository_data['repository_uuid'])
         self.setProperty('project_data', project_data, 'project_data')
+        self.setProperty('repository_data', repository_data, 'repository_data')
         self.setProperty('preserved_libs', False, 'preserved-libs')
         self.setProperty('depclean', False, 'depclean')
         self.setProperty('cpv_build', False, 'cpv_build')
+        self.setProperty('pkg_check_log_data', None, 'pkg_check_log_data')
+        self.setProperty('faild_version_data', None, 'faild_version_data')
         print(self.getProperty("buildnumber"))
         if self.getProperty('project_build_data') is None:
             project_build_data = {}
@@ -472,6 +484,49 @@ class CheckEmergeLogs(BuildStep):
         if self.step == 'pre-build':
             print(emerge_output)
 
+        #FIXME:
+        # Look for FAILURE and logname and download needed logfile and
+        # trigger a logparser
+        # local_log_path dir set in config
+        # format /var/cache/portage/logs/build/gui-libs/egl-wayland-1.1.6:20210321-173525.log.gz
+        if self.step == 'build':
+            print(emerge_output)
+            log_dict = {}
+            # get cpv, logname and log path
+            for log_path in emerge_output['log_paths']:
+                c = log_path.split('/')[6]
+                full_logname = log_path.split('/')[7]
+                print(full_logname)
+                pv = full_logname.split(':')[0]
+                cpv = c + '/' + pv
+                log_dict[cpv] = dict(
+                                log_path = log_path,
+                                full_logname = full_logname
+                                )
+            print(log_dict)
+            # Find log for cpv that was requested or did faild
+            if not log_dict == {}:
+                # requested cpv
+                if self.getProperty('cpv') in log_dict:
+                    log_data = log_dict[self.getProperty('cpv')]
+                    masterdest = yield os.path.join(self.master.basedir, 'cpv_logs', log_data['full_logname'])
+                    aftersteps_list.append(steps.FileUpload(
+                        workersrc=log_data['log_path'],
+                        masterdest=masterdest
+                        ))
+                    aftersteps_list.append(steps.Trigger(
+                        schedulerNames=['parse_build_log'],
+                        waitForFinish=False,
+                        updateSourceStamp=False,
+                        set_properties={
+                            'cpv' : self.getProperty("cpv"),
+                            'faild_version_data' : self.getProperty('faild_version_data'),
+                            'project_build_data' : self.getProperty('project_build_data'),
+                            'log_build_data' : log_data,
+                            'pkg_check_log_data' : self.getProperty("pkg_check_log_data"),
+                            'repository_data' : self.getProperty('repository_data')
+                        }
+                    ))
         if not self.step is None and aftersteps_list != []:
             yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS
@@ -496,8 +551,7 @@ class RunPkgCheck(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         project_data = self.getProperty('project_data')
         portage_repos_path = self.getProperty('portage_repos_path')
-        repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(projectrepository_data['repository_uuid'])
-        repository_path = yield os.path.join(portage_repos_path, repository_data['name'])
+        repository_path = yield os.path.join(portage_repos_path, self.getProperty('repository_data')['name'])
         cpv = self.getProperty("cpv")
         c = yield catpkgsplit(cpv)[0]
         p = yield catpkgsplit(cpv)[1]
@@ -544,7 +598,7 @@ class CheckPkgCheckLogs(BuildStep):
         print(pkgcheck_output)
         #FIXME:
         # Perse the logs
-        # tripp irc request with pkgcheck info
+        self.setProperty('pkg_check_log_data', None, 'pkg_check_log_data')
         return SUCCESS
 
 class RunBuild(BuildStep):
@@ -562,6 +616,8 @@ class RunBuild(BuildStep):
     @defer.inlineCallbacks
     def run(self):
         if not self.getProperty('cpv_build'):
+            #FIXME:
+            # trigger pars_build_log if we have any logs to check
             return SUCCESS
         aftersteps_list = []
         aftersteps_list.append(RunEmerge(step='pre-build'))
@@ -569,28 +625,4 @@ class RunBuild(BuildStep):
         self.setProperty('depclean', False, 'depclean')
         self.setProperty('preserved_libs', False, 'preserved-libs')
         yield self.build.addStepsAfterCurrentStep(aftersteps_list)
-        return SUCCESS
-
-class setBuildStatus(BuildStep):
-
-    name = 'setBuildStatus'
-    description = 'Running'
-    descriptionDone = 'Ran'
-    descriptionSuffix = None
-    haltOnFailure = True
-    flunkOnFailure = True
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    @defer.inlineCallbacks
-    def run(self):
-        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        project_build_data = self.getProperty('project_build_data')
-        if project_build_data['status'] == 'in-progress':
-            yield self.gentooci.db.builds.setSatusBuilds(
-                                                    project_build_data['build_id'],
-                                                    project_build_data['project_uuid'],
-                                                    'completed')
-            self.setProperty('project_build_data', project_build_data, 'project_build_data')
         return SUCCESS

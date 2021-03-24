@@ -10,6 +10,7 @@ from buildbot_gentoo_ci.steps import package
 from buildbot_gentoo_ci.steps import version
 from buildbot_gentoo_ci.steps import builders
 from buildbot_gentoo_ci.steps import portage
+from buildbot_gentoo_ci.steps import logs
 
 def update_db_check():
     f = util.BuildFactory()
@@ -159,5 +160,24 @@ def run_build_request():
     f.addStep(builders.RunEmerge(step='depclean'))
     f.addStep(builders.RunEmerge(step='preserved-libs'))
     f.addStep(builders.RunEmerge(step='depclean'))
-    f.addStep(builders.setBuildStatus())
+    return f
+
+def parse_build_log():
+    f = util.BuildFactory()
+    # FIXME: 6
+    # set needed Propertys
+    f.addStep(logs.SetupPropertys())
+    # pers the build log for info qa errors
+    #f.addStep(logs.ParserBuildLog())
+    # pers the log from pkg check
+    #f.addStep(logs.ParserPkgCheckLog())
+    # Upload the log to the cloud and remove the log
+    #f.addStep(logs.Upload())
+    # check the sum log if we need to make a issue/bug/pr report
+    # set it SUCCESS/FAILURE/WARNINGS
+    #f.addStep(logs.MakeIssue())
+    # set BuildStatus
+    #f.addStep(logs.setBuildStatus())
+    # setup things for the irc bot
+    #f.addStep(logs.SetIrcInfo())
     return f

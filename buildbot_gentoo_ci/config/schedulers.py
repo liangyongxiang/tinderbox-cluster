@@ -74,6 +74,8 @@ def gentoo_schedulers():
                                builderNames=["build_request_data"])
     run_build_request = schedulers.Triggerable(name="run_build_request",
                                builderNames=["run_build_request"])
+    pers_build_log = schedulers.Triggerable(name="parse_build_log",
+                               builderNames=["parse_build_log"])
     s = []
     s.append(test_updatedb)
     s.append(scheduler_update_db)
@@ -81,4 +83,5 @@ def gentoo_schedulers():
     s.append(update_v_data)
     s.append(build_request_data)
     s.append(run_build_request)
+    s.append(parse_build_log)
     return s
