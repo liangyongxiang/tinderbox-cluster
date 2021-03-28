@@ -166,6 +166,29 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
         res = yield self.db.pool.do(thd)
         return res
 
+    @defer.inlineCallbacks
+    def getProjectLogSearchPatternByUuid(self, uuid):
+        def thd(conn):
+            tbl = self.db.model.projects_pattern
+            q = tbl.select()
+            q = q.where(tbl.c.project_uuid == uuid)
+            return [self._row2dict_projects_pattern(conn, row)
+                for row in conn.execute(q).fetchall()]
+        res = yield self.db.pool.do(thd)
+        return res
+
+    @defer.inlineCallbacks
+    def getProjectLogSearchPatternByUuidAndIgnore(self, uuid):
+        def thd(conn):
+            tbl = self.db.model.projects_pattern
+            q = tbl.select()
+            q = q.where(tbl.c.project_uuid == uuid)
+            q = q.where(tbl.c.status == 'ignore')
+            return [self._row2dict_projects_pattern(conn, row)
+                for row in conn.execute(q).fetchall()]
+        res = yield self.db.pool.do(thd)
+        return res
+
     def _row2dict(self, conn, row):
         return dict(
             uuid=row.uuid,
@@ -241,4 +264,20 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             oneshot=row.oneshot,
             depclean=row.depclean,
             preserved_libs=row.preserved_libs
+            )
+
+    def _row2dict_projects_pattern(self, conn, row):
+        if row.search_end == '':
+            search_end = None
+        else:
+            search_end = row.search_end
+        return dict(
+            id=row.id,
+            project_uuid=row.project_uuid,
+            search=row.search,
+            search_end=search_end,
+            start=row.start,
+            end=row.end,
+            status=row.status,
+            type=row.type
             )

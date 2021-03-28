@@ -168,16 +168,18 @@ def parse_build_log():
     # set needed Propertys
     f.addStep(logs.SetupPropertys())
     # pers the build log for info qa errors
-    #f.addStep(logs.ParserBuildLog())
+    f.addStep(logs.ParserBuildLog())
     # pers the log from pkg check
     #f.addStep(logs.ParserPkgCheckLog())
     # Upload the log to the cloud and remove the log
     #f.addStep(logs.Upload())
     # check the sum log if we need to make a issue/bug/pr report
     # set it SUCCESS/FAILURE/WARNINGS
-    #f.addStep(logs.MakeIssue())
+    f.addStep(logs.MakeIssue())
+    # add sum log to buildbot log
+    #f.addStep(logs.setBuildbotLog)
     # set BuildStatus
-    #f.addStep(logs.setBuildStatus())
+    f.addStep(logs.setBuildStatus())
     # setup things for the irc bot
     #f.addStep(logs.SetIrcInfo())
     return f

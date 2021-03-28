@@ -221,6 +221,20 @@ class Model(base.DBConnectorComponent):
         sa.Column('deleted_at', sa.DateTime, nullable=True),
     )
 
+    projects_pattern = sautils.Table(
+        "projects_pattern", metadata,
+        sa.Column('id', sa.Integer, primary_key=True),
+        sa.Column('project_uuid', sa.String(36),
+                  sa.ForeignKey('projects.uuid', ondelete='CASCADE'),
+                  nullable=False),
+        sa.Column('search', sa.String(50), nullable=False),
+        sa.Column('search_end', sa.String(50), nullable=True),
+        sa.Column('start', sa.Integer, default=0),
+        sa.Column('end', sa.Integer, default=0),
+        sa.Column('status', sa.Enum('info', 'warning', 'ignore', 'error'), default='info'),
+        sa.Column('type', sa.Enum('info', 'qa', 'compile', 'configure', 'install', 'postinst', 'prepare', 'setup', 'test', 'unpack', 'ignore'), default='info'),
+    )
+
     keywords = sautils.Table(
         "keywords", metadata,
         # unique uuid per keyword
