@@ -32,27 +32,33 @@ def WriteTextToFile(path, text_list):
 
 def PersOutputOfEbuildSH(rc, stdout, stderr):
     metadata = None
-    metadata_lines = stdout.splitlines()
-    metadata_valid = True
     NoSplit = []
     NoSplit.append('DESCRIPTION')
-    if len(auxdbkeys) != len(metadata_lines):
-        # Don't trust bash's returncode if the
+    #make dict of the stout
+    index = 1
+    metadata_line_dict = {}
+    for text_line in stdout.splitlines():
+        metadata_line_dict[index] = text_line
+        index = index + 1
+    # should have 22 lines
+    if len(auxdbkeys) != index -1:
         # number of lines is incorrect.
         return {
             'auxdb' : metadata
             }
-    else:
-        metadata_tmp = dict(zip(auxdbkeys, metadata_lines))
+    # split all keys to list instead of speces
     metadata = {}
-    for k, v in metadata_tmp.items():
-        if v == '':
-            metadata[k] = None
+    i = 1
+    for key in auxdbkeys:
+        if metadata_line_dict[i] == '':
+            metadata[key] = None
         else:
-            if ' ' in v and k not in NoSplit:
-                metadata[k] = v.split(' ')
+            if ' ' in metadata_line_dict[i] and key not in NoSplit:
+                metadata[key] = metadata_line_dict[i].split(' ')
             else:
-                metadata[k] = v
+                metadata[key] = []
+                metadata[key].append(metadata_line_dict[i])
+        i = i + 1
     return {
         'auxdb' : metadata
         }
@@ -519,7 +525,7 @@ class SetEnvForEbuildSH(BuildStep):
                                                             command=ebuild_commands,
                                                             env=ebuild_env,
                                                             workdir=self.getProperty("builddir"),
-                                                            strip=True,
+                                                            strip=False,
                                                             extract_fn=PersOutputOfEbuildSH
                                                             ))
         yield self.build.addStepsAfterCurrentStep(addStepEbuildSH)

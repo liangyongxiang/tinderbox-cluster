@@ -125,9 +125,13 @@ class AddVersionKeyword(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.version_keyword_dict = {}
         auxdb = self.getProperty("auxdb")['KEYWORDS']
-        if auxdb is None:
-            auxdb = []
+        if auxdb is None or not isinstance(auxdb, list):
+            self.version_keyword_dict = None
+            self.setProperty('version_keyword_dict', self.version_keyword_dict, 'version_keyword_dict')
+            return SUCCESS
+        print(auxdb)
         for keyword in auxdb:
+            print(keyword)
             status = 'stable'
             if keyword[0] in ["~"]:
                 keyword = keyword[1:]
@@ -147,8 +151,6 @@ class AddVersionKeyword(BuildStep):
                                                 version_keyword_data['keyword_id'],
                                                 version_keyword_data['status'])
             self.version_keyword_dict[keyword] = version_keyword_data
-        if self.version_keyword_dict == {}:
-            self.version_keyword_dict = None
         self.setProperty('version_keyword_dict', self.version_keyword_dict, 'version_keyword_dict')
         return SUCCESS
 
