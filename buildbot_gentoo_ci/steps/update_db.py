@@ -181,40 +181,40 @@ class TriggerCheckForCPV(BuildStep):
         # check if git_change is a string or a list
         if not isinstance(self.git_changes, list):
             return FAILURE
-        self.success = True
         addStepUpdateCPVData = []
         for change_data in self.git_changes:
             # make a trigger for all cpv in the list
             for cpv in change_data['cpvs']:
+                self.success = True
+                if change_data['repository'] != self.getProperty("repository_data")['name']:
+                    log.msg("%s don't match" % change_data['repository'])
+                    self.success = False
+                # Trigger cpv builds and update db if we are working with ebuilds
                 # check that cpv is valied
                 if catpkgsplit(cpv) is None:
                     log.msg("%s is not vaild package name" % cpv)
                     self.success = False
-                else:
-                    if change_data['repository'] != self.getProperty("repository_data")['name']:
-                        log.msg("%s don't match" % change_data['repository'])
-                        self.success = False
-                    else:
-                        revision_data = {}
-                        revision_data['author'] = change_data['author']
-                        revision_data['committer']  = change_data['committer']
-                        revision_data['comments'] = change_data['comments']
-                        revision_data['revision'] = change_data['revision']
-                        # call update_cpv_data
-                        addStepUpdateCPVData.append(
-                            steps.Trigger(
-                                schedulerNames=['update_cpv_data'],
-                                waitForFinish=False,
-                                updateSourceStamp=False,
-                                set_properties={
-                                    'cpv' : cpv,
-                                    'project_data' : self.getProperty("project_data"),
-                                    'repository_data' : self.getProperty("repository_data"),
-                                    'revision_data' : revision_data,
-                                }
-                            )
+                if self.success:
+                    revision_data = {}
+                    revision_data['author'] = change_data['author']
+                    revision_data['committer']  = change_data['committer']
+                    revision_data['comments'] = change_data['comments']
+                    revision_data['revision'] = change_data['revision']
+                    addStepUpdateCPVData.append(
+                        steps.Trigger(
+                            schedulerNames=['update_cpv_data'],
+                            waitForFinish=False,
+                            updateSourceStamp=False,
+                            set_properties={
+                                'cpv' : cpv,
+                                'project_data' : self.getProperty("project_data"),
+                                'repository_data' : self.getProperty("repository_data"),
+                                'revision_data' : revision_data,
+                            }
                         )
-            yield self.build.addStepsAfterCurrentStep(addStepUpdateCPVData)
+                    )
+        print(addStepUpdateCPVData)
+        yield self.build.addStepsAfterCurrentStep(addStepUpdateCPVData)
         if self.success is False:
             return FAILURE
         return SUCCESS
