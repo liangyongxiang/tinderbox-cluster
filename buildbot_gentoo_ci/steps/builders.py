@@ -171,11 +171,12 @@ class GetProjectRepositoryData(BuildStep):
                 if project_keyword_data['name'] != '*' or project_data['status'] == 'all':
                     self.setProperty('fullcheck', False, 'fullcheck')
                     # get status of the keyword on cpv
-                    if project_keyword_data['name'] in self.getProperty("version_keyword_dict"):
-                        version_keywords_data = self.getProperty("version_keyword_dict")[project_keyword_data['name']]
-                        # if match trigger BuildRequest on cpv
-                        if project_data['status'] == version_keywords_data['status']:
-                            yield self.build.addStepsAfterCurrentStep([TriggerRunBuildRequest()])
+                    if self.getProperty("version_keyword_dict") is not None:
+                        if project_keyword_data['name'] in self.getProperty("version_keyword_dict"):
+                            version_keywords_data = self.getProperty("version_keyword_dict")[project_keyword_data['name']]
+                            # if match trigger BuildRequest on cpv
+                            if project_data['status'] == version_keywords_data['status']:
+                                yield self.build.addStepsAfterCurrentStep([TriggerRunBuildRequest()])
         return SUCCESS
 
 class SetupPropertys(BuildStep):
