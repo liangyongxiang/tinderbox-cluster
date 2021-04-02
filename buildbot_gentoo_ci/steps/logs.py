@@ -62,7 +62,7 @@ class ParserBuildLog(BuildStep):
 
     @defer.inlineCallbacks
     def get_log_search_pattern(self):
-        # get pattern from the profile
+        # get pattern from the projects
         # add that to log_search_pattern_list
         for project_pattern in (yield self.gentooci.db.projects.getProjectLogSearchPatternByUuid(self.getProperty('project_data')['uuid'])):
             self.log_search_pattern_list.append(project_pattern)
@@ -82,13 +82,21 @@ class ParserBuildLog(BuildStep):
         text_line = self.logfile_text_dict[tmp_index]
         # loop true the pattern list for match
         for search_pattern in self.log_search_pattern_list:
-            if re.search(search_pattern['search'], text_line) and not search_pattern['status'] == 'ignore':
+            # we add all line that start with ' * ' as info
+            # we add all line that start with '>>>' but not '>>> /' as info
+            if text_line.startswith(' * ') or (text_line.startswith('>>>') and not text_line.startswith('>>> /')):
                 self.summery_dict[tmp_index] = {}
                 self.summery_dict[tmp_index]['text'] = text_line
+                self.summery_dict[tmp_index]['type'] = 'info'
+                self.summery_dict[tmp_index]['status'] = 'info'
+            if re.search(search_pattern['search'], text_line):
+                self.summery_dict[tmp_index] = {}
+                self.summery_dict[tmp_index]['text'] = text_line
+                self.summery_dict[tmp_index]['type'] = search_pattern['type']
                 self.summery_dict[tmp_index]['status'] = search_pattern['status']
                 # add upper text lines if requested
                 # max 10
-                if search_pattern['start'] is not 0:
+                if search_pattern['start'] != 0:
                     i = tmp_index
                     i_start = i - search_pattern['start']
                     match = True
@@ -99,10 +107,11 @@ class ParserBuildLog(BuildStep):
                         else:
                             self.summery_dict[i] = {}
                             self.summery_dict[i]['text'] = self.logfile_text_dict[i]
+                            self.summery_dict[i]['type'] = search_pattern['type']
                             self.summery_dict[i]['status'] = 'info'
                 # add lower text lines if requested
                 # max 10
-                if search_pattern['end'] is not 0:
+                if search_pattern['end'] != 0:
                     i = tmp_index
                     i_end = i + search_pattern['end']
                     match = True
@@ -113,6 +122,7 @@ class ParserBuildLog(BuildStep):
                         else:
                             self.summery_dict[i] = {}
                             self.summery_dict[i]['text'] = self.logfile_text_dict[i]
+                            self.summery_dict[i]['type'] = search_pattern['type']
                             self.summery_dict[i]['status'] = 'info'
                 # add text lines if requested that we need to search for the end
                 # max 10
@@ -127,13 +137,15 @@ class ParserBuildLog(BuildStep):
                             if not i + 1 > self.max_text_lines or not re.search(search_pattern['search_end'], self.logfile_text_dict[i + 1]):
                                 self.summery_dict[i] = {}
                                 self.summery_dict[i]['text'] = self.logfile_text_dict[i]
+                                self.summery_dict[i]['type'] = search_pattern['type']
                                 self.summery_dict[i]['status'] = 'info'
                             else:
                                 match = False
                         else:
                             self.summery_dict[i] = {}
                             self.summery_dict[i]['text'] = self.logfile_text_dict[i]
-                            self.summery_dict[i]['status'] = 'info' 
+                            self.summery_dict[i]['type'] = search_pattern['type']
+                            self.summery_dict[i]['status'] = 'info'
 
     @defer.inlineCallbacks
     def run(self):
@@ -148,9 +160,9 @@ class ParserBuildLog(BuildStep):
         file_path = yield os.path.join(self.master.basedir, 'cpv_logs', self.getProperty('log_build_data')['full_logname'])
         with io.TextIOWrapper(io.BufferedReader(gzip.open(file_path, 'rb'))) as f:
             for text_line in f:
-                self.logfile_text_dict[self.index] = text_line
+                self.logfile_text_dict[self.index] = text_line.strip('\n')
                 # run the parse patten on the line
-                # have a buffer on 5 before we run pattern check
+                # have a buffer on 10 before we run pattern check
                 if self.index >= 10:
                     yield self.search_buildlog(self.index - 9)
                 # remove text line that we don't need any more
@@ -158,8 +170,10 @@ class ParserBuildLog(BuildStep):
                     del self.logfile_text_dict[self.index - 19]
                 self.index = self.index + 1
             f.close()
+        # check last 10 lines in logfile_text_dict
+        yield self.search_buildlog(self.index - 10)
         print(self.summery_dict)
-        # check last 5 lines in logfile_text_dict
+        # remove all lines with ignore in the dict
         # setProperty summery_dict
         self.setProperty("summery_log_dict", self.summery_dict, 'summery_log_dict')
         return SUCCESS
