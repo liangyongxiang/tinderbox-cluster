@@ -41,7 +41,7 @@ def gitUpdateDb(props):
 def gentoo_schedulers():
     scheduler_update_db = schedulers.SingleBranchScheduler(
         name='scheduler_update_db',
-        treeStableTimer=60,
+        treeStableTimer=0,
         properties = {
                         'git_changes' : gitUpdateDb,
                     },
