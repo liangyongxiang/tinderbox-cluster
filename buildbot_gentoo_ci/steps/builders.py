@@ -412,7 +412,6 @@ class RunEmerge(BuildStep):
             cpv = self.getProperty("cpv")
             c = yield catpkgsplit(cpv)[0]
             p = yield catpkgsplit(cpv)[1]
-            shell_commad_list.append('-q')
             if projects_emerge_options['oneshot']:
                 shell_commad_list.append('-1')
             shell_commad_list.append('=' + self.getProperty('cpv'))
