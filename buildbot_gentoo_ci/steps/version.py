@@ -131,7 +131,6 @@ class AddVersionKeyword(BuildStep):
             return SUCCESS
         print(auxdb)
         for keyword in auxdb:
-            print(keyword)
             status = 'stable'
             if keyword[0] in ["~"]:
                 keyword = keyword[1:]
@@ -170,7 +169,8 @@ class CheckPathHash(BuildStep):
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.repository_basedir = self.gentooci.config.project['repository_basedir']
-        self.repository_path = yield os.path.join(self.repository_basedir, self.getProperty("repository_data")['name'])
+        self.repository_path = yield os.path.join('/home', 'repos2', self.getProperty("repository_data")['name'])
+        #self.repository_path = yield os.path.join(self.repository_basedir, self.getProperty("repository_data")['name'])
         self.cp_path = yield pkgsplit(self.getProperty("cpv"))[0]
         self.file_name = yield self.getProperty("package_data")['name'] + '-' + self.getProperty("version") + '.ebuild'
         self.ebuild_file = yield os.path.join(self.repository_path, self.cp_path, self.file_name)
@@ -256,7 +256,9 @@ class CheckV(BuildStep):
         if self.getProperty("ebuild_file") is not None and self.getProperty("old_version_data") is not None:
             if self.getProperty("ebuild_file_hash") != self.getProperty("old_version_data")['file_hash']:
                 addStepVData.append(GetCommitdata())
-                addStepVData.append(portage_steps.SetEnvForEbuildSH())
+                #FIXME: use GetAuxMetadata insted of bugy SetEnvForEbuildSH
+                #addStepVData.append(portage_steps.SetEnvForEbuildSH())
+                addStepVData.append(portage_steps.GetAuxMetadata())
                 addStepVData.append(AddVersion())
                 addStepVData.append(AddVersionKeyword())
                 addStepVData.append(TriggerBuildCheck())
@@ -265,7 +267,9 @@ class CheckV(BuildStep):
                 return SUCCESS
         if self.getProperty("ebuild_file") is not None and self.getProperty("old_version_data") is None:
             addStepVData.append(GetCommitdata())
-            addStepVData.append(portage_steps.SetEnvForEbuildSH())
+            #FIXME: use GetAuxMetadata insted of bugy SetEnvForEbuildSH
+            #addStepVData.append(portage_steps.SetEnvForEbuildSH())
+            addStepVData.append(portage_steps.GetAuxMetadata())
             addStepVData.append(AddVersion())
             addStepVData.append(AddVersionKeyword())
             addStepVData.append(TriggerBuildCheck())

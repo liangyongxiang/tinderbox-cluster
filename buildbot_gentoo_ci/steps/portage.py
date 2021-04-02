@@ -10,6 +10,7 @@ from portage import _encodings
 from portage import _unicode_encode
 from portage import _parse_eapi_ebuild_head, eapi_is_supported
 from portage.versions import cpv_getversion, pkgsplit, catpkgsplit
+from portage import portdbapi
 
 from twisted.internet import defer
 from twisted.python import log
@@ -249,7 +250,7 @@ class SetMakeConf(BuildStep):
         makeconf_list.append('DISTDIR="/var/cache/portage/distfiles"')
         makeconf_list.append('PORTAGE_ELOG_CLASSES="*"')
         # We need echo:info to get the logfile name
-        makeconf_list.append('PORTAGE_ELOG_SYSTEM="save echo:info"')
+        makeconf_list.append('PORTAGE_ELOG_SYSTEM="save:* echo:info"')
         # add ACCEPT_KEYWORDS from the project_data info
         keyword_data = yield self.gentooci.db.keywords.getKeywordById(project_data['keyword_id'])
         if project_data['status'] == 'unstable':
@@ -395,7 +396,8 @@ class SetReposConfLocal(BuildStep):
         repos_conf_path = yield os.path.join('etc', 'portage', 'repos.conf')
         repos_conf_default_path = yield os.path.join(repos_conf_path, 'default.conf')
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        self.repository_basedir = self.gentooci.config.project['repository_basedir']
+        # the path should be set in the confg
+        self.repository_basedir2 = '/home/repos2/'
         if not os.path.isfile(repos_conf_default_path):
             # setup the default.conf
             repos_conf_data = yield self.gentooci.db.projects.getProjectPortageByUuidAndDirectory(self.getProperty('project_data')['uuid'], 'repos.conf')
@@ -409,7 +411,7 @@ class SetReposConfLocal(BuildStep):
             yield WriteTextToFile(repos_conf_default_path, default_conf)
         repos_conf_repository_path = yield os.path.join(repos_conf_path, self.getProperty("repository_data")['name'] + '.conf')
         if not os.path.isfile(repos_conf_repository_path):
-            repository_path = yield os.path.join(self.getProperty("builddir"), self.repository_basedir, self.getProperty("repository_data")['name'])
+            repository_path = yield os.path.join(self.repository_basedir2, self.getProperty("repository_data")['name'])
             repository_conf = []
             repository_conf.append('[' + self.getProperty("repository_data")['name'] + ']')
             repository_conf.append('location = ' + repository_path)
@@ -444,7 +446,7 @@ class SetMakeConfLocal(BuildStep):
         makeconf_list.append('ACCEPT_KEYWORDS="~amd64 amd64"')
         makeconf_list.append('EMERGE_DEFAULT_OPTS=""')
         makeconf_list.append('ABI_X86="32 64"')
-        makeconf_list.append('FEATURES=""')
+        makeconf_list.append('FEATURES="sandbox"')
         yield WriteTextToFile(make_conf_path, makeconf_list)
         return SUCCESS
 
@@ -529,4 +531,57 @@ class SetEnvForEbuildSH(BuildStep):
                                                             extract_fn=PersOutputOfEbuildSH
                                                             ))
         yield self.build.addStepsAfterCurrentStep(addStepEbuildSH)
+        return SUCCESS
+
+class GetAuxMetadata(BuildStep):
+
+    name = 'GetAuxMetadata'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    #@defer.inlineCallbacks
+    def thd_getAuxDbKeys(self):
+        auxdbs = self.myportdb.aux_get(self.getProperty("cpv"), auxdbkeys, myrepo=self.getProperty("repository_data")['name'])
+        return auxdbs
+
+    @defer.inlineCallbacks
+    def run(self):
+        config_root = yield os.path.join(self.getProperty("builddir"), '')
+        # setup mysettings and myportdb
+        mysettings = yield portage_config(config_root = config_root)
+        self.myportdb = yield portdbapi(mysettings=mysettings)
+        auxdbs = yield self.thd_getAuxDbKeys()
+        metadata = None
+        NoSplit = []
+        NoSplit.append('DESCRIPTION')
+        # should have 22 lines
+        if len(auxdbkeys) != len(auxdbs) or not isinstance(auxdbs, list):
+            # number of lines is incorrect or not a list.
+            print("Lines don't match or not a list")
+            yield self.myportdb.close_caches()
+            yield portdbapi.portdbapi_instances.remove(self.myportdb)
+            #self.setProperty('auxdb', metadata, 'auxdb')
+            return FAILURE
+        # split all keys to list instead of speces
+        metadata = {}
+        i = 0
+        for key in auxdbkeys:
+            if auxdbs[i] == '':
+                metadata[key] = None
+            else:
+                if ' ' in auxdbs[i] and key not in NoSplit:
+                    metadata[key] = auxdbs[i].split(' ')
+                else:
+                    metadata[key] = []
+                    metadata[key].append(auxdbs[i])
+            i = i + 1
+        self.setProperty('auxdb', metadata, 'auxdb')
+        yield self.myportdb.close_caches()
+        yield portdbapi.portdbapi_instances.remove(self.myportdb)
         return SUCCESS

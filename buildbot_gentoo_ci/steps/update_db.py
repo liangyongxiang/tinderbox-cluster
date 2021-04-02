@@ -141,10 +141,19 @@ class UpdateRepos(BuildStep):
                     raise AssertionError('Unknown merge analysis result')
 
     @defer.inlineCallbacks
+    def setchmod(self, path):
+        for root, dirs, files in os.walk(path):
+            for d in dirs:
+                yield os.chmod(os.path.join(root, d), 0o0755)
+            for f in files:
+                yield os.chmod(os.path.join(root, f), 0o0644)
+
+    @defer.inlineCallbacks
     def run(self):
         #FIXME check HEAD agenst local and worker local tree so we don't gitpull evrytime
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        self.repository_basedir = self.gentooci.config.project['repository_basedir']
+        #self.repository_basedir = self.gentooci.config.project['repository_basedir']
+        self.repository_basedir = yield os.path.join('/home', 'repos2')
         self.profile_repository_path = yield os.path.join(self.repository_basedir, self.getProperty("profile_repository_data")['name'])
         repo_path = yield pygit2.discover_repository(self.profile_repository_path)
         print(repo_path)
@@ -153,6 +162,9 @@ class UpdateRepos(BuildStep):
         else:
             repo = yield pygit2.Repository(repo_path)
             yield self.gitPull(repo)
+        # chmod and chown
+        yield self.setchmod(self.profile_repository_path)
+        #yield os.chown(self.profile_repository_path, 'buildbot', 'portage')
         if self.getProperty("profile_repository_data")['name'] != self.getProperty("repository_data")['name']:
             self.repository_path = yield os.path.join(self.repository_basedir, self.getProperty("repository_data")['name'])
             repo_path = yield pygit2.discover_repository(self.repository_path)
@@ -161,6 +173,9 @@ class UpdateRepos(BuildStep):
             else:
                 repo = yield pygit2.Repository(repo_path)
                 yield self.gitPull(repo)
+            # chmod and chown
+            yield self.setchmod(self.profile_repository_path)
+            #yield os.chown(self.repository_path, 'buildbot', 'portage')
         return SUCCESS
 
 class TriggerCheckForCPV(BuildStep):
