@@ -175,7 +175,7 @@ class ParserBuildLog(BuildStep):
         print(self.summery_dict)
         # remove all lines with ignore in the dict
         # setProperty summery_dict
-        self.setProperty("summery_log_dict", self.summery_dict, 'summery_log_dict')
+        self.setProperty("summary_log_dict", self.summery_dict, 'summary_log_dict')
         return SUCCESS
 
 class MakeIssue(BuildStep):
@@ -193,25 +193,48 @@ class MakeIssue(BuildStep):
     #@defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        summery_log_dict = self.getProperty('summery_log_dict')
+        summary_log_dict = self.getProperty('summary_log_dict')
         error = False
         warning = False
-        self.summery_log_list = []
+        self.summary_log_list = []
         log_hash = hashlib.sha256()
-        for k, v in sorted(summery_log_dict.items()):
+        for k, v in sorted(summary_log_dict.items()):
             if v['status'] == 'error':
                 error = True
             if v['status'] == 'warning':
                 warning = True
-            self.summery_log_list.append(v['text'])
+            self.summary_log_list.append(v['text'])
             log_hash.update(v['text'].encode('utf-8'))
         # add build log
         # add issue/bug/pr report
-        self.setProperty("summery_log_list", self.summery_log_list, 'summery_log_list')
+        self.setProperty("summary_log_list", self.summary_log_list, 'summary_log_list')
         if error:
             self.setProperty("status", 'failed', 'status')
         if warning:
             self.setProperty("status", 'warning', 'status')
+        return SUCCESS
+
+class setBuildbotLog(BuildStep):
+
+    name = 'setBuildbotLog'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = False
+    flunkOnFailure = True
+    warnOnWarnings = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        #setup the log
+        log = yield self.addLog('summary')
+        # add line for line
+        for line in self.getProperty('summary_log_list'):
+            yield log.addStdout(line + '\n')
+        # add emerge info log
         return SUCCESS
 
 class setBuildStatus(BuildStep):
