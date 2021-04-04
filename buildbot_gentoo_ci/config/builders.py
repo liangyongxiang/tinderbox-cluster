@@ -10,6 +10,7 @@ def gentoo_builders(b=[]):
         name='update_db_check',
         workername='updatedb_1',
         workerbuilddir='builds',
+        collapseRequests=False,
         factory=buildfactorys.update_db_check()
         )
     )
@@ -21,6 +22,7 @@ def gentoo_builders(b=[]):
         name='update_cpv_data',
         workername='updatedb_1',
         workerbuilddir='builds',
+        collapseRequests=False,
         factory=buildfactorys.update_db_cp()
         )
     )
@@ -30,6 +32,7 @@ def gentoo_builders(b=[]):
         name='update_v_data',
         workername='updatedb_1',
         workerbuilddir='builds',
+        collapseRequests=False,
         factory=buildfactorys.update_db_v()
         )
     )
@@ -38,6 +41,7 @@ def gentoo_builders(b=[]):
     b.append(util.BuilderConfig(
         name='build_request_data',
         workername='updatedb_1',
+        collapseRequests=False,
         factory=buildfactorys.build_request_check()
         )
     )
@@ -46,6 +50,7 @@ def gentoo_builders(b=[]):
     b.append(util.BuilderConfig(
         name='run_build_request',
         workername='bot-test',
+        collapseRequests=False,
         factory=buildfactorys.run_build_request()
         )
     )
@@ -54,6 +59,7 @@ def gentoo_builders(b=[]):
     b.append(util.BuilderConfig(
         name='parse_build_log',
         workername='updatedb_1',
+        collapseRequests=False,
         factory=buildfactorys.parse_build_log()
         )
     )
