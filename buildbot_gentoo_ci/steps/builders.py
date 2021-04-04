@@ -19,6 +19,7 @@ def PersOutputOfEmerge(rc, stdout, stderr):
     emerge_output['rc'] = rc
     emerge_output['preserved_libs'] = False
     emerge_output['depclean'] = False
+    emerge_output['change_use'] = False
     package_dict = {}
     log_path_list = []
     print(stderr)
@@ -82,7 +83,20 @@ def PersOutputOfEmerge(rc, stdout, stderr):
     # split the lines
     #FIXME: Handling of stderr output
     for line in stderr.split('\n'):
-        pass
+        if 'Change USE:' in line:
+            line_list = line.split(' ')
+            change_use_list = []
+            # get cpv
+            cpv_split = line_list[1].split(':')
+            change_use_list.append(cpv_split[0])
+            # add use flags
+            if line_list[4].startswith('+') or line_list[4].startswith('-'):
+                # we only support one for now
+                if line_list[4].endswith(')'):
+                    change_use_list.append(line_list[4].replace(')', ''))
+                else:
+                    change_use_list = False
+            emerge_output['change_use'] = change_use_list
     return {
         'emerge_output' : emerge_output
         }
@@ -209,6 +223,7 @@ class SetupPropertys(BuildStep):
         self.setProperty('cpv_build', False, 'cpv_build')
         self.setProperty('pkg_check_log_data', None, 'pkg_check_log_data')
         self.setProperty('faild_version_data', None, 'faild_version_data')
+        self.setProperty('rerun', 0, 'rerun')
         print(self.getProperty("buildnumber"))
         if self.getProperty('project_build_data') is None:
             project_build_data = {}
@@ -268,13 +283,13 @@ class RunEmerge(BuildStep):
     name = 'RunEmerge'
     description = 'Running'
     descriptionDone = 'Ran'
-    descriptionSuffix = None
     haltOnFailure = True
     flunkOnFailure = True
 
     def __init__(self, step=None,**kwargs):
         self.step = step
         super().__init__(**kwargs)
+        self.descriptionSuffix = self.step
 
     @defer.inlineCallbacks
     def run(self):
@@ -388,7 +403,6 @@ class RunEmerge(BuildStep):
             cpv = self.getProperty("cpv")
             c = yield catpkgsplit(cpv)[0]
             p = yield catpkgsplit(cpv)[1]
-            shell_commad_list.append('-p')
             shell_commad_list.append('=' + self.getProperty('cpv'))
             # we don't use the bin for the requsted cpv
             shell_commad_list.append('--usepkg-exclude')
@@ -398,6 +412,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('virtual')
             shell_commad_list.append('--buildpkg-exclude')
             shell_commad_list.append('acct-*')
+            shell_commad_list.append('-p')
             aftersteps_list.append(
                 steps.SetPropertyFromCommandNewStyle(
                         command=shell_commad_list,
@@ -444,13 +459,13 @@ class CheckEmergeLogs(BuildStep):
     name = 'CheckLogs'
     description = 'Running'
     descriptionDone = 'Ran'
-    descriptionSuffix = None
     haltOnFailure = True
     flunkOnFailure = True
 
     def __init__(self, step=None,**kwargs):
         self.step = step
         super().__init__(**kwargs)
+        self.descriptionSuffix = self.step
 
     @defer.inlineCallbacks
     def run(self):
@@ -480,10 +495,41 @@ class CheckEmergeLogs(BuildStep):
             print(self.getProperty('cpv_build'))
 
         #FIXME:
-        # update package.* if needed and rerun pre-build max X times
+        # update package.* if needed and rerun pre-build max 3 times
         if self.step == 'pre-build':
             print(emerge_output)
-
+            if self.getProperty('rerun') <= 3:
+                # when we need to change use. we could rerun pre-build with
+                # --autounmask-use=y --autounmask-write=y --autounmask-only=y
+                # but we use --binpkg--respect-use=y in EMERGE_DEFAULT_OPTS
+                # read man emerge for more
+                if emerge_output['change_use']:
+                    # add a zz file for autounmask use
+                    separator = '\n'
+                    separator2 = ' '
+                    change_use_list = []
+                    cpv = emerge_output['change_use'][0]
+                    c = yield catpkgsplit(cpv)[0]
+                    p = yield catpkgsplit(cpv)[1]
+                    change_use_list.append(c + '/' + p)
+                    # we only support one use
+                    use_flag = emerge_output['change_use'][1]
+                    if use_flag.startswith('+'):
+                        change_use_list.append(use_flag.replace('+', ''))
+                    else:
+                        change_use_list.append(use_flag)
+                    change_use_string = separator2.join(change_use_list)
+                    aftersteps_list.append(
+                        steps.StringDownload(change_use_string + separator,
+                                workerdest='zz_autouse' + str(self.getProperty('rerun')),
+                                workdir='/etc/portage/package.use/')
+                        )
+                    # rerun
+                    aftersteps_list.append(RunEmerge(step='pre-build'))
+                    self.setProperty('rerun', self.getProperty('rerun') + 1, 'rerun')
+            else:
+                # trigger parse_build_log with info about pre-build and it fail
+                pass
         #FIXME:
         # Look for FAILURE and logname and download needed logfile and
         # trigger a logparser

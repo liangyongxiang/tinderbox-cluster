@@ -120,7 +120,7 @@ def run_build_request():
     # setup env
     f.addStep(portage.SetEnvDefault())
     # setup package.*
-    #f.addStep(portage.SetPackageDefault())
+    f.addStep(portage.SetPackageDefault())
     # setup files in /etc if needed
     # run --regen if needed on repo
     # update packages before any tests

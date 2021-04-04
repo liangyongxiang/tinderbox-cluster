@@ -286,6 +286,7 @@ class SetPackageDefault(BuildStep):
         aftersteps_list = []
         packagedir_list = []
         packagedir_list.append('env')
+        packagedir_list.append('use')
         #FIXME:
         # get list what dir we need to make from db
         # create the dirs
