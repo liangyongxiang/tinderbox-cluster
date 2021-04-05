@@ -18,7 +18,6 @@ def PersOutputOfEmerge(rc, stdout, stderr):
     emerge_output = {}
     emerge_output['rc'] = rc
     emerge_output['preserved_libs'] = False
-    emerge_output['depclean'] = False
     emerge_output['change_use'] = False
     package_dict = {}
     log_path_list = []
@@ -119,6 +118,21 @@ def PersOutputOfPkgCheck(rc, stdout, stderr):
     #FIXME: Handling of stderr output
     return {
         'pkgcheck_output' : pkgcheck_output
+        }
+
+def PersOutputOfDepclean(rc, stdout, stderr):
+    depclean_output = {}
+    depclean_output['rc'] = rc
+    print(stderr)
+    depclean_output['stderr'] = stderr
+    package_list = False
+    for line in stdout.split('\n'):
+        if line.startswith('All selected packages:'):
+            line_tmp = line.replace('All selected packages: ', '')
+            package_list = line_tmp.split(' ')
+    depclean_output['packages'] = package_list
+    return {
+        'depclean_output' : depclean_output
         }
 
 class TriggerRunBuildRequest(BuildStep):
@@ -364,22 +378,26 @@ class RunEmerge(BuildStep):
                 steps.SetPropertyFromCommandNewStyle(
                         command=shell_commad_list,
                         strip=True,
-                        extract_fn=PersOutputOfEmerge,
+                        extract_fn=PersOutputOfDepclean,
                         workdir='/'
                 ))
-            aftersteps_list.append(CheckEmergeLogs('depclean'))
+            aftersteps_list.append(CheckDepcleanLogs('pre-depclean'))
+            self.setProperty('depclean', False, 'depclean')
 
-        if self.step == 'depclean' and self.getProperty('depclean'):
+        if self.step == 'depclean' and projects_emerge_options['depclean']:
             shell_commad_list.append('-q')
             shell_commad_list.append('--depclean')
+            # add exlude cpv if needed
+            if self.getProperty('depclean'):
+                pass
             aftersteps_list.append(
                 steps.SetPropertyFromCommandNewStyle(
                         command=shell_commad_list,
                         strip=True,
-                        extract_fn=PersOutputOfEmerge,
+                        extract_fn=PersOutputOfDepclean,
                         workdir='/'
                 ))
-            aftersteps_list.append(CheckEmergeLogs('depclean'))
+            aftersteps_list.append(CheckDepcleanLogs('depclean'))
 
         if self.step == 'match':
             cpv = self.getProperty("cpv")
@@ -456,7 +474,7 @@ class RunEmerge(BuildStep):
 
 class CheckEmergeLogs(BuildStep):
 
-    name = 'CheckLogs'
+    name = 'CheckEmergeLogs'
     description = 'Running'
     descriptionDone = 'Ran'
     haltOnFailure = True
@@ -483,10 +501,6 @@ class CheckEmergeLogs(BuildStep):
         # preserved-libs
         if emerge_output['preserved_libs'] and projects_emerge_options['preserved_libs']:
             self.setProperty('preserved_libs', True, 'preserved-libs')
-        # depclean
-        # FIXME: check if don't remove needed stuff.
-        if emerge_output['depclean'] and projects_emerge_options['depclean']:
-            self.setProperty('depclean', True, 'depclean')
 
         # FIXME: check if cpv match
         if self.step == 'match'and self.getProperty('projectrepository_data')['build']:
@@ -573,6 +587,40 @@ class CheckEmergeLogs(BuildStep):
                             'repository_data' : self.getProperty('repository_data')
                         }
                     ))
+        if not self.step is None and aftersteps_list != []:
+            yield self.build.addStepsAfterCurrentStep(aftersteps_list)
+        return SUCCESS
+
+class CheckDepcleanLogs(BuildStep):
+
+    name = 'CheckDepcleanLogs'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, step=None,**kwargs):
+        self.step = step
+        super().__init__(**kwargs)
+        self.descriptionSuffix = self.step
+
+    @defer.inlineCallbacks
+    def run(self):
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        project_data = self.getProperty('project_data')
+        projects_emerge_options = yield self.gentooci.db.projects.getProjectEmergeOptionsByUuid(project_data['uuid'])
+        depclean_output = self.getProperty('depclean_output')
+        aftersteps_list = []
+        # run depclean if needed
+        if self.step == 'pre-depclean' and projects_emerge_options['depclean']:
+            # FIXME: check if we don't remove needed stuff.
+            # add it to Property depclean if needed
+            if depclean_output['packages']:
+                for cpv_tmp in depclean_output['packages']:
+                    cpv = cpv_tmp.replace('=', '')
+                self.setProperty('depclean', False, 'depclean')
+                aftersteps_list.append(RunEmerge(step='depclean'))
+
         if not self.step is None and aftersteps_list != []:
             yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS

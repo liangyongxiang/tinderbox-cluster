@@ -127,21 +127,15 @@ def run_build_request():
     # run pretend on packages update on worker
     f.addStep(builders.RunEmerge(step='pre-update'))
     #   look at the log to see if we need to do stuff
-    #   run update package on worker
+    #   run update package on worker and check log
     f.addStep(builders.RunEmerge(step='update'))
-    #   check log
-    # run depclean if set
-    #   depclean pretend
+    # clean up the worker
+    # look at the log to see if we need to do stuff
+    # run pre-depclean and depclean if set
     f.addStep(builders.RunEmerge(step='pre-depclean'))
-    #   look at the log to see if we need to do stuff
-    #   depclean
-    f.addStep(builders.RunEmerge(step='depclean'))
-    # run @preserved-rebuild if needed
+    # run preserved-libs and depclean
     f.addStep(builders.RunEmerge(step='preserved-libs'))
-    #   check log
-    #   depclean
     f.addStep(builders.RunEmerge(step='depclean'))
-    #   check log
     # setup make.conf if build id has changes make.conf as dict from SetMakeConf
     # setup package.* env if build id has changes
     # setup pkgcheck.conf if needed
@@ -154,10 +148,10 @@ def run_build_request():
     # Add the needed steps for build
     f.addStep(builders.RunBuild())
     # clean up the worker
+    # look at the log to see if we need to do stuff
+    # run pre-depclean and depclean if set
     f.addStep(builders.RunEmerge(step='pre-depclean'))
-    #   look at the log to see if we need to do stuff
-    #   run depclean and preserved-libs
-    f.addStep(builders.RunEmerge(step='depclean'))
+    # run preserved-libs and depclean
     f.addStep(builders.RunEmerge(step='preserved-libs'))
     f.addStep(builders.RunEmerge(step='depclean'))
     return f
