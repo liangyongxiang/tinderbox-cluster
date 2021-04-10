@@ -157,7 +157,12 @@ class ParserBuildLog(BuildStep):
         # read it to a buffer
         # make a dict of the buffer
         # maby use mulitiprocces to speed up the search
-        file_path = yield os.path.join(self.master.basedir, 'cpv_logs', self.getProperty('log_build_data')['full_logname'])
+        print(self.getProperty('log_build_data'))
+        if self.getProperty('faild_cpv'):
+            log_cpv = self.getProperty('log_build_data')[self.getProperty('faild_cpv')]
+        else:
+            log_cpv = self.getProperty('log_build_data')[self.getProperty('cpv')]
+        file_path = yield os.path.join(self.master.basedir, 'cpv_logs', log_cpv['full_logname'])
         with io.TextIOWrapper(io.BufferedReader(gzip.open(file_path, 'rb'))) as f:
             for text_line in f:
                 self.logfile_text_dict[self.index] = text_line.strip('\n')

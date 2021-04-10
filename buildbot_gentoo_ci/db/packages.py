@@ -27,11 +27,13 @@ from buildbot.db import base
 class PackagesConnectorComponent(base.DBConnectorComponent):
 
     @defer.inlineCallbacks
-    def getPackageByName(self, name):
+    def getPackageByName(self, name, c_uuid, repo_uuid):
         def thd(conn):
             tbl = self.db.model.packages
             q = tbl.select()
             q = q.where(tbl.c.name == name)
+            q = q.where(tbl.c.category_uuid == c_uuid)
+            q = q.where(tbl.c.repository_uuid == repo_uuid)
             res = conn.execute(q)
             row = res.fetchone()
             if not row:

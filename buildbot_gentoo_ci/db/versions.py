@@ -28,11 +28,12 @@ from buildbot.util import datetime2epoch
 class VersionsConnectorComponent(base.DBConnectorComponent):
 
     @defer.inlineCallbacks
-    def getVersionByName(self, name):
+    def getVersionByName(self, name, p_uuid):
         def thd(conn):
             tbl = self.db.model.versions
             q = tbl.select()
             q = q.where(tbl.c.name == name)
+            q = q.where(tbl.c.package_uuid == p_uuid)
             res = conn.execute(q)
             row = res.fetchone()
             if not row:

@@ -38,7 +38,7 @@ class GetVData(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.version = yield cpv_getversion(self.getProperty("cpv"))
         print(self.version)
-        self.old_version_data = yield self.gentooci.db.versions.getVersionByName(self.version)
+        self.old_version_data = yield self.gentooci.db.versions.getVersionByName(self.version, self.getProperty("package_data")['uuid'])
         print(self.old_version_data)
         self.setProperty("old_version_data", self.old_version_data, 'old_version_data')
         self.setProperty("version", self.version, 'version')

@@ -59,7 +59,9 @@ class CheckP(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.package = yield catpkgsplit(self.getProperty("cpv"))[1]
         print(self.package)
-        self.package_data = yield self.gentooci.db.packages.getPackageByName(self.package)
+        self.package_data = yield self.gentooci.db.packages.getPackageByName(self.package,
+                                                                            self.getProperty("category_data")['uuid'],
+                                                                            self.getProperty("repository_data")['uuid'])
         print(self.package_data)
         if self.package_data is None:
             self.setProperty("package", self.package, 'package')

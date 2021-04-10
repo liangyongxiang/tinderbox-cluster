@@ -4,7 +4,7 @@
 import os
 import re
 
-from portage.versions import catpkgsplit
+from portage.versions import catpkgsplit, cpv_getversion
 
 from twisted.internet import defer
 from twisted.python import log
@@ -19,10 +19,10 @@ def PersOutputOfEmerge(rc, stdout, stderr):
     emerge_output['rc'] = rc
     emerge_output['preserved_libs'] = False
     emerge_output['change_use'] = False
+    emerge_output['failed'] = False
     package_dict = {}
     log_path_list = []
     print(stderr)
-    emerge_output['stderr'] = stderr
     # split the lines
     for line in stdout.split('\n'):
         # package list
@@ -67,6 +67,10 @@ def PersOutputOfEmerge(rc, stdout, stderr):
             # CPU_FLAGS_X86 list
             package_dict[cpv] = subdict
         if line.startswith('>>>'):
+            if line.startswith('>>> Failed to'):
+                emerge_output['failed'] = line.split(' ')[4][:-1]
+            if line.endswith('.log.gz') and emerge_output['failed']:
+                log_path_list.append(line.split(' ')[2])
             #FIXME: Handling of >>> output
             pass
         if line.startswith('!!!'):
@@ -78,9 +82,10 @@ def PersOutputOfEmerge(rc, stdout, stderr):
                 log_path_list.append(line.split(' ')[4])
         #FIXME: Handling of depclean output dict of packages that get removed or saved
     emerge_output['package'] = package_dict
-    emerge_output['log_paths'] = log_path_list
+
     # split the lines
     #FIXME: Handling of stderr output
+    stderr_line_list = []
     for line in stderr.split('\n'):
         if 'Change USE:' in line:
             line_list = line.split(' ')
@@ -96,6 +101,16 @@ def PersOutputOfEmerge(rc, stdout, stderr):
                 else:
                     change_use_list = False
             emerge_output['change_use'] = change_use_list
+        err_line_list = []
+        if line.startswith(' * '):
+            if line.endswith('.log.gz'):
+                log_path = line.split(' ')[3]
+                if log_path not in inlog_path_list:
+                    log_path_list.append(log_path)
+            stderr_line_list.append(line)
+    emerge_output['stderr'] = stderr_line_list
+    emerge_output['log_paths'] = log_path_list
+
     return {
         'emerge_output' : emerge_output
         }
@@ -484,6 +499,30 @@ class CheckEmergeLogs(BuildStep):
         self.step = step
         super().__init__(**kwargs)
         self.descriptionSuffix = self.step
+        self.aftersteps_list = []
+        self.log_data = {}
+
+    @defer.inlineCallbacks
+    def getVersionData(self, cpv):
+        c = yield catpkgsplit(cpv)[0]
+        p = yield catpkgsplit(cpv)[1]
+        category_data = yield self.gentooci.db.categorys.getCategoryByName(c)
+        package_data = yield self.gentooci.db.packages.getPackageByName(p,
+                                                                        category_data['uuid'],
+                                                                        self.getProperty('repository_data')['uuid'])
+        if package_data is None:
+            return None
+        version = yield cpv_getversion(cpv)
+        version_data = yield self.gentooci.db.versions.getVersionByName(version, package_data['uuid'])
+        return version_data
+
+    @defer.inlineCallbacks
+    def getLogFile(self, cpv, log_dict):
+        masterdest = yield os.path.join(self.master.basedir, 'cpv_logs', log_dict[cpv]['full_logname'])
+        self.aftersteps_list.append(steps.FileUpload(
+            workersrc=log_dict[cpv]['log_path'],
+            masterdest=masterdest
+        ))
 
     @defer.inlineCallbacks
     def run(self):
@@ -495,7 +534,6 @@ class CheckEmergeLogs(BuildStep):
                     'emerge',
                     '-v'
                     ]
-        aftersteps_list = []
 
         #FIXME: Prosees the logs and do stuff
         # preserved-libs
@@ -533,13 +571,13 @@ class CheckEmergeLogs(BuildStep):
                     else:
                         change_use_list.append(use_flag)
                     change_use_string = separator2.join(change_use_list)
-                    aftersteps_list.append(
+                    self.aftersteps_list.append(
                         steps.StringDownload(change_use_string + separator,
                                 workerdest='zz_autouse' + str(self.getProperty('rerun')),
                                 workdir='/etc/portage/package.use/')
                         )
                     # rerun
-                    aftersteps_list.append(RunEmerge(step='pre-build'))
+                    self.aftersteps_list.append(RunEmerge(step='pre-build'))
                     self.setProperty('rerun', self.getProperty('rerun') + 1, 'rerun')
             else:
                 # trigger parse_build_log with info about pre-build and it fail
@@ -564,31 +602,43 @@ class CheckEmergeLogs(BuildStep):
                                 full_logname = full_logname
                                 )
             print(log_dict)
-            # Find log for cpv that was requested or did faild
+            # Find log for cpv that was requested or did failed
             if not log_dict == {}:
                 # requested cpv
-                if self.getProperty('cpv') in log_dict:
-                    log_data = log_dict[self.getProperty('cpv')]
-                    masterdest = yield os.path.join(self.master.basedir, 'cpv_logs', log_data['full_logname'])
-                    aftersteps_list.append(steps.FileUpload(
-                        workersrc=log_data['log_path'],
-                        masterdest=masterdest
-                        ))
-                    aftersteps_list.append(steps.Trigger(
+                print(log_dict)
+                cpv = self.getProperty('cpv')
+                faild_cpv = emerge_output['failed']
+                if cpv in log_dict or faild_cpv in log_dict:
+                    if cpv in log_dict:
+                        self.log_data[cpv] = log_dict[cpv]
+                        yield self.getLogFile(cpv, log_dict)
+                        faild_version_data = False
+                    if faild_cpv:
+                        # failed and build requested cpv
+                        if cpv == faild_cpv:
+                            faild_version_data = self.getProperty("version_data")
+                        else:
+                            # failed but not build requested cpv
+                            self.log_data[faild_cpv] = log_dict[faild_cpv]
+                            yield self.getLogFile(faild_cpv, log_dict)
+                            faild_version_data = yield self.getVersionData(faild_cpv)
+                    self.aftersteps_list.append(steps.Trigger(
                         schedulerNames=['parse_build_log'],
                         waitForFinish=False,
                         updateSourceStamp=False,
                         set_properties={
                             'cpv' : self.getProperty("cpv"),
-                            'faild_version_data' : self.getProperty('faild_version_data'),
+                            'faild_version_data' : faild_version_data,
                             'project_build_data' : self.getProperty('project_build_data'),
-                            'log_build_data' : log_data,
+                            'log_build_data' : self.log_data,
                             'pkg_check_log_data' : self.getProperty("pkg_check_log_data"),
-                            'repository_data' : self.getProperty('repository_data')
+                            'repository_data' : self.getProperty('repository_data'),
+                            'faild_cpv' : faild_cpv,
+                            'step' : self.step
                         }
                     ))
-        if not self.step is None and aftersteps_list != []:
-            yield self.build.addStepsAfterCurrentStep(aftersteps_list)
+        if not self.step is None and self.aftersteps_list != []:
+            yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
         return SUCCESS
 
 class CheckDepcleanLogs(BuildStep):
