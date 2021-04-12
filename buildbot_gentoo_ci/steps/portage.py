@@ -353,6 +353,36 @@ class SetEnvDefault(BuildStep):
         yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS
 
+class CheckPathLocal(BuildStep):
+
+    name = 'CheckPathLocal'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        self.portage_path = yield os.path.join('etc', 'portage')
+        self.profile_path = yield os.path.join(self.portage_path, 'make.profile')
+        self.repos_path = yield os.path.join(self.portage_path, 'repos.conf')
+        print(os.getcwd())
+        print(self.getProperty("builddir"))
+        yield os.chdir(self.getProperty("builddir"))
+        print(os.getcwd())
+        for x in [
+                self.portage_path,
+                self.profile_path,
+                self.repos_path,
+                ]:
+            if not os.path.isdir(x):
+                os.makedirs(x)
+        return SUCCESS
+
 class SetMakeProfileLocal(BuildStep):
 
     name = 'SetMakeProfileLocal'

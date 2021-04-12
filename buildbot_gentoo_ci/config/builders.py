@@ -15,6 +15,15 @@ def gentoo_builders(b=[]):
         )
     )
     # FIXME: get workers from db
+    b.append(util.BuilderConfig(
+        name='update_repo_check',
+        workername='updatedb_1',
+        workerbuilddir='builds',
+        collapseRequests=True,
+        factory=buildfactorys.update_repo_check()
+        )
+    )
+    # FIXME: get workers from db
     # Use multiplay workers depend on Property(cpv)
     # if cp do not match next one, use diffrent worker then
     # or first cp have done its buildsteps.

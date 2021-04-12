@@ -11,6 +11,7 @@ from buildbot_gentoo_ci.steps import version
 from buildbot_gentoo_ci.steps import builders
 from buildbot_gentoo_ci.steps import portage
 from buildbot_gentoo_ci.steps import logs
+from buildbot_gentoo_ci.steps import repos
 
 def update_db_check():
     f = util.BuildFactory()
@@ -18,10 +19,10 @@ def update_db_check():
     # Get base project data from db
     #   return profile_repository, project
     f.addStep(update_db.GetDataGentooCiProject())
-    # Check if needed path is there
-    f.addStep(update_db.CheckPath())
     # update the repos
-    f.addStep(update_db.UpdateRepos())
+    f.addStep(update_db.TriggerUpdateRepositorys())
+    # Check if needed path is there
+    f.addStep(portage.CheckPathLocal())
     # setup the profile
     f.addStep(portage.SetMakeProfileLocal())
     # setup repos.conf dir
@@ -31,6 +32,18 @@ def update_db_check():
     # Make a for loop and trigger new builders with cpv from git_changes
     #   return cpv, repository, project_data
     f.addStep(update_db.TriggerCheckForCPV())
+    return f
+
+def update_repo_check():
+    f = util.BuildFactory()
+    # FIXME: 6
+    # Check if needed path is there
+    f.addStep(repos.CheckPathRepositoryLocal())
+    # update the repos
+    # FIXME:
+    # use doStepIf so we don't need to do step=profile
+    f.addStep(repos.CheckRepository(step='profile'))
+    f.addStep(repos.CheckRepository())
     return f
 
 def update_db_cp():

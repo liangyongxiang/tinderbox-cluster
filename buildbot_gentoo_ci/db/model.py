@@ -91,6 +91,7 @@ class Model(base.DBConnectorComponent):
         sa.Column('poll_interval', sa.Integer, nullable=False, default=600),
         sa.Column('poll_random_delay_min', sa.Integer, nullable=False, default=600),
         sa.Column('poll_random_delay_max', sa.Integer, nullable=False, default=600),
+        sa.Column('updated_at', sa.Integer, nullable=True),
     )
 
     projects = sautils.Table(

@@ -80,6 +80,16 @@ class RepositorysConnectorComponent(base.DBConnectorComponent):
         res = yield self.db.pool.do(thd)
         return res
 
+    @defer.inlineCallbacks
+    def updateGitPollerTime(self, uuid):
+        updated_at = int(self.master.reactor.seconds())
+        def thd(conn, no_recurse=False):
+                tbl = self.db.model.repositorys_gitpullers
+                q = tbl.update()
+                q = q.where(tbl.c.repository_uuid == uuid)
+                conn.execute(q, updated_at=updated_at)
+        yield self.db.pool.do(thd)
+
     def _row2dict(self, conn, row):
         return dict(
             uuid=row.uuid,
@@ -101,5 +111,6 @@ class RepositorysConnectorComponent(base.DBConnectorComponent):
             branches=row.branches,
             poll_interval=row.poll_interval,
             poll_random_delay_min=row.poll_random_delay_min,
-            poll_random_delay_max=row.poll_random_delay_max
+            poll_random_delay_max=row.poll_random_delay_max,
+            updated_at=row.updated_at
             )
