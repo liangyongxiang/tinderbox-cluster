@@ -153,7 +153,7 @@ class SetReposConf(BuildStep):
             repository_conf = []
             repository_conf.append('[' + repository_data['name'] + ']')
             repository_conf.append('location = ' + repository_path)
-            repository_conf.append('sync-uri = ' + repository_data['mirror_url'])
+            repository_conf.append('sync-uri = ' + repository_data['url'])
             repository_conf.append('sync-type = git')
             repository_conf.append('auto-sync = no')
             repository_conf_string = separator.join(repository_conf)
@@ -446,7 +446,7 @@ class SetReposConfLocal(BuildStep):
             repository_conf = []
             repository_conf.append('[' + self.getProperty("repository_data")['name'] + ']')
             repository_conf.append('location = ' + repository_path)
-            repository_conf.append('sync-uri = ' + self.getProperty("repository_data")['mirror_url'])
+            repository_conf.append('sync-uri = ' + self.getProperty("repository_data")['url'])
             repository_conf.append('sync-type = git')
             repository_conf.append('auto-sync = no')
             yield WriteTextToFile(repos_conf_repository_path, repository_conf)

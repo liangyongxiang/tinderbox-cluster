@@ -70,7 +70,7 @@ class Model(base.DBConnectorComponent):
         sa.Column('name', sa.String(255), nullable=False),
         # description of the repository
         sa.Column('description', sa.Text, nullable=True),
-        sa.Column('mirror_url', sa.String(255), nullable=True),
+        sa.Column('url', sa.String(255), nullable=True),
         sa.Column('type', sa.Enum('gitpuller'), nullable=False, default='gitpuller'),
         sa.Column('auto', sa.Boolean, default=False),
         sa.Column('enabled', sa.Boolean, default=False),
@@ -98,15 +98,11 @@ class Model(base.DBConnectorComponent):
         "projects", metadata,
         # unique id per project
         sa.Column('uuid', sa.String(36), primary_key=True,
-                  default=lambda: str(uuid.uuid4()),
-                  ),
+                  default=lambda: str(uuid.uuid4())),
         # project's name
         sa.Column('name', sa.String(255), nullable=False),
         # description of the project
         sa.Column('description', sa.Text, nullable=True),
-        sa.Column('project_repository_uuid', sa.String(36),
-                  sa.ForeignKey('repositorys.uuid', ondelete='CASCADE'),
-                  nullable=False),
         sa.Column('profile', sa.String(255), nullable=False),
         sa.Column('profile_repository_uuid', sa.String(36),
                   sa.ForeignKey('repositorys.uuid', ondelete='CASCADE'),
@@ -216,10 +212,10 @@ class Model(base.DBConnectorComponent):
         sa.Column('buildbot_build_id', sa.Integer),
         sa.Column('status', sa.Enum('failed','completed','in-progress','waiting', 'warning'), nullable=False),
         sa.Column('requested', sa.Boolean, default=False),
-        sa.Column('created_at', sa.DateTime, nullable=True),
-        sa.Column('updated_at', sa.DateTime, nullable=True),
+        sa.Column('created_at', sa.Integer, nullable=True),
+        sa.Column('updated_at', sa.Integer, nullable=True),
         sa.Column('deleted', sa.Boolean, default=False),
-        sa.Column('deleted_at', sa.DateTime, nullable=True),
+        sa.Column('deleted_at', sa.Integer, nullable=True),
     )
 
     projects_pattern = sautils.Table(
@@ -247,16 +243,14 @@ class Model(base.DBConnectorComponent):
     categorys = sautils.Table(
         "categorys", metadata,
         sa.Column('uuid', sa.String(36), primary_key=True,
-                  default=lambda: str(uuid.uuid4())
-                  ),
+                  default=lambda: str(uuid.uuid4())),
         sa.Column('name', sa.String(255), nullable=False),
     )
 
     packages = sautils.Table(
         "packages", metadata,
         sa.Column('uuid', sa.String(36), primary_key=True,
-                  default=lambda: str(uuid.uuid4()),
-                  ),
+                  default=lambda: str(uuid.uuid4())),
         sa.Column('name', sa.String(255), nullable=False),
         sa.Column('category_uuid', sa.String(36),
                   sa.ForeignKey('categorys.uuid', ondelete='CASCADE'),
@@ -265,14 +259,13 @@ class Model(base.DBConnectorComponent):
                   sa.ForeignKey('repositorys.uuid', ondelete='CASCADE'),
                   nullable=False),
         sa.Column('deleted', sa.Boolean, default=False),
-        sa.Column('deleted_at', sa.DateTime, nullable=True),
+        sa.Column('deleted_at', sa.Integer, nullable=True),
     )
 
     versions = sautils.Table(
         "versions", metadata,
         sa.Column('uuid', sa.String(36), primary_key=True,
-                  default=lambda: str(uuid.uuid4()),
-                  ),
+                  default=lambda: str(uuid.uuid4())),
         sa.Column('name', sa.String(255), nullable=False),
         sa.Column('package_uuid', sa.String(36),
                   sa.ForeignKey('packages.uuid', ondelete='CASCADE'),
@@ -280,15 +273,14 @@ class Model(base.DBConnectorComponent):
         sa.Column('file_hash', sa.String(255), nullable=False),
         sa.Column('commit_id', sa.String(255), nullable=False),
         sa.Column('deleted', sa.Boolean, default=False),
-        sa.Column('deleted_at', sa.DateTime, nullable=True),
+        sa.Column('deleted_at', sa.Integer, nullable=True),
     )
 
     versions_keywords = sautils.Table(
         "versions_keywords", metadata,
         # unique id per project
         sa.Column('uuid', sa.String(36), primary_key=True,
-                  default=lambda: str(uuid.uuid4()),
-                  ),
+                  default=lambda: str(uuid.uuid4())),
         # project's name
         sa.Column('keyword_id', sa.Integer,
                   sa.ForeignKey('keywords.id', ondelete='CASCADE')),
@@ -308,7 +300,7 @@ class Model(base.DBConnectorComponent):
         sa.Column("uid", sa.Integer, primary_key=True),
 
         # identifier (nickname) for this user; used for display
-        sa.Column("identifier", sa.String(255), nullable=False),
+        sa.Column("email", sa.String(255), nullable=False),
 
         # username portion of user credentials for authentication
         sa.Column("bb_username", sa.String(128)),

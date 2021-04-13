@@ -194,7 +194,6 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             uuid=row.uuid,
             name=row.name,
             description=row.description,
-            project_repository_uuid=row.project_repository_uuid,
             profile=row.profile,
             profile_repository_uuid=row.profile_repository_uuid,
             keyword_id=row.keyword_id,

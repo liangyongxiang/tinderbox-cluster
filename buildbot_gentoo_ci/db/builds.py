@@ -23,13 +23,12 @@ import sqlalchemy as sa
 from twisted.internet import defer
 
 from buildbot.db import base
-from buildbot.util import epoch2datetime
 
 class BuildsConnectorComponent(base.DBConnectorComponent):
 
     #@defer.inlineCallbacks
     def addBuild(self, project_build_data):
-        created_at = epoch2datetime(int(self.master.reactor.seconds()))
+        created_at = int(self.master.reactor.seconds())
         def thd(conn, no_recurse=False):
             tbl = self.db.model.projects_builds
             # get the highest current number
@@ -56,7 +55,7 @@ class BuildsConnectorComponent(base.DBConnectorComponent):
 
     @defer.inlineCallbacks
     def setSatusBuilds(self, build_id, project_uuid, status):
-        updated_at = epoch2datetime(int(self.master.reactor.seconds()))
+        updated_at = int(self.master.reactor.seconds())
         def thd(conn, no_recurse=False):
         
                 tbl = self.db.model.projects_builds
@@ -69,7 +68,7 @@ class BuildsConnectorComponent(base.DBConnectorComponent):
 
     @defer.inlineCallbacks
     def setBuildbotBuildIdBuilds(self, build_id, project_uuid, buildbot_build_id):
-        updated_at = epoch2datetime(int(self.master.reactor.seconds()))
+        updated_at = int(self.master.reactor.seconds())
         def thd(conn, no_recurse=False):
         
                 tbl = self.db.model.projects_builds

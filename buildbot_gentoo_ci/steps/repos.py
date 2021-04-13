@@ -108,7 +108,7 @@ class CheckRepository(BuildStep):
         repo_path = yield pygit2.discover_repository(repository_path)
         print(repo_path)
         if repo_path is None:
-            yield pygit2.clone_repository(repository_data['mirror_url'], repository_path)
+            yield pygit2.clone_repository(repository_data['url'], repository_path)
             success = True
         else:
             repo = yield pygit2.Repository(repo_path)

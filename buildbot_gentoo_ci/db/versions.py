@@ -23,8 +23,6 @@ import sqlalchemy as sa
 from twisted.internet import defer
 
 from buildbot.db import base
-from buildbot.util import epoch2datetime
-from buildbot.util import datetime2epoch
 class VersionsConnectorComponent(base.DBConnectorComponent):
 
     @defer.inlineCallbacks
@@ -76,7 +74,7 @@ class VersionsConnectorComponent(base.DBConnectorComponent):
 
     @defer.inlineCallbacks
     def delVersion(self, uuid):
-        deleted_at = epoch2datetime(int(self.master.reactor.seconds()))
+        deleted_at = int(self.master.reactor.seconds())
         def thd(conn, no_recurse=False):
         
                 tbl = self.db.model.versions
@@ -111,5 +109,5 @@ class VersionsConnectorComponent(base.DBConnectorComponent):
             file_hash=row.file_hash,
             commit_id=row.commit_id,
             deleted=row.deleted,
-            deleted_at=datetime2epoch(row.deleted_at)
+            deleted_at=row.deleted_at
             )

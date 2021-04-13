@@ -95,7 +95,7 @@ class RepositorysConnectorComponent(base.DBConnectorComponent):
             uuid=row.uuid,
             name=row.name,
             description=row.description,
-            mirror_url=row.mirror_url,
+            url=row.url,
             auto=row.auto,
             enabled=row.enabled,
             ebuild=row.ebuild,

@@ -300,7 +300,7 @@ class UpdateRepos(BuildStep):
             repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(project_repository_data['repository_uuid'])
             repository_path = yield os.path.join(portage_repos_path, repository_data['name'])
             yield self.build.addStepsAfterCurrentStep([
-            steps.Git(repourl=repository_data['mirror_url'],
+            steps.Git(repourl=repository_data['url'],
                             mode='incremental',
                             submodules=True,
                             workdir=os.path.join(repository_path, ''))
