@@ -18,6 +18,7 @@ from twisted.python import log
 from buildbot.process.buildstep import BuildStep
 from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
+from buildbot.process.results import SKIPPED
 from buildbot.plugins import steps
 
 from buildbot_gentoo_ci.steps import master as master_steps
@@ -367,6 +368,9 @@ class CheckPathLocal(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        self.repository_linkname = self.gentooci.config.project['repository_basedir']
+        self.repository_basedir2 = '/home/repos2/'
         self.portage_path = yield os.path.join('etc', 'portage')
         self.profile_path = yield os.path.join(self.portage_path, 'make.profile')
         self.repos_path = yield os.path.join(self.portage_path, 'repos.conf')
@@ -381,6 +385,8 @@ class CheckPathLocal(BuildStep):
                 ]:
             if not os.path.isdir(x):
                 os.makedirs(x)
+        if not os.path.islink(self.repository_linkname):
+            os.symlink(self.repository_basedir2, self.repository_linkname)
         return SUCCESS
 
 class SetMakeProfileLocal(BuildStep):
@@ -399,7 +405,7 @@ class SetMakeProfileLocal(BuildStep):
     def run(self):
         parent_path = yield os.path.join('etc','portage', 'make.profile', 'parent')
         if os.path.isfile(parent_path):
-            return SUCCESS
+            return SKIPPED
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.repository_basedir = self.gentooci.config.project['repository_basedir']
         makeprofiles_paths = []
