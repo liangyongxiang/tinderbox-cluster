@@ -75,13 +75,13 @@ class ParserBuildLog(BuildStep):
                     match = False
             if match:
                 self.log_search_pattern_list.append(project_pattern)
-        print(self.log_search_pattern_list)
 
     def search_buildlog(self, tmp_index):
         # get text line to search
         text_line = self.logfile_text_dict[tmp_index]
         # loop true the pattern list for match
         for search_pattern in self.log_search_pattern_list:
+            search_hit = False
             # we add all line that start with ' * ' as info
             # we add all line that start with '>>>' but not '>>> /' as info
             if text_line.startswith(' * ') or (text_line.startswith('>>>') and not text_line.startswith('>>> /')):
@@ -89,63 +89,57 @@ class ParserBuildLog(BuildStep):
                 self.summery_dict[tmp_index]['text'] = text_line
                 self.summery_dict[tmp_index]['type'] = 'info'
                 self.summery_dict[tmp_index]['status'] = 'info'
-            if re.search(search_pattern['search'], text_line):
+                self.summery_dict[tmp_index]['search_pattern_id'] = 0
+            if search_pattern['search_type'] == 'in':
+                if search_pattern['search'] in text_line:
+                    search_hit = True
+            if search_pattern['search_type'] == 'startswith':
+                if text_line.startswith(search_pattern['search']):
+                    search_hit = True
+            if search_pattern['search_type'] == 'endswith':
+                if text_line.endswith(search_pattern['search']):
+                    search_hit = True
+            if search_pattern['search_type'] == 'search':
+                if search_pattern['search'] in text_line:
+                    search_hit = True
+            if search_hit:
+                print(text_line)
+                print(search_pattern['search'])
                 self.summery_dict[tmp_index] = {}
                 self.summery_dict[tmp_index]['text'] = text_line
                 self.summery_dict[tmp_index]['type'] = search_pattern['type']
                 self.summery_dict[tmp_index]['status'] = search_pattern['status']
+                self.summery_dict[tmp_index]['search_pattern_id'] = search_pattern['id']
                 # add upper text lines if requested
                 # max 10
-                if search_pattern['start'] != 0:
-                    i = tmp_index
-                    i_start = i - search_pattern['start']
-                    match = True
-                    while match:
-                        i = i - 1
-                        if i < 0 or i < i_start:
-                            match = False
-                        else:
-                            self.summery_dict[i] = {}
-                            self.summery_dict[i]['text'] = self.logfile_text_dict[i]
-                            self.summery_dict[i]['type'] = search_pattern['type']
-                            self.summery_dict[i]['status'] = 'info'
+            if search_pattern['start'] != 0 and search_hit:
+                i = tmp_index
+                i_start = i - search_pattern['start']
+                match = True
+                while match:
+                    i = i - 1
+                    if i < 0 or i < i_start:
+                        match = False
+                    else:
+                        self.summery_dict[i] = {}
+                        self.summery_dict[i]['text'] = self.logfile_text_dict[i]
+                        self.summery_dict[i]['type'] = search_pattern['type']
+                        self.summery_dict[i]['status'] = 'info'
                 # add lower text lines if requested
                 # max 10
-                if search_pattern['end'] != 0:
-                    i = tmp_index
-                    i_end = i + search_pattern['end']
-                    match = True
-                    while match:
-                        i = i + 1
-                        if i > self.max_text_lines or i > i_end:
-                            match = False
-                        else:
-                            self.summery_dict[i] = {}
-                            self.summery_dict[i]['text'] = self.logfile_text_dict[i]
-                            self.summery_dict[i]['type'] = search_pattern['type']
-                            self.summery_dict[i]['status'] = 'info'
-                # add text lines if requested that we need to search for the end
-                # max 10
-                if search_pattern['search_end'] is not None:
-                    i = tmp_index
-                    match = True
-                    while match:
-                        i = i + 1
-                        if i > self.max_text_lines:
-                            match = False
-                        if re.search(search_pattern['search_end'], self.logfile_text_dict[i]):
-                            if not i + 1 > self.max_text_lines or not re.search(search_pattern['search_end'], self.logfile_text_dict[i + 1]):
-                                self.summery_dict[i] = {}
-                                self.summery_dict[i]['text'] = self.logfile_text_dict[i]
-                                self.summery_dict[i]['type'] = search_pattern['type']
-                                self.summery_dict[i]['status'] = 'info'
-                            else:
-                                match = False
-                        else:
-                            self.summery_dict[i] = {}
-                            self.summery_dict[i]['text'] = self.logfile_text_dict[i]
-                            self.summery_dict[i]['type'] = search_pattern['type']
-                            self.summery_dict[i]['status'] = 'info'
+            if search_pattern['end'] != 0 and search_hit:
+                i = tmp_index
+                i_end = i + search_pattern['end']
+                match = True
+                while match:
+                    i = i + 1
+                    if i > self.max_text_lines or i > i_end:
+                        match = False
+                    else:
+                        self.summery_dict[i] = {}
+                        self.summery_dict[i]['text'] = self.logfile_text_dict[i]
+                        self.summery_dict[i]['type'] = search_pattern['type']
+                        self.summery_dict[i]['status'] = 'info'
 
     @defer.inlineCallbacks
     def run(self):

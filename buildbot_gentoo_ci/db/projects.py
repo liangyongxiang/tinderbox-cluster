@@ -266,15 +266,11 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             )
 
     def _row2dict_projects_pattern(self, conn, row):
-        if row.search_end == '':
-            search_end = None
-        else:
-            search_end = row.search_end
         return dict(
             id=row.id,
             project_uuid=row.project_uuid,
             search=row.search,
-            search_end=search_end,
+            search_type=row.search_type,
             start=row.start,
             end=row.end,
             status=row.status,

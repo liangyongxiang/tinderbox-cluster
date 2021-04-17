@@ -225,11 +225,11 @@ class Model(base.DBConnectorComponent):
                   sa.ForeignKey('projects.uuid', ondelete='CASCADE'),
                   nullable=False),
         sa.Column('search', sa.String(50), nullable=False),
-        sa.Column('search_end', sa.String(50), nullable=True),
         sa.Column('start', sa.Integer, default=0),
         sa.Column('end', sa.Integer, default=0),
         sa.Column('status', sa.Enum('info', 'warning', 'ignore', 'error'), default='info'),
         sa.Column('type', sa.Enum('info', 'qa', 'compile', 'configure', 'install', 'postinst', 'prepare', 'setup', 'test', 'unpack', 'ignore'), default='info'),
+        sa.Column('search_type', sa.Enum('in', 'startswith', 'endswith', 'search'), default='in'),
     )
 
     keywords = sautils.Table(
