@@ -49,7 +49,7 @@ class CheckC(BuildStep):
     @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        self.category = yield self.getProperty("cpv").split('/')[0]
+        self.category = self.getProperty("change_data")['cp'].split('/')[0]
         print(self.category)
         self.category_data = yield self.gentooci.db.categorys.getCategoryByName(self.category)
         print(self.category_data)

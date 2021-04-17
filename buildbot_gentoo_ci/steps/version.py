@@ -15,6 +15,7 @@ from twisted.python import log
 from buildbot.process.buildstep import BuildStep
 from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
+from buildbot.process.results import WARNINGS
 from buildbot.plugins import steps
 
 from buildbot_gentoo_ci.steps import portage as portage_steps
@@ -36,6 +37,7 @@ class GetVData(BuildStep):
         # set cwd to builddir
         yield os.chdir(self.getProperty("builddir"))
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        print(self.getProperty("cpv"))
         self.version = yield cpv_getversion(self.getProperty("cpv"))
         print(self.version)
         self.old_version_data = yield self.gentooci.db.versions.getVersionByName(self.version, self.getProperty("package_data")['uuid'])
@@ -90,8 +92,8 @@ class GetCommitdata(BuildStep):
 
     #@defer.inlineCallbacks
     def run(self):
-        print(self.getProperty("revision_data"))
-        self.setProperty('commit_id', self.getProperty("revision_data")['revision'], 'commit_id')
+        print(self.getProperty("change_data"))
+        self.setProperty('commit_id', self.getProperty("change_data")['revision'], 'commit_id')
         return SUCCESS
 
 class AddVersionKeyword(BuildStep):
@@ -243,32 +245,30 @@ class CheckV(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
-        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        self.old_version_data = self.getProperty("old_version_data")
-        self.ebuild_file = self.getProperty("ebuild_file")
         addStepVData = []
-        print(self.ebuild_file)
-        print(self.old_version_data)
+        print(self.getProperty("ebuild_file"))
+        print(self.getProperty("old_version_data"))
         print(self.getProperty("ebuild_file_hash"))
-        if self.getProperty("ebuild_file") is None and self.getProperty("old_version_data") is not None:
-            addStepVData.append(TriggerBuildCheck())
-            addStepVData.append(DeleteOldVersion())
-        if self.getProperty("ebuild_file") is not None and self.getProperty("old_version_data") is not None:
-            if self.getProperty("ebuild_file_hash") != self.getProperty("old_version_data")['file_hash']:
-                addStepVData.append(GetCommitdata())
-                #FIXME: use GetAuxMetadata insted of bugy SetEnvForEbuildSH
-                #addStepVData.append(portage_steps.SetEnvForEbuildSH())
-                addStepVData.append(portage_steps.GetAuxMetadata())
-                addStepVData.append(AddVersion())
-                addStepVData.append(AddVersionKeyword())
+        if self.getProperty("ebuild_file") is None:
+            if self.getProperty("old_version_data") is None:
+                return WARNINGS
+            else:
                 addStepVData.append(TriggerBuildCheck())
                 addStepVData.append(DeleteOldVersion())
-            else:
-                return SUCCESS
-        if self.getProperty("ebuild_file") is not None and self.getProperty("old_version_data") is None:
+        else:
+            if self.getProperty("old_version_data") is not None:
+                if self.getProperty("ebuild_file_hash") == self.getProperty("old_version_data")['file_hash']:
+                    return WARNINGS
+                else:
+                    addStepVData.append(DeleteOldVersion())
+            # setup /etc/portage
+            addStepVData.append(portage_steps.CheckPathLocal())
+            addStepVData.append(portage_steps.SetMakeProfileLocal())
+            addStepVData.append(portage_steps.SetReposConfLocal())
+            addStepVData.append(portage_steps.SetMakeConfLocal())
+            # get commit data
             addStepVData.append(GetCommitdata())
-            #FIXME: use GetAuxMetadata insted of bugy SetEnvForEbuildSH
-            #addStepVData.append(portage_steps.SetEnvForEbuildSH())
+            # get ebuild aux metadata
             addStepVData.append(portage_steps.GetAuxMetadata())
             addStepVData.append(AddVersion())
             addStepVData.append(AddVersionKeyword())

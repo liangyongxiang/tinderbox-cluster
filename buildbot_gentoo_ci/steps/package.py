@@ -57,7 +57,7 @@ class CheckP(BuildStep):
     @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        self.package = yield catpkgsplit(self.getProperty("cpv"))[1]
+        self.package = self.getProperty("change_data")['cp'].split('/')[1]
         print(self.package)
         self.package_data = yield self.gentooci.db.packages.getPackageByName(self.package,
                                                                             self.getProperty("category_data")['uuid'],
@@ -86,20 +86,22 @@ class TriggerCheckForV(BuildStep):
     @defer.inlineCallbacks
     def run(self):
         addStepUpdateVData = []
-        addStepUpdateVData.append(
-                    steps.Trigger(
-                        schedulerNames=['update_v_data'],
-                        waitForFinish=False,
-                        updateSourceStamp=False,
-                        set_properties={
-                            'cpv' : self.getProperty("cpv"),
-                            'package_data' : self.getProperty("package_data"),
-                            'repository_data' : self.getProperty("repository_data"),
-                            'category_data' : self.getProperty("category_data"),
-                            'revision_data' : self.getProperty("revision_data"),
-                            'project_data' : self.getProperty("project_data"),
-                        }
-                    )
+        for cpv in self.getProperty("change_data")['cpvs']:
+            print(cpv)
+            addStepUpdateVData.append(
+                steps.Trigger(
+                    schedulerNames=['update_v_data'],
+                    waitForFinish=False,
+                    updateSourceStamp=False,
+                    set_properties={
+                        'cpv' : cpv,
+                        'package_data' : self.getProperty("package_data"),
+                        'repository_data' : self.getProperty("repository_data"),
+                        'category_data' : self.getProperty("category_data"),
+                        'change_data' : self.getProperty("change_data"),
+                        'project_data' : self.getProperty("project_data"),
+                    }
                 )
+            )
         yield self.build.addStepsAfterCurrentStep(addStepUpdateVData)
         return SUCCESS

@@ -21,14 +21,6 @@ def update_db_check():
     f.addStep(update_db.GetDataGentooCiProject())
     # update the repos
     f.addStep(update_db.TriggerUpdateRepositorys())
-    # Check if needed path is there
-    f.addStep(portage.CheckPathLocal())
-    # setup the profile
-    f.addStep(portage.SetMakeProfileLocal())
-    # setup repos.conf dir
-    f.addStep(portage.SetReposConfLocal())
-    # setup make.conf
-    f.addStep(portage.SetMakeConfLocal())
     # Make a for loop and trigger new builders with cpv from git_changes
     #   return cpv, repository, project_data
     f.addStep(update_db.TriggerCheckForCPV())

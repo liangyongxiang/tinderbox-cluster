@@ -407,11 +407,12 @@ class SetMakeProfileLocal(BuildStep):
         if os.path.isfile(parent_path):
             return SKIPPED
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        self.profile_repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(self.getProperty('project_data')['profile_repository_uuid'])
         self.repository_basedir = self.gentooci.config.project['repository_basedir']
         makeprofiles_paths = []
         makeprofiles_data = yield self.gentooci.db.projects.getAllProjectPortageByUuidAndDirectory(self.getProperty('project_data')['uuid'], 'make.profile')
         for makeprofile in makeprofiles_data:
-            makeprofile_path = yield os.path.join(self.repository_basedir, self.getProperty("profile_repository_data")['name'], 'profiles', makeprofile['value'], '')
+            makeprofile_path = yield os.path.join(self.repository_basedir, self.profile_repository_data['name'], 'profiles', makeprofile['value'], '')
             makeprofiles_paths.append('../../../' + makeprofile_path)
         yield WriteTextToFile(parent_path, makeprofiles_paths)
         return SUCCESS

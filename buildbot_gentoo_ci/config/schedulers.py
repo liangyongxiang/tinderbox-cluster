@@ -12,7 +12,7 @@ def builderUpdateDbNames(props):
     return list(builders)
 
 @util.renderer
-def gitUpdateDb(props):
+def getGitChanges(props):
     k = props.changes[0]
     change_data = {}
     print(k)
@@ -23,7 +23,6 @@ def gitUpdateDb(props):
             p = v.split('/')[1]
             pv = v.split('/')[2][:-7]
             cpv = c + '/' + pv
-            print(cpv)
             change_data['cp'] = c + '/' + p
             change_data['cpvs'].append(cpv)
     if k['repository'].endswith('.git'):
@@ -35,16 +34,15 @@ def gitUpdateDb(props):
     change_data['comments'] = k['comments']
     change_data['revision'] = k['revision']
     change_data['timestamp'] =k['when_timestamp']
-    print(change_data)
     return change_data
 
 def gentoo_schedulers():
     scheduler_update_db = schedulers.SingleBranchScheduler(
         name='scheduler_update_db',
         treeStableTimer=0,
-        properties = {
-                        'git_change' : gitUpdateDb,
-                    },
+        properties = dict(
+                        change_data = getGitChanges
+                        ),
         builderNames = builderUpdateDbNames,
         change_filter=util.ChangeFilter(branch='master'),
     )
