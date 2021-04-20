@@ -86,21 +86,35 @@ def PersOutputOfEmerge(rc, stdout, stderr):
     # split the lines
     #FIXME: Handling of stderr output
     stderr_line_list = []
+    emerge_output['change_use'] = False
     for line in stderr.split('\n'):
         if 'Change USE:' in line:
             line_list = line.split(' ')
             change_use_list = []
             # get cpv
             cpv_split = line_list[1].split(':')
-            change_use_list.append(cpv_split[0])
+            change_use = {}
             # add use flags
             if line_list[4].startswith('+') or line_list[4].startswith('-'):
-                # we only support one for now
+                # we only support tre for now
                 if line_list[4].endswith(')'):
                     change_use_list.append(line_list[4].replace(')', ''))
+                elif line_list[5].endswith(')'):
+                    change_use_list.append(line_list[4])
+                    change_use_list.append(line_list[5].replace(')', ''))
+                elif line_list[6].endswith(')'):
+                    change_use_list.append(line_list[4])
+                    change_use_list.append(line_list[5])
+                    change_use_list.append(line_list[6].replace(')', ''))
+                elif not line_list[6].endswith(')'):
+                    change_use_list.append(line_list[4])
+                    change_use_list.append(line_list[5])
+                    change_use_list.append(line_list[6])
                 else:
                     change_use_list = False
-            emerge_output['change_use'] = change_use_list
+            if change_use_list:
+                change_use[cpv_split[0]] = change_use_list
+                emerge_output['change_use'] = change_use
         err_line_list = []
         if line.startswith(' * '):
             if line.endswith('.log.gz'):
@@ -226,7 +240,7 @@ class SetupPropertys(BuildStep):
     
     name = 'SetupPropertys'
     description = 'Running'
-    descriptionDone = 'Ran'
+    #descriptionDone = 'Ran'
     descriptionSuffix = None
     haltOnFailure = True
     flunkOnFailure = True
@@ -240,6 +254,7 @@ class SetupPropertys(BuildStep):
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         print('build this %s' % self.getProperty("cpv"))
+        self.descriptionDone = 'Building this %s' % self.getProperty("cpv")
         self.setProperty('portage_repos_path', self.portage_repos_path, 'portage_repos_path')
         projectrepository_data = self.getProperty('projectrepository_data')
         print(projectrepository_data)
@@ -550,6 +565,7 @@ class CheckEmergeLogs(BuildStep):
         # update package.* if needed and rerun pre-build max 3 times
         if self.step == 'pre-build':
             print(emerge_output)
+            # this should be set in the config
             if self.getProperty('rerun') <= 3:
                 # when we need to change use. we could rerun pre-build with
                 # --autounmask-use=y --autounmask-write=y --autounmask-only=y
@@ -560,21 +576,21 @@ class CheckEmergeLogs(BuildStep):
                     separator = '\n'
                     separator2 = ' '
                     change_use_list = []
-                    cpv = emerge_output['change_use'][0]
-                    c = yield catpkgsplit(cpv)[0]
-                    p = yield catpkgsplit(cpv)[1]
-                    change_use_list.append(c + '/' + p)
-                    # we only support one use
-                    use_flag = emerge_output['change_use'][1]
-                    if use_flag.startswith('+'):
-                        change_use_list.append(use_flag.replace('+', ''))
-                    else:
-                        change_use_list.append(use_flag)
+                    for cpv, v in emerge_output['change_use'].items():
+                        c = yield catpkgsplit(cpv)[0]
+                        p = yield catpkgsplit(cpv)[1]
+                        change_use_list.append(c + '/' + p)
+                        for use_flag in v:
+                            if use_flag.startswith('+'):
+                                change_use_list.append(use_flag.replace('+', ''))
+                            else:
+                                change_use_list.append(use_flag)
                     change_use_string = separator2.join(change_use_list)
                     self.aftersteps_list.append(
                         steps.StringDownload(change_use_string + separator,
-                                workerdest='zz_autouse' + str(self.getProperty('rerun')),
-                                workdir='/etc/portage/package.use/')
+                            workerdest='zz_autouse' + str(self.getProperty('rerun')),
+                            workdir='/etc/portage/package.use/'
+                            )
                         )
                     # rerun
                     self.aftersteps_list.append(RunEmerge(step='pre-build'))
