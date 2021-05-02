@@ -252,7 +252,29 @@ class setBuildbotLog(BuildStep):
         # add line for line
         for line in self.getProperty('summary_log_list'):
             yield log.addStdout(line + '\n')
-        # add emerge info log
+        return SUCCESS
+
+class setEmergeInfoLog(BuildStep):
+
+    name = 'setEmergeInfoLog'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = False
+    flunkOnFailure = True
+    warnOnWarnings = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        #setup the log
+        log = yield self.addLog('emerge_info')
+        #FIXME: add emerge info to db
+        # add line for line
+        for line in self.getProperty('emerge_info'):
+            yield log.addStdout(line + '\n')
         return SUCCESS
 
 class setBuildStatus(BuildStep):

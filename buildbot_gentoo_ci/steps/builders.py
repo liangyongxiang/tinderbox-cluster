@@ -164,6 +164,17 @@ def PersOutputOfDepclean(rc, stdout, stderr):
         'depclean_output' : depclean_output
         }
 
+def PersOutputOfEmergeInfo(rc, stdout, stderr):
+    emerge_info_output = {}
+    emerge_info_output['rc'] = rc
+    emerge_info_list = []
+    for line in stdout.split('\n'):
+        emerge_info_list.append(line)
+    emerge_info_output['emerge_info'] = emerge_info_list
+    return {
+        'emerge_info_output' : emerge_info_output
+        }
+
 class TriggerRunBuildRequest(BuildStep):
     
     name = 'TriggerRunBuildRequest'
@@ -650,7 +661,8 @@ class CheckEmergeLogs(BuildStep):
                             'pkg_check_log_data' : self.getProperty("pkg_check_log_data"),
                             'repository_data' : self.getProperty('repository_data'),
                             'faild_cpv' : faild_cpv,
-                            'step' : self.step
+                            'step' : self.step,
+                            'emerge_info' : self.getProperty('emerge_info_output')['emerge_info']
                         }
                     ))
         if not self.step is None and self.aftersteps_list != []:
@@ -761,6 +773,35 @@ class CheckPkgCheckLogs(BuildStep):
         self.setProperty('pkg_check_log_data', None, 'pkg_check_log_data')
         return SUCCESS
 
+class RunEmergeInfo(BuildStep):
+
+    name = 'RunEmergeInfo'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        aftersteps_list = []
+        shell_commad_list = [
+                    'emerge',
+                    ]
+        shell_commad_list.append('--info')
+        aftersteps_list.append(
+                steps.SetPropertyFromCommandNewStyle(
+                        command=shell_commad_list,
+                        strip=True,
+                        extract_fn=PersOutputOfEmergeInfo,
+                        workdir='/',
+                        timeout=None
+                ))
+        yield self.build.addStepsAfterCurrentStep(aftersteps_list)
+        return SUCCESS
+
 class RunBuild(BuildStep):
 
     name = 'RunBuild'
@@ -780,6 +821,7 @@ class RunBuild(BuildStep):
             # trigger pars_build_log if we have any logs to check
             return SUCCESS
         aftersteps_list = []
+        aftersteps_list.append(RunEmergeInfo())
         aftersteps_list.append(RunEmerge(step='pre-build'))
         aftersteps_list.append(RunEmerge(step='build'))
         self.setProperty('depclean', False, 'depclean')
