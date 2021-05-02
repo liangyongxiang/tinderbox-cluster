@@ -6,10 +6,11 @@ from buildbot.reporters.generators.build import BuildStatusGenerator
 from buildbot.reporters.message import MessageFormatter
 
 from buildbot_gentoo_ci.reporters import irc
-#FIXME can colors be added here or is it needed in IRCStatusPush
-irc_template = '''\
-Buildbot: {{ build['properties']['cpv'][0] }} repo/{{ projects }} {{ build['properties']['revision'][0] }} \
-{{ build['properties']['owners'][0] }} {{ build['properties']['project_data'][0]['name'] }} {{ summary }} {{ build_url }}\
+irc_template = '''{% set resultsList = ["\x0303SUCCESS", "\x0308WARNINGS", "\x0304FAILURE"] %}\
+Buildbot: {{ "\x02" }}{{ build['properties']['cpv'][0] }}{{ "\x02" }} {{ "\x0303" }}repo/{{ projects }}{{ "\x03" }} \
+{{ build['properties']['revision'][0]|truncate(10, True) }} {{ "\x0302" }}{{ build['properties']['owners'][0][0] }}{{ "\x03" }} \
+{{ build['properties']['project_data'][0]['name'] }} \
+{{ "\x02" }}{{ "Build: "}}{{ resultsList[build['results']] }}{{ "\x03" }}{{ "\x02" }} {{ "\x0312" }}{{ build_url }}{{ "\x03" }}\
 '''
 
 def ircGenerators():
@@ -34,7 +35,6 @@ def ircGenerators():
 #FIXME:
 # server, nick channel should be set in config
 irc_reporter = irc.IRCStatusPush("irc.freenode.net", "gentoo_ci_test",
-                 useColors=False,
                  channels=[{"channel": "#gentoo-ci"},
                         ],
                  generators=ircGenerators()

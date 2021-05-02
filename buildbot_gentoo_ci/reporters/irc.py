@@ -99,8 +99,8 @@ class IRCStatusPush(ReporterBase):
     def reconfigService(self, host, nick, channels, pm_to_nicks=None, port=6667,
                         allowForce=None, tags=None, password=None, generators=None,
                         showBlameList=True, useRevisions=False,
-                        useSSL=False, lostDelay=None, failedDelay=None, useColors=True,
-                        allowShutdown=None, noticeOnChannel=False, authz=None, context=None,**kwargs
+                        useSSL=False, lostDelay=None, failedDelay=None, useColors=False,
+                        allowShutdown=None, noticeOnChannel=False, authz=None, **kwargs
                         ):
 
         # need to stash these so we can detect changes later
@@ -162,11 +162,10 @@ class IRCStatusPush(ReporterBase):
                 message_formatter=formatter
             )
         ]
-    #FIXME: add colors and notice support
+    #FIXME: add notice support
     def sendMessage(self, reports):
         body = reports[0].get('body', None)
         print(body)
-        print(assembleFormattedText(A.normal[body]))
         for c in self.join_channels:
             if isinstance(c, dict):
                 channel = c.get('channel', None)
