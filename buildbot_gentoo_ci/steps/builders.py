@@ -327,8 +327,9 @@ class UpdateRepos(BuildStep):
             repository_path = yield os.path.join(portage_repos_path, repository_data['name'])
             yield self.build.addStepsAfterCurrentStep([
             steps.Git(repourl=repository_data['url'],
-                            mode='incremental',
+                            mode='full',
                             submodules=True,
+                            alwaysUseLatest=True,
                             workdir=os.path.join(repository_path, ''))
             ])
         return SUCCESS
