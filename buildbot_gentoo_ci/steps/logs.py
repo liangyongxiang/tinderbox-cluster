@@ -18,6 +18,8 @@ from buildbot.process.results import FAILURE
 from buildbot.process.results import WARNINGS
 from buildbot.plugins import steps
 
+from buildbot_gentoo_ci.steps import minio
+
 class SetupPropertys(BuildStep):
     
     name = 'SetupPropertys'
@@ -275,6 +277,32 @@ class setEmergeInfoLog(BuildStep):
         # add line for line
         for line in self.getProperty('emerge_info'):
             yield log.addStdout(line + '\n')
+        return SUCCESS
+
+class Upload(BuildStep):
+
+    name = 'Upload'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = False
+    flunkOnFailure = True
+    warnOnWarnings = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        if self.getProperty('faild_cpv'):
+            log_cpv = self.getProperty('log_build_data')[self.getProperty('faild_cpv')]
+        else:
+            log_cpv = self.getProperty('log_build_data')[self.getProperty('cpv')]
+        bucket = self.getProperty('project_data')['uuid'] + '-' + 'logs'
+        file_path = yield os.path.join(self.master.basedir, 'cpv_logs', log_cpv['full_logname'])
+        aftersteps_list = []
+        aftersteps_list.append(minio.putFileToMinio(file_path, log_cpv['full_logname'], bucket))
+        yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS
 
 class setBuildStatus(BuildStep):
