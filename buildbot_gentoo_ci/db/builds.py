@@ -40,7 +40,6 @@ class BuildsConnectorComponent(base.DBConnectorComponent):
                 q = tbl.insert()
                 r = conn.execute(q, dict(project_uuid=project_build_data['project_uuid'],
                                          version_uuid=project_build_data['version_uuid'],
-                                         buildbot_build_id=project_build_data['buildbot_build_id'],
                                          status=project_build_data['status'],
                                          requested=project_build_data['requested'],
                                          created_at=created_at,
