@@ -37,8 +37,10 @@ def PersOutputOfEmerge(rc, stdout, stderr):
             # action [ N ] stuff
             subdict['action'] = line[8:15].replace(' ', '')
             # cpv
-            #FIXME: We my have more then one spece betvine ] and cpv
-            cpv_split = re.search('] (.+?) ', line).group(1).split(':')
+            # We my have more then one spece betvine ] and cpv
+            cpv_line = re.sub(' +', ' ', line)
+            # get cpv
+            cpv_split = re.search('] (.+?) ', cpv_line).group(1).split(':')
             print(cpv_split)
             cpv = cpv_split[0]
             # repository
