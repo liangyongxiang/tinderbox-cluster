@@ -37,7 +37,7 @@ class SetupPropertys(BuildStep):
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         project_data = yield self.gentooci.db.projects.getProjectByUuid(self.getProperty('project_build_data')['project_uuid'])
-        default_project_data = yield self.gentooci.db.projects.getProjectByName(self.gentooci.config.project['project'])
+        default_project_data = yield self.gentooci.db.projects.getProjectByName(self.gentooci.config.project['project']['update_db'])
         version_data = yield self.gentooci.db.versions.getVersionByUuid(self.getProperty('project_build_data')['version_uuid'])
         self.setProperty("project_data", project_data, 'project_data')
         self.setProperty("default_project_data", default_project_data, 'default_project_data')

@@ -326,7 +326,7 @@ class SetEnvDefault(BuildStep):
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         project_data = self.getProperty('project_data')
-        default_project_data = yield self.gentooci.db.projects.getProjectByName(self.gentooci.config.project['project'])
+        default_project_data = yield self.gentooci.db.projects.getProjectByName(self.gentooci.config.project['project']['update_db'])
         aftersteps_list = []
         separator1 = '\n'
         separator2 = ' '

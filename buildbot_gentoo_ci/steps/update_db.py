@@ -19,7 +19,7 @@ class GetDataGentooCiProject(BuildStep):
     @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        self.project_data = yield self.gentooci.db.projects.getProjectByName(self.gentooci.config.project['project'])
+        self.project_data = yield self.gentooci.db.projects.getProjectByName(self.gentooci.config.project['project']['update_db'])
         if self.project_data is None:
             log.err('No data for project in the database')
             return FAILURE
