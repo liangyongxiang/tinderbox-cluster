@@ -189,6 +189,17 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
         res = yield self.db.pool.do(thd)
         return res
 
+    @defer.inlineCallbacks
+    def getWorkersByProjectUuid(self, uuid):
+        def thd(conn):
+            tbl = self.db.model.projects_workers
+            q = tbl.select()
+            q = q.where(tbl.c.project_uuid == uuid)
+            return [self._row2dict_projects_workers(conn, row)
+                for row in conn.execute(q).fetchall()]
+        res = yield self.db.pool.do(thd)
+        return res
+
     def _row2dict(self, conn, row):
         return dict(
             uuid=row.uuid,
@@ -215,6 +226,13 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             auto=row.auto,
             pkgcheck=pkgcheck,
             build=row.build
+            )
+
+    def _row2dict_projects_workers(self, conn, row):
+        return dict(
+            id=row.id,
+            project_uuid=row.project_uuid,
+            worker_uuid=row.worker_uuid,
             )
 
     def _row2dict_projects_portage(self, conn, row):

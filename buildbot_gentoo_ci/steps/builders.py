@@ -186,7 +186,10 @@ class TriggerRunBuildRequest(BuildStep):
     haltOnFailure = True
     flunkOnFailure = True
 
-    def __init__(self, **kwargs):
+    def __init__(self, projectrepository_data, use_data, project_data, **kwargs):
+        self.projectrepository_data = projectrepository_data
+        self.use_data = use_data
+        self.project_data = project_data
         super().__init__(**kwargs)
 
     @defer.inlineCallbacks
@@ -194,7 +197,7 @@ class TriggerRunBuildRequest(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         if self.getProperty('project_build_data') is None:
             project_build_data = {}
-            project_build_data['project_uuid'] = self.getProperty('project_data')['uuid']
+            project_build_data['project_uuid'] = self.project_data['uuid']
             project_build_data['version_uuid'] = self.getProperty("version_data")['uuid']
             project_build_data['status'] = 'waiting'
             project_build_data['requested'] = False
@@ -210,8 +213,8 @@ class TriggerRunBuildRequest(BuildStep):
                         set_properties={
                             'cpv' : self.getProperty("cpv"),
                             'version_data' : self.getProperty("version_data"),
-                            'projectrepository_data' : self.getProperty('projectrepository_data'),
-                            'use_data' : self.getProperty("use_data"),
+                            'projectrepository_data' : self.projectrepository_data,
+                            'use_data' : self.use_data,
                             'fullcheck' : self.getProperty("fullcheck"),
                             'project_build_data' : project_build_data
                         }
@@ -239,14 +242,17 @@ class GetProjectRepositoryData(BuildStep):
             return SUCCESS
         # for loop to get all the projects that have the repository
         for projectrepository_data in self.projectrepositorys_data:
+            print(projectrepository_data)
             # get project data
             project_data = yield self.gentooci.db.projects.getProjectByUuid(projectrepository_data['project_uuid'])
+            #FIXME: check if we have working workers
+            project_workers = yield self.gentooci.db.projects.getWorkersByProjectUuid(project_data['uuid'])
+            if project_workers == []:
+                print('No Workers on this profile')
+                continue
             # check if auto, enabled and not in config.project['project']
-            if project_data['auto'] is True and project_data['enabled'] is True and project_data['name'] != self.gentooci.config.project['project']:
+            if project_data['auto'] is True and project_data['enabled'] is True and project_data['name'] != self.gentooci.config.project['project']['update_db']:
                 # set Property projectrepository_data so we can use it in the trigger
-                self.setProperty('projectrepository_data', projectrepository_data, 'projectrepository_data')
-                self.setProperty('use_data', None, 'use_data')
-                self.setProperty('project_data', project_data, 'project_data')
                 # get name o project keyword
                 project_keyword_data = yield self.gentooci.db.keywords.getKeywordById(project_data['keyword_id'])
                 # if not * (all keywords)
@@ -258,7 +264,11 @@ class GetProjectRepositoryData(BuildStep):
                             version_keywords_data = self.getProperty("version_keyword_dict")[project_keyword_data['name']]
                             # if match trigger BuildRequest on cpv
                             if project_data['status'] == version_keywords_data['status']:
-                                yield self.build.addStepsAfterCurrentStep([TriggerRunBuildRequest()])
+                                yield self.build.addStepsAfterCurrentStep([TriggerRunBuildRequest(
+                                    projectrepository_data = projectrepository_data,
+                                    use_data = None,
+                                    project_data = project_data
+                                )])
         return SUCCESS
 
 class SetupPropertys(BuildStep):

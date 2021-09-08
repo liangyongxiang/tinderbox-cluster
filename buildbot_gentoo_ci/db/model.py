@@ -232,6 +232,17 @@ class Model(base.DBConnectorComponent):
         sa.Column('search_type', sa.Enum('in', 'startswith', 'endswith', 'search'), default='in'),
     )
 
+    projects_workers = sautils.Table(
+        "projects_workers", metadata,
+        sa.Column('id', sa.Integer, primary_key=True),
+        sa.Column('project_uuid', sa.String(36),
+                  sa.ForeignKey('projects.uuid', ondelete='CASCADE'),
+                  nullable=False),
+        sa.Column('worker_uuid', sa.String(36),
+                  sa.ForeignKey('workers.uuid', ondelete='CASCADE'),
+                  nullable=False),
+    )
+
     keywords = sautils.Table(
         "keywords", metadata,
         # unique uuid per keyword
@@ -287,6 +298,15 @@ class Model(base.DBConnectorComponent):
         sa.Column('version_uuid', sa.String(36),
                   sa.ForeignKey('versions.uuid', ondelete='CASCADE')),
         sa.Column('status', sa.Enum('stable','unstable','negative','all'), nullable=False),
+    )
+
+    workers = sautils.Table(
+        "workers", metadata,
+        # unique id per project
+        sa.Column('uuid', sa.String(36), primary_key=True,
+                  default=lambda: str(uuid.uuid4())),
+        sa.Column('type', sa.Enum('local','default','latent'), nullable=False),
+        sa.Column('enabled', sa.Boolean, default=False),
     )
 
     # Tables related to users
