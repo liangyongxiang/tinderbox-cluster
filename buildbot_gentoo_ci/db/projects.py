@@ -211,6 +211,7 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             status=row.status,
             auto=row.auto,
             enabled=row.enabled,
+            use_default=row.use_default,
             created_by=row.created_by
             )
 

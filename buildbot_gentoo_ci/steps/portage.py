@@ -179,7 +179,7 @@ class SetMakeConf(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
-        #FIXME: Make a dict before we pass it to the make.conf
+        #FIXME: Make a dict before we pass it to the log
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         project_data = self.getProperty('project_data')
         makeconf_variables_data = yield self.gentooci.db.portages.getVariables()
@@ -189,46 +189,25 @@ class SetMakeConf(BuildStep):
         for k in makeconf_variables_data:
             makeconf_variables_values_data = yield self.gentooci.db.projects.getProjectMakeConfById(project_data['uuid'], k['id'])
             makeconf_variable_list = []
-            # we add some default values
-            #FIXME:
-            # we could set them in a config variables
-            # FEATURES
-            if k['variable'] == 'FEATURES':
-                makeconf_variable_list.append('xattr')
-                makeconf_variable_list.append('cgroup')
-                makeconf_variable_list.append('-news')
-                makeconf_variable_list.append('-collision-protect')
-                makeconf_variable_list.append('split-log')
-                makeconf_variable_list.append('compress-build-logs')
-            # EMERGE_DEFAULT_OPTS
-            if k['variable'] == 'EMERGE_DEFAULT_OPTS':
-                makeconf_variable_list.append('--buildpkg=y')
-                makeconf_variable_list.append('--rebuild-if-new-rev=y')
-                makeconf_variable_list.append('--rebuilt-binaries=y')
-                makeconf_variable_list.append('--usepkg=y')
-                makeconf_variable_list.append('--binpkg-respect-use=y')
-                makeconf_variable_list.append('--binpkg-changed-deps=y')
-                makeconf_variable_list.append('--nospinner')
-                makeconf_variable_list.append('--color=n')
-                makeconf_variable_list.append('--ask=n')
-                makeconf_variable_list.append('--quiet-build=y')
-                makeconf_variable_list.append('--quiet-fail=y')
             # CFLAGS
             if k['variable'] == 'CFLAGS' or k['variable'] == 'FCFLAGS':
                 makeconf_variable_list.append('-O2')
                 makeconf_variable_list.append('-pipe')
-                makeconf_variable_list.append('-march=native')
                 makeconf_variable_list.append('-fno-diagnostics-color')
                 #FIXME:
                 # Depend on worker we may have to add a diffrent march
+                makeconf_variable_list.append('-march=native')
             if k['variable'] == 'CXXFLAGS':
                 makeconf_variable_list.append('${CFLAGS}')
             if k['variable'] == 'FFLAGS':
                 makeconf_variable_list.append('${FCFLAGS}')
-            if k['variable'] == 'ACCEPT_PROPERTIES':
-                makeconf_variable_list.append('-interactive')
-            if k['variable'] == 'ACCEPT_RESTRICT':
-                makeconf_variable_list.append('-fetch')
+            # Add default setting if use_default
+            if project_data['use_default']:
+                default_project_data = yield self.gentooci.db.projects.getProjectByName(self.gentooci.config.project['project']['update_db'])
+                default_makeconf_variables_values_data = yield self.gentooci.db.projects.getProjectMakeConfById(default_project_data['uuid'], k['id'])
+                for v in default_makeconf_variables_values_data:
+                    if v['build_id'] == 0:
+                        makeconf_variable_list.append(v['value'])
             for v in makeconf_variables_values_data:
                 if v['build_id'] == 0:
                     makeconf_variable_list.append(v['value'])
@@ -237,21 +216,10 @@ class SetMakeConf(BuildStep):
             if makeconf_variable_list != []:
                 makeconf_variable_string = k['variable'] + '="' + separator2.join(makeconf_variable_list) + '"'
                 makeconf_list.append(makeconf_variable_string)
-        # add hardcoded variables and values
-        #FIXME:
-        # we could set them in a config variables
-        makeconf_list.append('LC_MESSAGES=C')
-        makeconf_list.append('NOCOLOR="true"')
-        makeconf_list.append('GCC_COLORS=""')
-        makeconf_list.append('PORTAGE_TMPFS="/dev/shm"')
-        makeconf_list.append('CLEAN_DELAY=0')
-        makeconf_list.append('NOCOLOR=true')
-        makeconf_list.append('PORT_LOGDIR="/var/cache/portage/logs"')
-        makeconf_list.append('PKGDIR="/var/cache/portage/packages"')
-        makeconf_list.append('DISTDIR="/var/cache/portage/distfiles"')
-        makeconf_list.append('PORTAGE_ELOG_CLASSES="*"')
-        # We need echo:info to get the logfile name
-        makeconf_list.append('PORTAGE_ELOG_SYSTEM="save:* echo:info"')
+        # add hardcoded variables from config file
+        config_makeconfig = self.gentooci.config.project['project']['config_makeconfig']
+        for v in config_makeconfig:
+            makeconf_list.append(v)
         # add ACCEPT_KEYWORDS from the project_data info
         keyword_data = yield self.gentooci.db.keywords.getKeywordById(project_data['keyword_id'])
         if project_data['status'] == 'unstable':
@@ -259,6 +227,7 @@ class SetMakeConf(BuildStep):
         else:
             makeconf_keyword = keyword_data['name']
         makeconf_list.append('ACCEPT_KEYWORDS="' + makeconf_keyword + '"')
+        makeconf_list.append('MAKEOPTS="-j14"')
         makeconf_string = separator1.join(makeconf_list)
         print(makeconf_string)
         yield self.build.addStepsAfterCurrentStep([

@@ -113,6 +113,7 @@ class Model(base.DBConnectorComponent):
         sa.Column('status', sa.Enum('stable','unstable','all'), nullable=False),
         sa.Column('auto', sa.Boolean, default=False),
         sa.Column('enabled', sa.Boolean, default=False),
+        sa.Column('use_default', sa.Boolean, default=True),
         sa.Column('created_by', sa.Integer,
                   sa.ForeignKey('users.uid', ondelete='CASCADE'),
                   nullable=False),
