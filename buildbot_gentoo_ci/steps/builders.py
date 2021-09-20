@@ -5,6 +5,7 @@ import os
 import re
 
 from portage.versions import catpkgsplit, cpv_getversion
+from portage.dep import dep_getcpv, dep_getslot, dep_getrepo
 
 from twisted.internet import defer
 from twisted.python import log
@@ -19,15 +20,15 @@ def PersOutputOfEmerge(rc, stdout, stderr):
     emerge_output['rc'] = rc
     emerge_output['preserved_libs'] = False
     emerge_output['change_use'] = False
+    emerge_output['circular_deps'] = False
     emerge_output['failed'] = False
     package_dict = {}
     log_path_list = []
     print(stderr)
     # split the lines
     for line in stdout.split('\n'):
-        # package list
+        # package dict
         subdict = {}
-        subdict2 = {}
         if line.startswith('[ebuild') or line.startswith('[binary') or line.startswith('[nomerge'):
             # if binaries
             if line.startswith('[ebuild') or line.startswith('[nomerge'):
@@ -36,21 +37,14 @@ def PersOutputOfEmerge(rc, stdout, stderr):
                 subdict['binary'] = True
             # action [ N ] stuff
             subdict['action'] = line[8:15].replace(' ', '')
-            # cpv
             # We my have more then one spece betvine ] and cpv
-            cpv_line = re.sub(' +', ' ', line)
-            # get cpv
-            cpv_split = re.search('] (.+?) ', cpv_line).group(1).split(':')
-            print(cpv_split)
-            cpv = cpv_split[0]
+            pkg_line = re.sub(' +', ' ', line)
+            # get pkg
+            pkg = '=' + re.search('] (.+?) ', pkg_line).group(1)
             # repository
+            subdict['repository'] = dep_getrepo(pkg)
             # slot
-            if cpv_split[1] == '':
-                subdict['slot'] = None
-                subdict['repository'] = cpv_split[2]
-            else:
-                subdict['slot'] = cpv_split[1]
-                subdict['repository'] = cpv_split[3]
+            subdict['slot'] = dep_getslot(pkg)
             # if action U version cpv
             if 'U' in subdict['action']:
                 subdict['old_version'] = re.search(' \[(.+?)] ', line).group(1).split(':')
@@ -66,8 +60,8 @@ def PersOutputOfEmerge(rc, stdout, stderr):
                 subdict['python_targets'] = re.search('PYTHON_TARGETS="(.+?)" ', line).group(1).split(' ')
             else:
                 subdict['python_targets'] = None
-            # CPU_FLAGS_X86 list
-            package_dict[cpv] = subdict
+            # FIXME: CPU_FLAGS_X86 list
+            package_dict[dep_getcpv(pkg)] = subdict
         if line.startswith('>>>'):
             if line.startswith('>>> Failed to'):
                 emerge_output['failed'] = line.split(' ')[4][:-1]
@@ -83,12 +77,11 @@ def PersOutputOfEmerge(rc, stdout, stderr):
             if line.endswith('.log.gz'):
                 log_path_list.append(line.split(' ')[4])
         #FIXME: Handling of depclean output dict of packages that get removed or saved
-    emerge_output['package'] = package_dict
+    emerge_output['packages'] = package_dict
 
     # split the lines
     #FIXME: Handling of stderr output
     stderr_line_list = []
-    emerge_output['change_use'] = False
     for line in stderr.split('\n'):
         if 'Change USE:' in line:
             line_list = line.split(' ')
@@ -123,6 +116,9 @@ def PersOutputOfEmerge(rc, stdout, stderr):
                 log_path = line.split(' ')[3]
                 if log_path not in inlog_path_list:
                     log_path_list.append(log_path)
+            #FIXME: make dict of cpv listed in the circular dependencies
+            if line.endswith('circular dependencies:'):
+                emerge_output['circular_deps'] = True
             stderr_line_list.append(line)
     emerge_output['stderr'] = stderr_line_list
     emerge_output['log_paths'] = log_path_list
@@ -282,7 +278,6 @@ class SetupPropertys(BuildStep):
 
     def __init__(self, **kwargs):
         # set this in config
-        self.portage_repos_path = '/var/db/repos/'
         super().__init__(**kwargs)
 
     @defer.inlineCallbacks
@@ -290,7 +285,7 @@ class SetupPropertys(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         print('build this %s' % self.getProperty("cpv"))
         self.descriptionDone = 'Building this %s' % self.getProperty("cpv")
-        self.setProperty('portage_repos_path', self.portage_repos_path, 'portage_repos_path')
+        self.setProperty('portage_repos_path', self.gentooci.config.project['project']['worker_portage_repos_path'], 'portage_repos_path')
         projectrepository_data = self.getProperty('projectrepository_data')
         print(projectrepository_data)
         project_data = yield self.gentooci.db.projects.getProjectByUuid(projectrepository_data['project_uuid'])
@@ -356,7 +351,7 @@ class RunEmerge(BuildStep):
     haltOnFailure = True
     flunkOnFailure = True
 
-    def __init__(self, step=None,**kwargs):
+    def __init__(self, step=None, **kwargs):
         self.step = step
         super().__init__(**kwargs)
         self.descriptionSuffix = self.step
@@ -575,6 +570,7 @@ class CheckEmergeLogs(BuildStep):
                     'emerge',
                     '-v'
                     ]
+        package_dict = emerge_output['packages']
 
         #FIXME: Prosees the logs and do stuff
         # preserved-libs
@@ -583,7 +579,7 @@ class CheckEmergeLogs(BuildStep):
 
         # FIXME: check if cpv match
         if self.step == 'match'and self.getProperty('projectrepository_data')['build']:
-            if self.getProperty('cpv') in emerge_output['package']:
+            if self.getProperty('cpv') in package_dict:
                 self.setProperty('cpv_build', True, 'cpv_build')
             print(self.getProperty('cpv_build'))
 
@@ -621,9 +617,79 @@ class CheckEmergeLogs(BuildStep):
                     # rerun
                     self.aftersteps_list.append(RunEmerge(step='pre-build'))
                     self.setProperty('rerun', self.getProperty('rerun') + 1, 'rerun')
+
+                # * Error: circular dependencies:
+                if emerge_output['circular_deps'] is True:
+                    circular_dep = None
+                    print('circular_deps')
+                    for cpv, v in package_dict.items():
+                        print(cpv)
+                        print(catpkgsplit(cpv))
+                        p = yield catpkgsplit(cpv)[1]
+                        if p == 'harfbuzz':
+                            circular_dep = 'harfbuzz'
+                    # media-libs/harfbuzz
+                    # https://wiki.gentoo.org/wiki/User:Sam/Portage_help/Circular_dependencies#Solution
+                    if circular_dep == 'harfbuzz':
+                        shell_commad_list = []
+                        shell_commad_list.append('emerge')
+                        shell_commad_list.append('-v')
+                        # FIXME: cpv my get deleted in the tree
+                        cpv = 'x11-libs/pango-1.48.5-r1'
+                        c = yield catpkgsplit(cpv)[0]
+                        p = yield catpkgsplit(cpv)[1]
+                        shell_commad_list.append('-1')
+                        shell_commad_list.append('=' + cpv)
+                        # we don't use the bin for the requsted cpv
+                        shell_commad_list.append('--usepkg-exclude')
+                        shell_commad_list.append(c + '/' + p)
+                        # rebuild this
+                        shell_commad_list.append('--buildpkg-exclude')
+                        shell_commad_list.append('freetype')
+                        shell_commad_list.append('--buildpkg-exclude')
+                        shell_commad_list.append('harfbuzz')
+                        # don't build bin for virtual and acct-*
+                        shell_commad_list.append('--buildpkg-exclude')
+                        shell_commad_list.append('virtual')
+                        shell_commad_list.append('--buildpkg-exclude')
+                        shell_commad_list.append('acct-*')
+                        self.aftersteps_list.append(
+                            steps.SetPropertyFromCommandNewStyle(
+                                command=shell_commad_list,
+                                strip=True,
+                                extract_fn=PersOutputOfEmerge,
+                                workdir='/',
+                                env={'USE': "-harfbuzz"},
+                                timeout=None
+                        ))
+                        self.aftersteps_list.append(CheckEmergeLogs('extra-build'))
             else:
                 # trigger parse_build_log with info about pre-build and it fail
                 pass
+        # Check if extra build did work
+        if self.step == 'extra-build':
+            print(emerge_output)
+            log_dict = {}
+            # get cpv, logname and log path
+            for log_path in emerge_output['log_paths']:
+                c = log_path.split('/')[6]
+                full_logname = log_path.split('/')[7]
+                print(full_logname)
+                pv = full_logname.split(':')[0]
+                cpv = c + '/' + pv
+                log_dict[cpv] = dict(
+                                log_path = log_path,
+                                full_logname = full_logname
+                                )
+            print(log_dict)
+            # Find log for cpv that was requested or did failed
+            if not log_dict == {}:
+                # requested cpv
+                print(log_dict)
+                faild_cpv = emerge_output['failed']
+            self.aftersteps_list.append(RunEmerge(step='pre-build'))
+            self.setProperty('rerun', self.getProperty('rerun') + 1, 'rerun')
+
         #FIXME:
         # Look for FAILURE and logname and download needed logfile and
         # trigger a logparser
