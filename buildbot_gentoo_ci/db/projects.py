@@ -153,6 +153,18 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
         return res
 
     @defer.inlineCallbacks
+    def getProjectPortagePackageByUuidAndExclude(self, uuid):
+        def thd(conn):
+            tbl = self.db.model.projects_portages_package
+            q = tbl.select()
+            q = q.where(tbl.c.project_uuid == uuid)
+            q = q.where(tbl.c.directory == 'exclude')
+            return [self._row2dict_projects_portages_package(conn, row)
+                for row in conn.execute(q).fetchall()]
+        res = yield self.db.pool.do(thd)
+        return res
+
+    @defer.inlineCallbacks
     def getProjectEmergeOptionsByUuid(self, uuid):
         def thd(conn):
             tbl = self.db.model.projects_emerge_options
@@ -263,16 +275,16 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             )
 
     def _row2dict_projects_portages_package(self, conn, row):
-        if row.value2 == '':
-            value2 = None
+        if row.value == '':
+            value = None
         else:
-            value2 = row.value2
+            value = row.value
         return dict(
             id=row.id,
             project_uuid=row.project_uuid,
-            directorys=row.directorys,
-            value1=row.value1,
-            value2=value2
+            directory=row.directory,
+            package=row.package,
+            value=value
             )
 
     def _row2dict_projects_emerge_options(self, conn, row):

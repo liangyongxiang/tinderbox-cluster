@@ -252,20 +252,28 @@ class SetPackageDefault(BuildStep):
     @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        project_data = self.getProperty('project_data')
-        aftersteps_list = []
-        packagedir_list = []
-        packagedir_list.append('env')
-        packagedir_list.append('use')
-        #FIXME:
-        # get list what dir we need to make from db
-        # create the dirs
-        for packagedir in packagedir_list:
-            aftersteps_list.append(steps.MakeDirectory(dir='package.' + packagedir,
-                                workdir='/etc/portage/'))
-        #FIXME:
+        separator1 = '\n'
+        separator2 = ' '
+        self.aftersteps_list = []
+        #FIXME: accept_keywords, env
         # add the needed package.* settings from db
-        yield self.build.addStepsAfterCurrentStep(aftersteps_list)
+        package_conf_use_list = []
+        package_settings = yield self.gentooci.db.projects.getProjectPortagePackageByUuid(self.getProperty('project_data')['uuid'])
+        for package_setting in package_settings:
+            if package_setting['directory'] == 'use':
+                package_conf_use_list.append(separator2.join(package_setting['package'],package_setting['value']))
+        if package_conf_use_list != []:
+            package_conf_use_string = separator1.join(package_conf_use_list)
+            self.aftersteps_list.append(
+                        steps.StringDownload(package_conf_use_string + separator1,
+                            workerdest='default.conf',
+                            workdir='/etc/portage/package.use/'
+                            )
+                        )
+            # create the dir
+            aftersteps_list.append(steps.MakeDirectory(dir='package.use',
+                                workdir='/etc/portage/'))
+        yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
         return SUCCESS
 
 class SetEnvDefault(BuildStep):

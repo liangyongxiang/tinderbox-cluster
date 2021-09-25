@@ -13,6 +13,7 @@ from twisted.python import log
 from buildbot.process.buildstep import BuildStep
 from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
+from buildbot.process.results import SKIPPED
 from buildbot.plugins import steps
 
 def PersOutputOfEmerge(rc, stdout, stderr):
@@ -451,9 +452,19 @@ class RunEmerge(BuildStep):
             aftersteps_list.append(CheckDepcleanLogs('depclean'))
 
         if self.step == 'match':
+            packages_excludes = yield self.gentooci.db.projects.getProjectPortagePackageByUuidAndExclude(self.getProperty('project_data')['uuid'])
             cpv = self.getProperty("cpv")
             c = yield catpkgsplit(cpv)[0]
             p = yield catpkgsplit(cpv)[1]
+            # Check if package is on the exclude list
+            if packages_excludes != []:
+                for package_exclude in packages_excludes:
+                    if '/' not in package_exclude:
+                        if package_exclude == p:
+                            return SKIPPED
+                    else:
+                        if package_exclude == c + '/' + p:
+                            return SKIPPED
             shell_commad_list.append('-pO')
             # don't use bin for match
             shell_commad_list.append('--usepkg=n')
@@ -900,11 +911,14 @@ class RunBuild(BuildStep):
         if not self.getProperty('cpv_build'):
             #FIXME:
             # trigger pars_build_log if we have any logs to check
-            return SUCCESS
+            return SKIPPED
         aftersteps_list = []
         aftersteps_list.append(RunEmergeInfo())
         aftersteps_list.append(RunEmerge(step='pre-build'))
         aftersteps_list.append(RunEmerge(step='build'))
+        aftersteps_list.append(RunEmerge(step='pre-depclean'))
+        aftersteps_list.append(RunEmerge(step='preserved-libs'))
+        aftersteps_list.append(RunEmerge(step='depclean'))
         self.setProperty('depclean', False, 'depclean')
         self.setProperty('preserved_libs', False, 'preserved-libs')
         yield self.build.addStepsAfterCurrentStep(aftersteps_list)

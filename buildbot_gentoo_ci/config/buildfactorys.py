@@ -152,13 +152,9 @@ def run_build_request():
     f.addStep(builders.RunEmerge(step='match'))
     # Add the needed steps for build
     f.addStep(builders.RunBuild())
-    # clean up the worker
-    # look at the log to see if we need to do stuff
-    # run pre-depclean and depclean if set
-    f.addStep(builders.RunEmerge(step='pre-depclean'))
-    # run preserved-libs and depclean
-    f.addStep(builders.RunEmerge(step='preserved-libs'))
-    f.addStep(builders.RunEmerge(step='depclean'))
+    # run eclean pkg and dist
+    #f.addStep(builders.RunEclean(step='pkg')
+    #f.addStep(builders.RunEclean(step='dist')
     return f
 
 def parse_build_log():

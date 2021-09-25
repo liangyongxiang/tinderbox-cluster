@@ -178,15 +178,15 @@ class Model(base.DBConnectorComponent):
     )
 
     # projects etc/portage/package.* settings
-    projects_portage_package = sautils.Table(
-        "projects_portage_package", metadata,
+    projects_portages_package = sautils.Table(
+        "projects_portages_package", metadata,
         sa.Column('id', sa.Integer, primary_key=True),
         sa.Column('project_uuid', sa.String(36),
                   sa.ForeignKey('projects.uuid', ondelete='CASCADE'),
                   nullable=False),
-        sa.Column('directorys', sa.Enum('use', 'accept_keywords', 'env'), nullable=False),
-        sa.Column('value1', sa.String(255), nullable=False),
-        sa.Column('value2', sa.String(255), nullable=True),
+        sa.Column('directory', sa.Enum('use', 'accept_keywords', 'env', 'exclude'), nullable=False),
+        sa.Column('package', sa.String(255), nullable=False),
+        sa.Column('value', sa.String(255), nullable=True),
     )
 
     projects_emerge_options = sautils.Table(
