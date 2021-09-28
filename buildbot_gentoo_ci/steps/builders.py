@@ -458,12 +458,14 @@ class RunEmerge(BuildStep):
             p = yield catpkgsplit(cpv)[1]
             # Check if package is on the exclude list
             if packages_excludes != []:
+                print(packages_excludes)
+                print(cpv)
                 for package_exclude in packages_excludes:
-                    if '/' not in package_exclude:
-                        if package_exclude == p:
+                    if '/' in package_exclude['package']:
+                        if package_exclude['package'] == c + '/' + p:
                             return SKIPPED
                     else:
-                        if package_exclude == c + '/' + p:
+                        if package_exclude['package'] == p:
                             return SKIPPED
             shell_commad_list.append('-pO')
             # don't use bin for match
