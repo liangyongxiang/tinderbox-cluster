@@ -2,7 +2,7 @@
 # Distributed under the terms of the GNU General Public License v2
 
 import os
-import pygit2
+import git
 
 from twisted.internet import defer
 
@@ -104,20 +104,31 @@ class CheckRepository(BuildStep):
 
     @defer.inlineCallbacks
     def checkRepos(self, repository_data):
+        success = False
         repository_path = yield os.path.join(self.getProperty("repository_basedir"), repository_data['name'])
-        repo_path = yield pygit2.discover_repository(repository_path)
-        print(repo_path)
-        if repo_path is None:
-            yield pygit2.clone_repository(repository_data['url'], repository_path)
-            success = True
+        try:
+            repo = git.Repo(repository_path)
+        except:
+            try:
+                yield git.Repo.clone_from(repository_data['url'], repository_path)
+            except:
+                pass
+            else:
+                repo = git.Repo(repository_path)
+                success = True
         else:
-            repo = yield pygit2.Repository(repo_path)
-            commit = repo.get(repo.head.target)
-            success = yield self.gitPull(repo)
-            print(commit.hex)
-            print(commit.commit_time)
+            try:
+                yield repo.git.pull()
+            except:
+                pass
+            else:
+                success = True
+        if success:
+            headcommit = repo.head.commit
+            print(headcommit.hexsha)
+            print(headcommit.committed_date)
         # chmod needed for ebuilds metadata portage.GetAuxMetadata step
-        yield self.setchmod(repository_path)
+        # yield self.setchmod(repository_path)
         return success
 
     @defer.inlineCallbacks
@@ -140,8 +151,6 @@ class CheckRepository(BuildStep):
         if Poller_data['updated_at'] > self.getProperty("commit_time"):
             return SKIPPED
         success = yield self.checkRepos(repository_data)
-        if success is None:
-            return SKIPPED
         if not success:
             return FAILURE
         if repository_data['type'] == 'gitpuller':
