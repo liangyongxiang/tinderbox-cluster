@@ -3,6 +3,7 @@
 
 import os
 import re
+import json
 
 from portage.versions import catpkgsplit, cpv_getversion
 from portage.dep import dep_getcpv, dep_getslot, dep_getrepo
@@ -131,18 +132,13 @@ def PersOutputOfEmerge(rc, stdout, stderr):
 def PersOutputOfPkgCheck(rc, stdout, stderr):
     pkgcheck_output = {}
     pkgcheck_output['rc'] = rc
-    #FIXME: Handling of stdout output
-    pkgcheck_xml_list = []
+    print(stdout)
+    pkgcheck_json_list = []
     # split the lines
     for line in stdout.split('\n'):
-        #  pkgcheck output list
-        if line.startswith('<checks'):
-            pkgcheck_xml_list.append(line)
-        if line.startswith('<result'):
-            pkgcheck_xml_list.append(line)
-        if line.startswith('</checks'):
-            pkgcheck_xml_list.append(line)
-    pkgcheck_output['pkgcheck_xml'] = pkgcheck_xml_list
+        if line.startswith('{"'):
+            pkgcheck_json_list.append(json.loads(line))
+    pkgcheck_output['pkgcheck_json'] = pkgcheck_json_list
     #FIXME: Handling of stderr output
     return {
         'pkgcheck_output' : pkgcheck_output
@@ -827,7 +823,7 @@ class RunPkgCheck(BuildStep):
                     '-v'
                     ]
         shell_commad_list.append('-R')
-        shell_commad_list.append('XmlReporter')
+        shell_commad_list.append('JsonReporter')
         aftersteps_list = []
         if projectrepository_data['pkgcheck'] == 'full':
             pkgcheck_workdir = yield os.path.join(repository_path, '')
@@ -856,15 +852,24 @@ class CheckPkgCheckLogs(BuildStep):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    #@defer.inlineCallbacks
+    @defer.inlineCallbacks
     def run(self):
-        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        project_data = self.getProperty('project_data')
+        #self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        #project_data = self.getProperty('project_data')
         pkgcheck_output = self.getProperty('pkgcheck_output')
         print(pkgcheck_output)
-        #FIXME:
-        # Perse the logs
-        self.setProperty('pkg_check_log_data', None, 'pkg_check_log_data')
+        if pkgcheck_output['pkgcheck_json'] == []:
+            return SKIPPED
+        pkg_check_log_data = []
+        c = yield catpkgsplit(self.getProperty("cpv"))[0]
+        p = yield catpkgsplit(self.getProperty("cpv"))[1]
+        v = yield cpv_getversion(self.getProperty("cpv"))
+        for json_dict in pkgcheck_output['pkgcheck_json']:
+            for k, i in json_dict[c][p].items():
+                if k == v or k == '_info' or k == '_style':
+                    pkg_check_log_data.append(i)
+        if pkg_check_log_data != []:
+            self.setProperty('pkg_check_log_data', pkg_check_log_data, 'pkg_check_log_data')
         return SUCCESS
 
 class RunEmergeInfo(BuildStep):
