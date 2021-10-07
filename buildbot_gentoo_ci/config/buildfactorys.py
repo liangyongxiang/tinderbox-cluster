@@ -101,7 +101,7 @@ def run_build_request():
     f.addStep(builders.SetupPropertys())
     # Clean and add new /etc/portage
     #NOTE: remove the symlink befor the dir
-    f.addStep(buildbot_steps.ShellCommandNewStyle(
+    f.addStep(buildbot_steps.ShellCommand(
                         command=['rm', 'make.profile'],
                         workdir='/etc/portage/'
                         ))

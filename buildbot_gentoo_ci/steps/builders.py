@@ -375,7 +375,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('--buildpkg-exclude')
             shell_commad_list.append('acct-*')
             aftersteps_list.append(
-                steps.SetPropertyFromCommandNewStyle(
+                steps.SetPropertyFromCommand(
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
@@ -394,7 +394,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('--buildpkg-exclude')
             shell_commad_list.append('acct-*')
             aftersteps_list.append(
-                steps.SetPropertyFromCommandNewStyle(
+                steps.SetPropertyFromCommand(
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
@@ -409,7 +409,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('-q')
             shell_commad_list.append('@preserved-rebuild')
             aftersteps_list.append(
-                steps.SetPropertyFromCommandNewStyle(
+                steps.SetPropertyFromCommand(
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
@@ -423,7 +423,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('--pretend')
             shell_commad_list.append('--depclean')
             aftersteps_list.append(
-                steps.SetPropertyFromCommandNewStyle(
+                steps.SetPropertyFromCommand(
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfDepclean,
@@ -439,7 +439,7 @@ class RunEmerge(BuildStep):
             if self.getProperty('depclean'):
                 pass
             aftersteps_list.append(
-                steps.SetPropertyFromCommandNewStyle(
+                steps.SetPropertyFromCommand(
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfDepclean,
@@ -468,7 +468,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('--usepkg=n')
             shell_commad_list.append(c + '/' + p)
             aftersteps_list.append(
-                steps.SetPropertyFromCommandNewStyle(
+                steps.SetPropertyFromCommand(
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
@@ -492,7 +492,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('acct-*')
             shell_commad_list.append('-p')
             aftersteps_list.append(
-                steps.SetPropertyFromCommandNewStyle(
+                steps.SetPropertyFromCommand(
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
@@ -517,7 +517,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('--buildpkg-exclude')
             shell_commad_list.append('acct-*')
             aftersteps_list.append(
-                steps.SetPropertyFromCommandNewStyle(
+                steps.SetPropertyFromCommand(
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
@@ -663,7 +663,7 @@ class CheckEmergeLogs(BuildStep):
                         shell_commad_list.append('--buildpkg-exclude')
                         shell_commad_list.append('acct-*')
                         self.aftersteps_list.append(
-                            steps.SetPropertyFromCommandNewStyle(
+                            steps.SetPropertyFromCommand(
                                 command=shell_commad_list,
                                 strip=True,
                                 extract_fn=PersOutputOfEmerge,
@@ -830,7 +830,7 @@ class RunPkgCheck(BuildStep):
         else:
             pkgcheck_workdir = yield os.path.join(repository_path, c, p, '')
         aftersteps_list.append(
-            steps.SetPropertyFromCommandNewStyle(
+            steps.SetPropertyFromCommand(
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfPkgCheck,
@@ -891,7 +891,7 @@ class RunEmergeInfo(BuildStep):
                     ]
         shell_commad_list.append('--info')
         aftersteps_list.append(
-                steps.SetPropertyFromCommandNewStyle(
+                steps.SetPropertyFromCommand(
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfEmergeInfo,

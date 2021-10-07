@@ -105,7 +105,7 @@ class SetMakeProfile(BuildStep):
         shell_commad_list.append(makeprofile_path)
         shell_commad_list.append('/etc/portage/make.profile')
         yield self.build.addStepsAfterCurrentStep([
-            steps.ShellCommandNewStyle(
+            steps.ShellCommand(
                         command=shell_commad_list,
                         workdir='/'
                 )
