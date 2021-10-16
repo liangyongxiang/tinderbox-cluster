@@ -5,16 +5,7 @@ from twisted.internet import defer
 
 from buildbot.plugins import util
 from buildbot_gentoo_ci.config import buildfactorys
-
-# FIXME: get LocalWorkers and BuildWorkers from db or file
-LocalWorkers = []
-LocalWorkers.append('updatedb_1')
-LocalWorkers.append('updatedb_2')
-LocalWorkers.append('updatedb_3')
-LocalWorkers.append('updatedb_4')
-
-BuildWorkers = []
-BuildWorkers.append('a89c2c1a-46e0-4ded-81dd-c51afeb7fcfd')
+from buildbot_gentoo_ci.config.workers import gentoo_ci_workers
 
 @defer.inlineCallbacks
 def CanWorkerBuildProject(builder, wfb, request):
@@ -29,10 +20,14 @@ def CanWorkerBuildProject(builder, wfb, request):
     print('no worker')
     return False
 
-def gentoo_builders(b=[]):
+def gentoo_builders(worker_data):
+    b = []
+    g_ci_w = gentoo_ci_workers(worker_data)
+    LocalWorkers = g_ci_w.getLocalWorkersUuid()
+    BuildWorkers = g_ci_w.getBuildWorkersUuid()
     b.append(util.BuilderConfig(
         name='update_db_check',
-        workername='updatedb_1',
+        workername=LocalWorkers[0],
         workerbuilddir='builds',
         collapseRequests=False,
         factory=buildfactorys.update_db_check()
@@ -40,7 +35,7 @@ def gentoo_builders(b=[]):
     )
     b.append(util.BuilderConfig(
         name='update_repo_check',
-        workername='updatedb_2',
+        workername=LocalWorkers[1],
         workerbuilddir='builds',
         collapseRequests=True,
         factory=buildfactorys.update_repo_check()
