@@ -117,16 +117,25 @@ class CheckRepository(BuildStep):
                 repo = git.Repo(repository_path)
                 success = True
         else:
+            print('repo commit id to check')
+            print(self.getProperty("revision"))
             try:
-                yield repo.git.pull()
+                commits = list(repo.iter_commits(rev=self.getProperty("revision"), max_count=2))
             except:
-                pass
+                try:
+                    yield repo.git.pull()
+                except:
+                    pass
+                else:
+                    success = True
             else:
-                success = True
+                print('repo allready has commit id')
+                print(commits[0].hexsha)
+                return None
         if success:
             headcommit = repo.head.commit
+            print('repo updated to commit id')
             print(headcommit.hexsha)
-            print(headcommit.committed_date)
         # chmod needed for ebuilds metadata portage.GetAuxMetadata step
         # yield self.setchmod(repository_path)
         return success
@@ -144,15 +153,11 @@ class CheckRepository(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(repository_uuid)
         self.descriptionSuffix = repository_data['name']
-        if repository_data['type'] == 'gitpuller':
-            Poller_data = yield self.gentooci.db.repositorys.getGitPollerByUuid(repository_uuid)
-        print(Poller_data['updated_at'])
-        print(self.getProperty("commit_time"))
-        if Poller_data['updated_at'] > self.getProperty("commit_time"):
-            return SKIPPED
+        #self.Poller_data = yield self.gentooci.db.repositorys.getGitPollerByUuid(repository_uuid)
         success = yield self.checkRepos(repository_data)
+        if success is None:
+            return SKIPPED
         if not success:
             return FAILURE
-        if repository_data['type'] == 'gitpuller':
-            yield self.gentooci.db.repositorys.updateGitPollerTime(repository_uuid)
+        #yield self.gentooci.db.repositorys.updateGitPollerTime(repository_uuid)
         return SUCCESS
