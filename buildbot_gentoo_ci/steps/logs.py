@@ -16,6 +16,7 @@ from buildbot.process.buildstep import BuildStep
 from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
 from buildbot.process.results import WARNINGS
+from buildbot.process.results import SKIPPED
 from buildbot.plugins import steps
 
 from buildbot_gentoo_ci.steps import minio
@@ -304,6 +305,56 @@ class Upload(BuildStep):
         aftersteps_list.append(minio.putFileToMinio(file_path, log_cpv['full_logname'], bucket))
         yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS
+
+class ParserPkgCheckLog(BuildStep):
+
+    name = 'ParserPkgCheckLog'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = False
+    flunkOnWarnings = False
+    flunkOnFailure = False
+    warnOnWarnings = False
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        if self.getProperty("pkg_check_log_data") is None:
+            return SKIPPED
+        returnstatus = SUCCESS
+        error = False
+        warning = False
+        log = yield self.addLog('Pkgcheck')
+        print(self.getProperty("pkg_check_log_data"))
+        for a in self.getProperty("pkg_check_log_data"):
+            status = ''
+            print(a)
+            if isinstance(a, dict):
+                for k, i in a.items():
+                    if k.startswith('_'):
+                        if k == '_info':
+                            status = 'INFO: '
+                        if k == '_error':
+                            status = 'ERROR: '
+                            error = True
+                        if k == '_warning':
+                            status = 'WARNING: '
+                            warning = True
+                        if k == '_style':
+                            status = 'STYLE: '
+                        if isinstance(i, dict):
+                            for b, c in i.items():
+                                yield log.addStdout(status + b + c + '\n')
+                    else:
+                        yield log.addStdout(i + '\n')
+        if error:
+            returnstatus = FAILURE
+        if warning and not error:
+            returnstatus = WARNINGS
+        return returnstatus
 
 class setBuildStatus(BuildStep):
 
