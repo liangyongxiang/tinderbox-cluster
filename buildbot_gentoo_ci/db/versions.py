@@ -101,6 +101,36 @@ class VersionsConnectorComponent(base.DBConnectorComponent):
         res = yield self.db.pool.do(thd)
         return res
 
+    @defer.inlineCallbacks
+    def addMetadata(self, version_uuid, metadata, value):
+        def thd(conn, no_recurse=False):
+            try:
+                tbl = self.db.model.versions_metadata
+                q = tbl.insert()
+                r = conn.execute(q, dict(version_uuid=version_uuid,
+                                         metadata=metadata,
+                                         value=value))
+            except (sa.exc.IntegrityError, sa.exc.ProgrammingError):
+                id = None
+            else:
+                id = r.inserted_primary_key[0]
+            return uuid
+        res = yield self.db.pool.do(thd)
+        return res
+
+    #FIXME: return sorted by id
+    @defer.inlineCallbacks
+    def getMetadataByUuidAndMatadata(self, uuid, metadata):
+        def thd(conn):
+            tbl = self.db.model.versions_metadata
+            q = tbl.select()
+            q = q.where(tbl.c.version_uuid == uuid)
+            q = q.where(tbl.c.metadata == metadata)
+            return [self._row2dict_version_metadata(conn, row)
+                for row in conn.execute(q).fetchall()]
+        res = yield self.db.pool.do(thd)
+        return res
+
     def _row2dict(self, conn, row):
         return dict(
             uuid=row.uuid,
@@ -110,4 +140,12 @@ class VersionsConnectorComponent(base.DBConnectorComponent):
             commit_id=row.commit_id,
             deleted=row.deleted,
             deleted_at=row.deleted_at
+            )
+
+    def _row2dict_version_metadata(self, conn, row):
+        return dict(
+            id=row.id,
+            version_uuid=row.version_uuid,
+            metadata=row.metadata,
+            value=row.value
             )

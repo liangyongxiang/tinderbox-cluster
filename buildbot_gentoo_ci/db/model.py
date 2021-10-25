@@ -301,6 +301,16 @@ class Model(base.DBConnectorComponent):
         sa.Column('status', sa.Enum('stable','unstable','negative','all'), nullable=False),
     )
 
+    versions_metadata = sautils.Table(
+        "versions_metadata", metadata,
+        # unique id per project
+        sa.Column('id', sa.Integer, primary_key=True),
+        sa.Column('version_uuid', sa.String(36),
+                  sa.ForeignKey('versions.uuid', ondelete='CASCADE')),
+        sa.Column('metadata', sa.Enum('restrict', 'properties', 'iuse', 'required use', 'keyword'), nullable=False),
+        sa.Column('value', sa.String(255), nullable=False),
+    )
+
     workers = sautils.Table(
         "workers", metadata,
         # unique id per project

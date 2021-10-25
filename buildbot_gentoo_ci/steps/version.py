@@ -16,9 +16,20 @@ from buildbot.process.buildstep import BuildStep
 from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
 from buildbot.process.results import WARNINGS
+from buildbot.process.results import SKIPPED
 from buildbot.plugins import steps
 
 from buildbot_gentoo_ci.steps import portage as portage_steps
+
+def getIUseValue(auxdb_iuse):
+    status = False
+    if auxdb_iuse[0] in ['+']:
+        status = True
+    if auxdb_iuse[0] in ['+'] or auxdb_iuse[0] in ['-']:
+        iuse = auxdb_iuse[1:]
+    else:
+        iuse = auxdb_iuse
+    return iuse, status
 
 class GetVData(BuildStep):
     
@@ -96,6 +107,7 @@ class GetCommitdata(BuildStep):
         self.setProperty('commit_id', self.getProperty("change_data")['revision'], 'commit_id')
         return SUCCESS
 
+#FIXME: use versions_metadata table
 class AddVersionKeyword(BuildStep):
 
     name = 'AddVersionKeyword'
@@ -153,6 +165,64 @@ class AddVersionKeyword(BuildStep):
                                                 version_keyword_data['status'])
             self.version_keyword_dict[keyword] = version_keyword_data
         self.setProperty('version_keyword_dict', self.version_keyword_dict, 'version_keyword_dict')
+        return SUCCESS
+
+class AddVersionRestrictions(BuildStep):
+
+    name = 'AddVersionRestrictions'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        auxdb = self.getProperty("auxdb")['RESTRICT']
+        if auxdb is None or not isinstance(auxdb, list):
+            return SKIPPED
+        for restrict in auxdb:
+            version_metadata_data = {}
+            version_metadata_data['version_uuid'] = self.getProperty("version_data")['uuid']
+            version_metadata_data['metadata'] = 'restrict'
+            version_metadata_data['value'] = restrict
+            version_metadata_data['id'] = yield self.gentooci.db.versions.addMetadata(
+                                                version_metadata_data['version_uuid'],
+                                                version_metadata_data['metadata'],
+                                                version_metadata_data['value'])
+        return SUCCESS
+
+class AddVersionIUse(BuildStep):
+
+    name = 'AddVersionIUse'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        auxdb = self.getProperty("auxdb")['IUSE']
+        if auxdb is None or not isinstance(auxdb, list):
+            return SKIPPED
+        for iuse in auxdb:
+            version_metadata_data = {}
+            version_metadata_data['version_uuid'] = self.getProperty("version_data")['uuid']
+            version_metadata_data['metadata'] = 'iuse'
+            version_metadata_data['value'] = iuse
+            version_metadata_data['id'] = yield self.gentooci.db.versions.addMetadata(
+                                                version_metadata_data['version_uuid'],
+                                                version_metadata_data['metadata'],
+                                                version_metadata_data['value'])
         return SUCCESS
 
 class CheckPathHash(BuildStep):
@@ -272,6 +342,8 @@ class CheckV(BuildStep):
             addStepVData.append(portage_steps.GetAuxMetadata())
             addStepVData.append(AddVersion())
             addStepVData.append(AddVersionKeyword())
+            addStepVData.append(AddVersionRestrictions())
+            addStepVData.append(AddVersionIUse())
             addStepVData.append(TriggerBuildCheck())
         yield self.build.addStepsAfterCurrentStep(addStepVData)
         return SUCCESS
