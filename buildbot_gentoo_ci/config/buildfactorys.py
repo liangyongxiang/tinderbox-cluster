@@ -95,10 +95,10 @@ def build_request_check():
 
 def run_build_request():
     f = util.BuildFactory()
-    # FIXME: 5
-    # Move the etc/portage stuff to is own file
     # set needed Propertys
     f.addStep(builders.SetupPropertys())
+    # update the repositorys listed in project_repository
+    f.addStep(builders.UpdateRepos())
     # Clean and add new /etc/portage
     #NOTE: remove the symlink befor the dir
     f.addStep(buildbot_steps.ShellCommand(
@@ -118,8 +118,6 @@ def run_build_request():
     f.addStep(buildbot_steps.MakeDirectory(dir="repos.conf",
                                 workdir='/etc/portage/'))
     f.addStep(portage.SetReposConf())
-    # update the repositorys listed in project_repository
-    f.addStep(builders.UpdateRepos())
     # setup make.conf
     f.addStep(portage.SetMakeConf())
     # setup env
