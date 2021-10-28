@@ -238,7 +238,8 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             repository_uuid=row.repository_uuid,
             auto=row.auto,
             pkgcheck=pkgcheck,
-            build=row.build
+            build=row.build,
+            test=row.test
             )
 
     def _row2dict_projects_workers(self, conn, row):

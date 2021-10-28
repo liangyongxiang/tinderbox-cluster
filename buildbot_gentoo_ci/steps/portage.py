@@ -22,6 +22,7 @@ from buildbot.process.results import SKIPPED
 from buildbot.plugins import steps
 
 from buildbot_gentoo_ci.steps import master as master_steps
+from buildbot_gentoo_ci.utils.use import getIUseValue
 
 @defer.inlineCallbacks
 def WriteTextToFile(path, text_list):
@@ -255,7 +256,9 @@ class SetPackageDefault(BuildStep):
         separator1 = '\n'
         separator2 = ' '
         self.aftersteps_list = []
-        #FIXME: accept_keywords, env
+        package_use_dir = False
+        package_env_dir = False
+        #FIXME: accept_keywords
         # add the needed package.* settings from db
         package_conf_use_list = []
         package_settings = yield self.gentooci.db.projects.getProjectPortagePackageByUuid(self.getProperty('project_data')['uuid'])
@@ -263,6 +266,7 @@ class SetPackageDefault(BuildStep):
             if package_setting['directory'] == 'use':
                 package_conf_use_list.append(separator2.join(package_setting['package'],package_setting['value']))
         if package_conf_use_list != []:
+            package_use_dir = True
             package_conf_use_string = separator1.join(package_conf_use_list)
             self.aftersteps_list.append(
                         steps.StringDownload(package_conf_use_string + separator1,
@@ -270,8 +274,33 @@ class SetPackageDefault(BuildStep):
                             workdir='/etc/portage/package.use/'
                             )
                         )
-            # create the dir
+        # for test we need to add env and use
+        #FIXME: check restrictions, test use mask and required use
+        if self.getProperty('projectrepository_data')['test']:
+            auxdb_iuses = yield self.gentooci.db.versions.getMetadataByUuidAndMatadata(self.getProperty("version_data")['uuid'], 'iuse')
+            for auxdb_iuse in auxdb_iuses:
+                iuse, status = getIUseValue(auxdb_iuse)
+                if iuse == 'test':
+                    package_use_dir = True
+                    self.aftersteps_list.append(
+                        steps.StringDownload(separator2.join('='+ self.getProperty("cpv"),'test') + separator1,
+                            workerdest='test.conf',
+                            workdir='/etc/portage/package.use/'
+                            )
+                        )
+            package_env_dir = True
+            self.aftersteps_list.append(
+                        steps.StringDownload(separator2.join('='+ self.getProperty("cpv"),'test.conf') + separator1,
+                            workerdest='test.conf',
+                            workdir='/etc/portage/package.env/'
+                            )
+                        )
+        # add package.* dirs
+        if package_use_dir:
             aftersteps_list.append(steps.MakeDirectory(dir='package.use',
+                                workdir='/etc/portage/'))
+        if package_env_dir:
+            aftersteps_list.append(steps.MakeDirectory(dir='package.env',
                                 workdir='/etc/portage/'))
         yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
         return SUCCESS

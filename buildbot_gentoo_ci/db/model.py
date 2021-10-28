@@ -132,6 +132,7 @@ class Model(base.DBConnectorComponent):
         sa.Column('auto', sa.Boolean, default=False),
         sa.Column('pkgcheck', sa.Enum('package','full','none'), default='none'),
         sa.Column('build', sa.Boolean, default=False),
+        sa.Column('test', sa.Boolean, default=False),
     )
 
     # projects etc/portage settings
