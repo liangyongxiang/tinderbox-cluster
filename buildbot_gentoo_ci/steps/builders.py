@@ -607,6 +607,7 @@ class CheckEmergeLogs(BuildStep):
                     separator = '\n'
                     separator2 = ' '
                     change_use_list = []
+                    log = yield self.addLog('change_use')
                     for cpv, v in emerge_output['change_use'].items():
                         c = yield catpkgsplit(cpv)[0]
                         p = yield catpkgsplit(cpv)[1]
@@ -623,6 +624,8 @@ class CheckEmergeLogs(BuildStep):
                             workdir='/etc/portage/package.use/'
                             )
                         )
+                    yield log.addStdout('File: ' + 'zz_autouse' + str(self.getProperty('rerun')) + '\n')
+                    yield log.addStdout(change_use_string + '\n')
                     # rerun
                     self.aftersteps_list.append(RunEmerge(step='pre-build'))
                     self.setProperty('rerun', self.getProperty('rerun') + 1, 'rerun')

@@ -111,6 +111,8 @@ class SetMakeProfile(BuildStep):
                         workdir='/'
                 )
             ])
+        log = yield self.addLog('make.profile')
+        yield log.addStdout('Profile path: ' + makeprofile_path + '\n')
         return SUCCESS
 
 class SetReposConf(BuildStep):
@@ -135,6 +137,7 @@ class SetReposConf(BuildStep):
         if repos_conf_data is None:
             print('Default repo is not set in repos.conf')
             return FAILURE
+        log = yield self.addLog('repos.conf')
         # check if repos_conf_data['value'] is vaild repo name
         separator = '\n'
         default_conf = []
@@ -147,6 +150,10 @@ class SetReposConf(BuildStep):
                                 workerdest="repos.conf/default.conf",
                                 workdir='/etc/portage/')
             ])
+        # display the default.conf
+        yield log.addStdout('File: ' + 'default.conf' + '\n')
+        for line in default_conf:
+            yield log.addStdout(line + '\n')
         # add all repos that project have in projects_repositorys to repos.conf/reponame.conf
         projects_repositorys_data = yield self.gentooci.db.projects.getRepositorysByProjectUuid(project_data['uuid'])
         for project_repository_data in projects_repositorys_data:
@@ -159,11 +166,15 @@ class SetReposConf(BuildStep):
             repository_conf.append('sync-type = git')
             repository_conf.append('auto-sync = no')
             repository_conf_string = separator.join(repository_conf)
+            filename = repository_data['name'] + '.conf'
             yield self.build.addStepsAfterCurrentStep([
                 steps.StringDownload(repository_conf_string + separator,
-                                workerdest='repos.conf/' + repository_data['name'] + '.conf',
+                                workerdest='repos.conf/' + filename,
                                 workdir='/etc/portage/')
                 ])
+            yield log.addStdout('File: ' + filename + '\n')
+            for line in repository_conf:
+                yield log.addStdout(line + '\n')
         return SUCCESS
 
 class SetMakeConf(BuildStep):
@@ -187,6 +198,7 @@ class SetMakeConf(BuildStep):
         separator1 = '\n'
         separator2 = ' '
         makeconf_list = []
+        log = yield self.addLog('make.conf')
         for k in makeconf_variables_data:
             makeconf_variables_values_data = yield self.gentooci.db.projects.getProjectMakeConfById(project_data['uuid'], k['id'])
             makeconf_variable_list = []
@@ -236,6 +248,9 @@ class SetMakeConf(BuildStep):
                                 workerdest="make.conf",
                                 workdir='/etc/portage/')
             ])
+        # display the make.conf
+        for line in makeconf_list:
+            yield log.addStdout(line + '\n')
         return SUCCESS
 
 class SetPackageDefault(BuildStep):
@@ -255,18 +270,28 @@ class SetPackageDefault(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         separator1 = '\n'
         separator2 = ' '
+        log = yield self.addLog('package.*')
         self.aftersteps_list = []
-        package_use_dir = False
-        package_env_dir = False
+        self.aftersteps_list.append(steps.MakeDirectory(dir='package.use',
+                                workdir='/etc/portage/'))
+        self.aftersteps_list.append(steps.MakeDirectory(dir='package.env',
+                                workdir='/etc/portage/'))
         #FIXME: accept_keywords
         # add the needed package.* settings from db
+        # add package use
         package_conf_use_list = []
         package_settings = yield self.gentooci.db.projects.getProjectPortagePackageByUuid(self.getProperty('project_data')['uuid'])
         for package_setting in package_settings:
             if package_setting['directory'] == 'use':
                 package_conf_use_list.append(separator2.join(package_setting['package'],package_setting['value']))
+        if self.getProperty('use_data') is not None:
+            for k, v in self.getProperty('use_data').items():
+                    for use, value in v.items():
+                        if value:
+                            package_conf_use_list.append(separator2.join([k, use]))
+                        else:
+                            package_conf_use_list.append(separator2.join([k, '-' + use]))
         if package_conf_use_list != []:
-            package_use_dir = True
             package_conf_use_string = separator1.join(package_conf_use_list)
             self.aftersteps_list.append(
                         steps.StringDownload(package_conf_use_string + separator1,
@@ -274,34 +299,32 @@ class SetPackageDefault(BuildStep):
                             workdir='/etc/portage/package.use/'
                             )
                         )
+            yield log.addStdout('File: ' + 'package.use/default.conf' + separator1)
+            for line in package_conf_use_list:
+                yield log.addStdout(line + separator1)
         # for test we need to add env and use
         #FIXME: check restrictions, test use mask and required use
         if self.getProperty('projectrepository_data')['test']:
             auxdb_iuses = yield self.gentooci.db.versions.getMetadataByUuidAndMatadata(self.getProperty("version_data")['uuid'], 'iuse')
             for auxdb_iuse in auxdb_iuses:
-                iuse, status = getIUseValue(auxdb_iuse)
+                iuse, status = getIUseValue(auxdb_iuse['value'])
                 if iuse == 'test':
-                    package_use_dir = True
                     self.aftersteps_list.append(
-                        steps.StringDownload(separator2.join('='+ self.getProperty("cpv"),'test') + separator1,
+                        steps.StringDownload(separator2.join(['=' + self.getProperty("cpv"),'test']) + separator1,
                             workerdest='test.conf',
                             workdir='/etc/portage/package.use/'
                             )
                         )
-            package_env_dir = True
+                    yield log.addStdout('File: ' + 'package.use/test.conf' + separator1)
+                    yield log.addStdout(separator2.join(['=' + self.getProperty("cpv"),'test']) + separator1)
             self.aftersteps_list.append(
-                        steps.StringDownload(separator2.join('='+ self.getProperty("cpv"),'test.conf') + separator1,
+                        steps.StringDownload(separator2.join(['=' + self.getProperty("cpv"),'test.conf']) + separator1,
                             workerdest='test.conf',
                             workdir='/etc/portage/package.env/'
                             )
                         )
-        # add package.* dirs
-        if package_use_dir:
-            aftersteps_list.append(steps.MakeDirectory(dir='package.use',
-                                workdir='/etc/portage/'))
-        if package_env_dir:
-            aftersteps_list.append(steps.MakeDirectory(dir='package.env',
-                                workdir='/etc/portage/'))
+            yield log.addStdout('File: ' + 'package.env/test.conf' + separator1)
+            yield log.addStdout(separator2.join(['=' + self.getProperty("cpv"),'test.conf']) + separator1)
         yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
         return SUCCESS
 
@@ -336,6 +359,7 @@ class SetEnvDefault(BuildStep):
         aftersteps_list = []
         separator1 = '\n'
         separator2 = ' '
+        log = yield self.addLog('env')
         # create the dir
         aftersteps_list.append(steps.MakeDirectory(dir='env',
                                 workdir='/etc/portage/'))
@@ -357,6 +381,9 @@ class SetEnvDefault(BuildStep):
                                 workerdest=k + '.conf',
                                 workdir='/etc/portage/env/')
             ])
+            yield log.addStdout('File: ' + k + '.conf' + '\n')
+            for line in env_strings:
+                yield log.addStdout(line + '\n')
         yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS
 
