@@ -352,6 +352,7 @@ class RunEmerge(BuildStep):
         self.step = step
         super().__init__(**kwargs)
         self.descriptionSuffix = self.step
+        self.build_env = {}
 
     @defer.inlineCallbacks
     def run(self):
@@ -363,6 +364,26 @@ class RunEmerge(BuildStep):
                     '-v'
                     ]
         aftersteps_list = []
+        # set env
+        # https://bugs.gentoo.org/683118
+        # export TERM=linux
+        # export TERMINFO=/etc/terminfo
+        self.build_env['TERM'] = 'linux'
+        self.build_env['TERMINFO'] = '/etc/terminfo'
+        # Lang
+        self.build_env['LANG'] = 'C.utf8'
+        self.build_env['LC_MESSAGES'] = 'C'
+        # no color
+        self.build_env['CARGO_TERM_COLOR'] = 'never'
+        self.build_env['GCC_COLORS'] = '0'
+        self.build_env['OCAML_COLOR'] = 'never'
+        self.build_env['PY_FORCE_COLOR'] = '0'
+        self.build_env['PYTEST_ADDOPTS'] = '--color=no'
+        self.build_env['NO_COLOR'] = '1'
+        # not all terms support urls
+        self.build_env['GCC_URLS'] = 'no'
+        self.build_env['TERM_URLS'] = 'no'
+
         if self.step == 'pre-update':
             shell_commad_list.append('-uDN')
             shell_commad_list.append('--changed-deps')
@@ -522,6 +543,7 @@ class RunEmerge(BuildStep):
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
                         workdir='/',
+                        env=self.build_env,
                         timeout=None
                 ))
             aftersteps_list.append(CheckEmergeLogs('build'))
