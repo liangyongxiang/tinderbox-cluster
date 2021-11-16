@@ -6,6 +6,7 @@ import re
 import gzip
 import io
 import hashlib
+import json
 
 from portage.versions import catpkgsplit
 
@@ -20,6 +21,22 @@ from buildbot.process.results import SKIPPED
 from buildbot.plugins import steps
 
 from buildbot_gentoo_ci.steps import minio
+from buildbot_gentoo_ci.steps import master as master_steps
+
+def PersOutputOfLogParser(rc, stdout, stderr):
+    build_summery_output = {}
+    build_summery_output['rc'] = rc
+    build_summery_output_json_list = []
+    # split the lines
+    for line in stdout.split('\n'):
+        #FIXME: check if line start with {[1-9]: {
+        if line.startswith('{'):
+            build_summery_output_json_list.append(json.loads(line))
+    build_summery_output['build_summery_output_json'] = build_summery_output_json_list
+    #FIXME: Handling of stderr output
+    return {
+        'build_summery_output' : build_summery_output
+        }
 
 class SetupPropertys(BuildStep):
     
@@ -44,6 +61,44 @@ class SetupPropertys(BuildStep):
         self.setProperty("default_project_data", default_project_data, 'default_project_data')
         self.setProperty("version_data", version_data, 'version_data')
         self.setProperty("status", 'completed', 'status')
+        return SUCCESS
+
+class SetupParserBuildLoger(BuildStep):
+
+    name = 'SetupParserBuildLoger'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        workdir = yield os.path.join(self.master.basedir, 'workers', self.getProperty('build_workername'), str(self.getProperty("project_build_data")['buildbot_build_id']))
+        if self.getProperty('faild_cpv'):
+            log_cpv = self.getProperty('log_build_data')[self.getProperty('faild_cpv')]
+        else:
+            log_cpv = self.getProperty('log_build_data')[self.getProperty('cpv')]
+        command = []
+        command.append('ci_log_parser')
+        command.append('-f')
+        command.append(log_cpv['full_logname'])
+        command.append('-u')
+        command.append(self.getProperty('project_data')['uuid'])
+        self.aftersteps_list = []
+        self.aftersteps_list.append(master_steps.MasterSetPropertyFromCommand(
+                                                            name = 'RunBuildLogParser',
+                                                            haltOnFailure = True,
+                                                            flunkOnFailure = True,
+                                                            command=command,
+                                                            workdir=workdir,
+                                                            strip=False,
+                                                            extract_fn=PersOutputOfLogParser
+                                                            ))
+        yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
         return SUCCESS
 
 class ParserBuildLog(BuildStep):
@@ -176,7 +231,7 @@ class ParserBuildLog(BuildStep):
             log_cpv = self.getProperty('log_build_data')[self.getProperty('faild_cpv')]
         else:
             log_cpv = self.getProperty('log_build_data')[self.getProperty('cpv')]
-        file_path = yield os.path.join(self.master.basedir, 'cpv_logs', log_cpv['full_logname'])
+        file_path = yield os.path.join(self.master.basedir, 'workers', self.getProperty('build_workername'), str(self.getProperty("project_build_data")['buildbot_build_id']) ,log_cpv['full_logname'])
         #FIXME: decode it to utf-8
         with io.TextIOWrapper(io.BufferedReader(gzip.open(file_path, 'rb'))) as f:
             for text_line in f:
@@ -214,18 +269,19 @@ class MakeIssue(BuildStep):
     #@defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        summary_log_dict = self.getProperty('summary_log_dict')
+        summary_log_dict_list = self.getProperty('build_summery_output')['build_summery_output_json']
         error = False
         warning = False
         self.summary_log_list = []
         log_hash = hashlib.sha256()
-        for k, v in sorted(summary_log_dict.items()):
-            if v['status'] == 'error':
-                error = True
-            if v['status'] == 'warning':
-                warning = True
-            self.summary_log_list.append(v['text'])
-            log_hash.update(v['text'].encode('utf-8'))
+        for summary_log_dict in summary_log_dict_list:
+            for k, v in sorted(summary_log_dict.items()):
+                if v['status'] == 'error':
+                    error = True
+                if v['status'] == 'warning':
+                    warning = True
+                self.summary_log_list.append(v['text'])
+                log_hash.update(v['text'].encode('utf-8'))
         # add build log
         # add issue/bug/pr report
         self.setProperty("summary_log_list", self.summary_log_list, 'summary_log_list')
@@ -300,7 +356,7 @@ class Upload(BuildStep):
         else:
             log_cpv = self.getProperty('log_build_data')[self.getProperty('cpv')]
         bucket = self.getProperty('project_data')['uuid'] + '-' + 'logs'
-        file_path = yield os.path.join(self.master.basedir, 'cpv_logs', log_cpv['full_logname'])
+        file_path = yield os.path.join(self.master.basedir, 'workers', self.getProperty('build_workername'), str(self.getProperty("project_build_data")['buildbot_build_id']) ,log_cpv['full_logname'])
         aftersteps_list = []
         aftersteps_list.append(minio.putFileToMinio(file_path, log_cpv['full_logname'], bucket))
         yield self.build.addStepsAfterCurrentStep(aftersteps_list)
@@ -374,8 +430,7 @@ class setBuildStatus(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         project_build_data = self.getProperty('project_build_data')
         yield self.gentooci.db.builds.setSatusBuilds(
-                                                    project_build_data['build_id'],
-                                                    project_build_data['project_uuid'],
+                                                    project_build_data['id'],
                                                     self.getProperty('status')
                                                     )
         if self.getProperty('status') == 'failed':

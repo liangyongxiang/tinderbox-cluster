@@ -43,6 +43,7 @@ class BuildsConnectorComponent(base.DBConnectorComponent):
                                          status=project_build_data['status'],
                                          requested=project_build_data['requested'],
                                          created_at=created_at,
+                                         buildbot_build_id=0,
                                          build_id=new_number))
             except (sa.exc.IntegrityError, sa.exc.ProgrammingError):
                 id = None
@@ -53,27 +54,25 @@ class BuildsConnectorComponent(base.DBConnectorComponent):
         return self.db.pool.do(thd)
 
     @defer.inlineCallbacks
-    def setSatusBuilds(self, build_id, project_uuid, status):
+    def setSatusBuilds(self, id, status):
         updated_at = int(self.master.reactor.seconds())
         def thd(conn, no_recurse=False):
         
                 tbl = self.db.model.projects_builds
                 q = tbl.update()
-                q = q.where(tbl.c.build_id == build_id)
-                q = q.where(tbl.c.project_uuid == project_uuid)
+                q = q.where(tbl.c.id == id)
                 conn.execute(q, updated_at=updated_at,
                                 status=status)
         yield self.db.pool.do(thd)
 
     @defer.inlineCallbacks
-    def setBuildbotBuildIdBuilds(self, build_id, project_uuid, buildbot_build_id):
+    def setBuildbotBuildIdBuilds(self, id, buildbot_build_id):
         updated_at = int(self.master.reactor.seconds())
         def thd(conn, no_recurse=False):
         
                 tbl = self.db.model.projects_builds
                 q = tbl.update()
-                q = q.where(tbl.c.build_id == build_id)
-                q = q.where(tbl.c.project_uuid == project_uuid)
+                q = q.where(tbl.c.id == id)
                 conn.execute(q, updated_at=updated_at,
                                 buildbot_build_id=buildbot_build_id)
         yield self.db.pool.do(thd)

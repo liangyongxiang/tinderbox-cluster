@@ -230,7 +230,7 @@ class Model(base.DBConnectorComponent):
         sa.Column('start', sa.Integer, default=0),
         sa.Column('end', sa.Integer, default=0),
         sa.Column('status', sa.Enum('info', 'warning', 'ignore', 'error'), default='info'),
-        sa.Column('type', sa.Enum('info', 'qa', 'compile', 'configure', 'install', 'postinst', 'prepare', 'setup', 'test', 'unpack', 'ignore'), default='info'),
+        sa.Column('type', sa.Enum('info', 'qa', 'compile', 'configure', 'install', 'postinst', 'prepare', 'setup', 'test', 'unpack', 'ignore', 'issues', 'misc', 'elog'), default='info'),
         sa.Column('search_type', sa.Enum('in', 'startswith', 'endswith', 'search'), default='in'),
     )
 

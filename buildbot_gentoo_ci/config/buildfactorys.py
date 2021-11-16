@@ -161,7 +161,8 @@ def parse_build_log():
     # set needed Propertys
     f.addStep(logs.SetupPropertys())
     # pers the build log for info qa errors
-    f.addStep(logs.ParserBuildLog())
+    f.addStep(logs.SetupParserBuildLoger())
+    #f.addStep(logs.ParserBuildLog())
     # pers the log from pkg check
     #f.addStep(logs.ParserPkgCheckLog())
     # Upload the log to the cloud and remove the log

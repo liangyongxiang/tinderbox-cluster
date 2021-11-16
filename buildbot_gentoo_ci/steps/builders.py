@@ -295,16 +295,15 @@ class SetupPropertys(BuildStep):
         self.setProperty('pkg_check_log_data', None, 'pkg_check_log_data')
         self.setProperty('faild_version_data', None, 'faild_version_data')
         self.setProperty('rerun', 0, 'rerun')
-        print(self.getProperty("buildnumber"))
         project_build_data = self.getProperty('project_build_data')
+        project_build_data['status'] = 'in-progress'
+        project_build_data['buildbot_build_id'] = self.getProperty("buildnumber")
         yield self.gentooci.db.builds.setSatusBuilds(
-                                                    project_build_data['build_id'],
-                                                    project_build_data['project_uuid'],
-                                                    'in-progress')
+                                                    project_build_data['id'],
+                                                    project_build_data['status'])
         yield self.gentooci.db.builds.setBuildbotBuildIdBuilds(
-                                                    project_build_data['build_id'],
-                                                    project_build_data['project_uuid'],
-                                                    self.getProperty("buildnumber"))
+                                                    project_build_data['id'],
+                                                    project_build_data['buildbot_build_id'])
         self.setProperty('project_build_data', project_build_data, 'project_build_data')
         print(self.getProperty("project_build_data"))
         return SUCCESS
@@ -584,8 +583,16 @@ class CheckEmergeLogs(BuildStep):
         return version_data
 
     @defer.inlineCallbacks
+    def createDistDir(self):
+        workdir = yield os.path.join(self.master.basedir, 'workers', self.getProperty('workername'))
+        self.aftersteps_list.append(steps.MasterShellCommand(
+            command=['mkdir', str(self.getProperty("buildnumber"))],
+            workdir=workdir
+        ))
+
+    @defer.inlineCallbacks
     def getLogFile(self, cpv, log_dict):
-        masterdest = yield os.path.join(self.master.basedir, 'cpv_logs', log_dict[cpv]['full_logname'])
+        masterdest = yield os.path.join(self.master.basedir, 'workers', self.getProperty('workername'), str(self.getProperty("buildnumber")) ,log_dict[cpv]['full_logname'])
         self.aftersteps_list.append(steps.FileUpload(
             workersrc=log_dict[cpv]['log_path'],
             masterdest=masterdest
@@ -753,6 +760,7 @@ class CheckEmergeLogs(BuildStep):
                 if cpv in log_dict or faild_cpv in log_dict:
                     if cpv in log_dict:
                         self.log_data[cpv] = log_dict[cpv]
+                        yield self.createDistDir()
                         yield self.getLogFile(cpv, log_dict)
                         faild_version_data = False
                     if faild_cpv:
@@ -777,7 +785,8 @@ class CheckEmergeLogs(BuildStep):
                             'repository_data' : self.getProperty('repository_data'),
                             'faild_cpv' : faild_cpv,
                             'step' : self.step,
-                            'emerge_info' : self.getProperty('emerge_info_output')['emerge_info']
+                            'emerge_info' : self.getProperty('emerge_info_output')['emerge_info'],
+                            'build_workername' : self.getProperty('workername')
                         }
                     ))
         if not self.step is None and self.aftersteps_list != []:
