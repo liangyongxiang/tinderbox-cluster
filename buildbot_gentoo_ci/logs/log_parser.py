@@ -21,7 +21,7 @@ class ProjectsPattern(Base):
     start = sa.Column(sa.Integer, default=0)
     end = sa.Column(sa.Integer, default=0)
     status = sa.Column(sa.Enum('info', 'warning', 'ignore', 'error'), default='info')
-    type = sa.Column(sa.Enum('info', 'qa', 'compile', 'configure', 'install', 'postinst', 'prepare', 'setup', 'test', 'unpack', 'ignore', 'issues', 'misc', 'elog'), default='info')
+    type = sa.Column(sa.Enum('info', 'qa', 'compile', 'configure', 'install', 'postinst', 'prepare', 'pretend', 'setup', 'test', 'unpack', 'ignore', 'issues', 'misc', 'elog'), default='info')
     search_type = sa.Column(sa.Enum('in', 'startswith', 'endswith', 'search'), default='in')
 
 def getDBSession(config):
@@ -31,26 +31,23 @@ def getDBSession(config):
     return Session()
 
 def getMultiprocessingPool(config):
-    # Use cores/4 when multiprocessing
     return Pool(processes = int(config['core']))
-    # multi_pool = getMultiprocessingPool()
-    # use multi_pool.apply_async(function, (args list)
-    # multi_pool.close()
-    # multi_pool.join()
 
 def addPatternToList(Session, pattern_list, uuid):
     for project_pattern in Session.query(ProjectsPattern).filter_by(project_uuid=uuid).all():
         # check if the search pattern is vaild
+        project_pattern_search = project_pattern.search
         try:
-            re.compile(project_pattern.search)
+            re.compile(project_pattern_search)
         except re.error:
             print("Non valid regex pattern")
-            print(project_pattern)
+            print(project_pattern.search)
+            print(project_pattern.id)
         else:
             patten_dict = {}
             patten_dict['id'] = project_pattern.id
             patten_dict['project_uuid'] = project_pattern.project_uuid
-            patten_dict['search'] = project_pattern.search
+            patten_dict['search'] = project_pattern_search
             patten_dict['start'] = project_pattern.start
             patten_dict['end'] = project_pattern.end
             patten_dict['status'] = project_pattern.status
@@ -74,25 +71,34 @@ def search_buildlog(log_search_pattern_list, logfile_text_dict, tmp_index, max_t
     # loop true the pattern list for match
     for search_pattern in log_search_pattern_list:
         search_hit = False
-        if search_pattern['search_type'] == 'in':
-            if search_pattern['search'] in text_line:
-                search_hit = True
-        if search_pattern['search_type'] == 'startswith':
-            if text_line.startswith(search_pattern['search']):
-                search_hit = True
-        if search_pattern['search_type'] == 'endswith':
-            if text_line.endswith(search_pattern['search']):
-                search_hit = True
-        if search_pattern['search_type'] == 'search':
-            if re.search(search_pattern['search'], text_line):
-                search_hit = True
+        # check if should ignore the line
+        #FIXME take the ignore line pattern from db
+        if text_line.startswith('>>> /'):
+            pass
+        if else re.search('./\w+/'):
+            pass
+        else:
+            # search for match
+            if search_pattern['search_type'] == 'in':
+                if search_pattern['search'] in text_line:
+                    search_hit = True
+            if search_pattern['search_type'] == 'startswith':
+                if text_line.startswith(search_pattern['search']):
+                    search_hit = True
+            if search_pattern['search_type'] == 'endswith':
+                if text_line.endswith(search_pattern['search']):
+                    search_hit = True
+            if search_pattern['search_type'] == 'search':
+                if re.search(search_pattern['search'], text_line):
+                    search_hit = True
         # add the line if the pattern match
         if search_hit:
             summery_dict[tmp_index] = {}
             summery_dict[tmp_index]['text'] = text_line
             summery_dict[tmp_index]['type'] = search_pattern['type']
             summery_dict[tmp_index]['status'] = search_pattern['status']
-            summery_dict[tmp_index]['search_pattern_id'] = search_pattern['id']
+            summery_dict[tmp_index]['id'] = search_pattern['id']
+            summery_dict[tmp_index]['search_pattern'] = search_pattern['search']
             # add upper text lines if requested
             # max 5
             if search_pattern['start'] != 0:
@@ -108,6 +114,8 @@ def search_buildlog(log_search_pattern_list, logfile_text_dict, tmp_index, max_t
                             summery_dict[i]['text'] = logfile_text_dict[i]
                             summery_dict[i]['type'] = 'info'
                             summery_dict[i]['status'] = 'info'
+                            summery_dict[i]['id'] = 0
+                            summery_dict[i]['search_pattern'] = 'auto'
             # add lower text lines if requested
             # max 5
             if search_pattern['end'] != 0:
@@ -124,6 +132,8 @@ def search_buildlog(log_search_pattern_list, logfile_text_dict, tmp_index, max_t
                             summery_dict[i]['text'] = logfile_text_dict[i]
                             summery_dict[i]['type'] = 'info'
                             summery_dict[i]['status'] = 'info'
+                            summery_dict[i]['id'] = 0
+                            summery_dict[i]['search_pattern'] = 'auto'
         else:
             # we add all line that start with ' * ' as info
             # we add all line that start with '>>>' but not '>>> /' as info
@@ -133,6 +143,8 @@ def search_buildlog(log_search_pattern_list, logfile_text_dict, tmp_index, max_t
                     summery_dict[tmp_index]['text'] = text_line
                     summery_dict[tmp_index]['type'] = 'info'
                     summery_dict[tmp_index]['status'] = 'info'
+                    summery_dict[tmp_index]['id'] = 0
+                    summery_dict[tmp_index]['search_pattern'] = 'auto'
     #FIXME: print json
     if summery_dict == {}:
         return None
@@ -154,21 +166,18 @@ def runLogParser(args):
     #NOTE: The patten is from https://github.com/toralf/tinderbox/tree/master/data files.
     # Is stored in a db instead of files.
     log_search_pattern_list = get_log_search_pattern(Session, args.uuid, config['default_uuid'])
+    Session.close()
     with io.TextIOWrapper(io.BufferedReader(gzip.open(args.file, 'rb'))) as f:
             #FIXME: add support for multiprocessing
             for text_line in f:
                 logfile_text_dict[index] = text_line.strip('\n')
-                # run the parse patten on the line
-                #search_buildlog(log_search_pattern_list, logfile_text_dict, index, max_text_lines)
-                res = mp_pool.apply_async(search_buildlog, (log_search_pattern_list, logfile_text_dict, index, max_text_lines,))
-                if res.get() is not None:
-                    print(json.dumps(res.get()))
-                # remove text line that we don't need any more
-                if index >= 20:
-                    del logfile_text_dict[index - 19]
                 index = index + 1
                 max_text_lines = index
-            mp_pool.close()
-            mp_pool.join()
             f.close()
-    Session.close()
+    # run the parse patten on the line
+    for tmp_index, text in logfile_text_dict.items():
+        res = mp_pool.apply_async(search_buildlog, (log_search_pattern_list, logfile_text_dict, tmp_index, max_text_lines,))
+        if res.get() is not None:
+            print(json.dumps(res.get()))
+    mp_pool.close()
+    mp_pool.join()

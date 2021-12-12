@@ -26,13 +26,20 @@ from buildbot_gentoo_ci.steps import master as master_steps
 def PersOutputOfLogParser(rc, stdout, stderr):
     build_summery_output = {}
     build_summery_output['rc'] = rc
-    build_summery_output_json_list = []
+    summary_log_dict = {}
     # split the lines
     for line in stdout.split('\n'):
-        #FIXME: check if line start with {[1-9]: {
+        #FIXME: check if line start with {"[1-9]": {
         if line.startswith('{'):
-            build_summery_output_json_list.append(json.loads(line))
-    build_summery_output['build_summery_output_json'] = build_summery_output_json_list
+            for k, v in json.loads(line).items():
+                summary_log_dict[int(k)] = {
+                                    'text' : v['text'],
+                                    'type' : v['type'],
+                                    'status' : v['status'],
+                                    'id' : v['id'],
+                                    'search_pattern' : v['search_pattern']
+                                    }
+    build_summery_output['summary_log_dict'] = summary_log_dict
     #FIXME: Handling of stderr output
     return {
         'build_summery_output' : build_summery_output
@@ -266,27 +273,94 @@ class MakeIssue(BuildStep):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
-    #@defer.inlineCallbacks
+    @defer.inlineCallbacks
+    def logIssue(self):
+        separator1 = '\n'
+        separator2 = ' '
+        log = yield self.addLog('issue')
+        if self.getProperty('faild_cpv'):
+            cpv = self.getProperty('faild_cpv')
+        else:
+            cpv = self.getProperty('cpv')
+        yield log.addStdout('Titel:' + '\n')
+        yield log.addStdout(separator2.join([cpv, '-', self.error_dict['title']]) + separator1)
+        yield log.addStdout('Summary:' + '\n')
+        for line in self.summary_log_list:
+            yield log.addStdout(line + '\n')
+        yield log.addStdout('Attachments:' + '\n')
+        yield log.addStdout('emerge_info.log' + '\n')
+        log_cpv = self.getProperty('log_build_data')[cpv]
+        yield log.addStdout(log_cpv['full_logname'] + '\n')
+        yield log.addStdout('world.log' + '\n')
+
+    def ClassifyIssue(self):
+        # get the title for the issue
+        text_issue_list = []
+        text_phase_list = []
+        for k, v in sorted(self.summary_log_dict.items()):
+            # get the issue error
+            if v['text'].startswith(' * ERROR:') and v['text'].endswith(' phase):'):
+                issue_text = self.summary_log_dict[k + 1]['text']
+                if issue_text.startswith(' *   ninja -v -j'):
+                    issue_text = 'ninja failed'
+                if issue_text.startswith(' *   (no error'):
+                    issue_text = False
+                if issue_text:
+                    text_issue_list.append(issue_text)
+            # get the phase error
+            if v['type'] == self.error_dict['phase'] and v['status'] == 'error':
+                text_phase_list.append(v['text'])
+        # if not get the first issue
+        if text_issue_list == []:
+            for k, v in self.summary_log_dict.items():
+                if v['type'] == 'issues':
+                    text_issue_list.append(v['text'])
+        # if not get the first error
+        if text_phase_list == []:
+            for k, v in self.summary_log_dict.items():
+                if v['status'] == 'error':
+                    text_phase_list.append(v['text'])
+        # add the issue error
+        if text_issue_list != []:
+            self.error_dict['title_issue'] = text_issue_list[0].replace('*', '').strip()
+        else:
+            self.error_dict['title_issue'] = 'title_issue : None'
+        # add the error line
+        if text_phase_list != []:
+            self.error_dict['title_phase'] = text_phase_list[0].replace('*', '').strip()
+        else:
+            self.error_dict['title_phase'] = 'title_phase : None'
+        #set the error title
+        self.error_dict['title'] = self.error_dict['title_issue'] + ' (' + self.error_dict['title_phase'] + ')'
+
+    @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        summary_log_dict_list = self.getProperty('build_summery_output')['build_summery_output_json']
+        self.summary_log_dict = self.getProperty('build_summery_output')['summary_log_dict']
         error = False
         warning = False
         self.summary_log_list = []
-        log_hash = hashlib.sha256()
-        for summary_log_dict in summary_log_dict_list:
-            for k, v in sorted(summary_log_dict.items()):
-                if v['status'] == 'error':
-                    error = True
-                if v['status'] == 'warning':
-                    warning = True
-                self.summary_log_list.append(v['text'])
-                log_hash.update(v['text'].encode('utf-8'))
+        self.error_dict = {}
+        self.error_dict['hash'] = hashlib.sha256()
+        for k, v in sorted(self.summary_log_dict.items()):
+            self.summary_log_list.append(v['text'])
+            self.error_dict['hash'].update(v['text'].encode('utf-8'))
+            if v['status'] == 'warning':
+                warning = True
+            # check if the build did fail
+            if v['text'].startswith(' * ERROR:') and v['text'].endswith(' phase):'):
+                # get phase error
+                phase_error = v['text'].split(' (')[1].split(' phase')[0]
+                self.error_dict['phase'] = phase_error
+                error = True
         # add build log
         # add issue/bug/pr report
-        self.setProperty("summary_log_list", self.summary_log_list, 'summary_log_list')
         if error:
+            yield self.ClassifyIssue()
+            print(self.error_dict)
+            yield self.logIssue()
             self.setProperty("status", 'failed', 'status')
+        self.setProperty("summary_log_list", self.summary_log_list, 'summary_log_list')
         if warning:
             self.setProperty("status", 'warning', 'status')
         return SUCCESS
