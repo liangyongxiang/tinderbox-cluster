@@ -172,8 +172,12 @@ def parse_build_log():
     f.addStep(logs.MakeIssue())
     # add sum log to buildbot log
     f.addStep(logs.setBuildbotLog())
+    # pers the emerge info
+    f.addStep(logs.SetupParserEmergeInfoLog())
     # add emerge info to log and db
     f.addStep(logs.setEmergeInfoLog())
+    # add package info to log and db
+    f.addStep(logs.setPackageInfoLog())
     # set BuildStatus
     f.addStep(logs.setBuildStatus())
     # setup things for the irc bot

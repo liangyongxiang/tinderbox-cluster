@@ -590,13 +590,34 @@ class CheckEmergeLogs(BuildStep):
             workdir=workdir
         ))
 
+    def addFileUploade(self, sourcefile, destfile):
+        self.aftersteps_list.append(steps.FileUpload(
+            workersrc=sourcefile,
+            masterdest=destfile
+        ))
+
     @defer.inlineCallbacks
     def getLogFile(self, cpv, log_dict):
-        masterdest = yield os.path.join(self.master.basedir, 'workers', self.getProperty('workername'), str(self.getProperty("buildnumber")) ,log_dict[cpv]['full_logname'])
-        self.aftersteps_list.append(steps.FileUpload(
-            workersrc=log_dict[cpv]['log_path'],
-            masterdest=masterdest
-        ))
+        destfile = yield os.path.join(self.masterdest, log_dict[cpv]['full_logname'])
+        sourcefile = log_dict[cpv]['log_path']
+        self.addFileUploade(sourcefile, destfile)
+
+    @defer.inlineCallbacks
+    def getEmergeFiles(self, faild_version_data):
+        # get emerge info
+        destfile = yield os.path.join(self.masterdest, 'emerge_info.txt')
+        sourcefile = yield os.path.join('/', 'tmp', 'emerge_info.txt')
+        self.addFileUploade(sourcefile, destfile)
+        #FIXME:
+        # if faild_version_data:
+        # get emerge.log
+        # get elogs
+        # world file
+
+    def getBuildWorkdirFiles(self):
+        #FIXME:
+        # get files from the build workdir
+        pass
 
     @defer.inlineCallbacks
     def run(self):
@@ -609,6 +630,8 @@ class CheckEmergeLogs(BuildStep):
                     '-v'
                     ]
         package_dict = emerge_output['packages']
+
+        self.masterdest = yield os.path.join(self.master.basedir, 'workers', self.getProperty('workername'), str(self.getProperty("buildnumber")))
 
         #FIXME: Prosees the logs and do stuff
         # preserved-libs
@@ -757,12 +780,12 @@ class CheckEmergeLogs(BuildStep):
                 print(log_dict)
                 cpv = self.getProperty('cpv')
                 faild_cpv = emerge_output['failed']
+                faild_version_data = False
                 if cpv in log_dict or faild_cpv in log_dict:
+                    yield self.createDistDir()
                     if cpv in log_dict:
                         self.log_data[cpv] = log_dict[cpv]
-                        yield self.createDistDir()
                         yield self.getLogFile(cpv, log_dict)
-                        faild_version_data = False
                     if faild_cpv:
                         # failed and build requested cpv
                         if cpv == faild_cpv:
@@ -772,6 +795,8 @@ class CheckEmergeLogs(BuildStep):
                             self.log_data[faild_cpv] = log_dict[faild_cpv]
                             yield self.getLogFile(faild_cpv, log_dict)
                             faild_version_data = yield self.getVersionData(faild_cpv)
+                        self.getBuildWorkdirFiles()
+                    self.getEmergeFiles(faild_version_data)
                     self.aftersteps_list.append(steps.Trigger(
                         schedulerNames=['parse_build_log'],
                         waitForFinish=False,
@@ -785,7 +810,6 @@ class CheckEmergeLogs(BuildStep):
                             'repository_data' : self.getProperty('repository_data'),
                             'faild_cpv' : faild_cpv,
                             'step' : self.step,
-                            'emerge_info' : self.getProperty('emerge_info_output')['emerge_info'],
                             'build_workername' : self.getProperty('workername')
                         }
                     ))
@@ -920,17 +944,37 @@ class RunEmergeInfo(BuildStep):
     @defer.inlineCallbacks
     def run(self):
         aftersteps_list = []
+        # add emerge info
         shell_commad_list = [
                     'emerge',
                     ]
         shell_commad_list.append('--info')
+        shell_commad_list.append('>')
+        shell_commad_list.append('/tmp/emerge_info.txt')
         aftersteps_list.append(
-                steps.SetPropertyFromCommand(
-                        command=shell_commad_list,
-                        strip=True,
-                        extract_fn=PersOutputOfEmergeInfo,
-                        workdir='/',
-                        timeout=None
+                steps.ShellCommand(
+                        # the list need to be joined to pipe to a file
+                        command=' '.join(shell_commad_list),
+                        workdir='/'
+                ))
+        # add package info
+        cpv = self.getProperty("cpv")
+        c = yield catpkgsplit(cpv)[0]
+        p = yield catpkgsplit(cpv)[1]
+        shell_commad_list = [
+                    'emerge',
+                    ]
+        shell_commad_list.append('-qpvO')
+        shell_commad_list.append('=' + self.getProperty('cpv'))
+        shell_commad_list.append('--usepkg-exclude')
+        shell_commad_list.append(c + '/' + p)
+        shell_commad_list.append('>>')
+        shell_commad_list.append('/tmp/emerge_info.txt')
+        aftersteps_list.append(
+                steps.ShellCommand(
+                        # the list need to be joined to pipe to a file
+                        command=' '.join(shell_commad_list),
+                        workdir='/'
                 ))
         yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS
@@ -954,8 +998,8 @@ class RunBuild(BuildStep):
             # trigger pars_build_log if we have any logs to check
             return SKIPPED
         aftersteps_list = []
-        aftersteps_list.append(RunEmergeInfo())
         aftersteps_list.append(RunEmerge(step='pre-build'))
+        aftersteps_list.append(RunEmergeInfo())
         aftersteps_list.append(RunEmerge(step='build'))
         aftersteps_list.append(RunEmerge(step='pre-depclean'))
         aftersteps_list.append(RunEmerge(step='preserved-libs'))

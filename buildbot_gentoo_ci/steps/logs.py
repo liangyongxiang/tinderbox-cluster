@@ -45,6 +45,23 @@ def PersOutputOfLogParser(rc, stdout, stderr):
         'build_summery_output' : build_summery_output
         }
 
+def PersOutputOfEmergeInfo(rc, stdout, stderr):
+    #FIXME: line for package info
+    emerge_info_output = {}
+    emerge_info_output['rc'] = rc
+    emerge_info_list = []
+    emerge_package_info = []
+    for line in stdout.split('\n'):
+        if line.startswith('['):
+            emerge_package_info.append(line)
+        else:
+            emerge_info_list.append(line)
+    emerge_info_output['emerge_info'] = emerge_info_list
+    emerge_info_output['emerge_package_info'] = emerge_package_info
+    return {
+        'emerge_info_output' : emerge_info_output
+        }
+
 class SetupPropertys(BuildStep):
     
     name = 'SetupPropertys'
@@ -387,6 +404,38 @@ class setBuildbotLog(BuildStep):
             yield log.addStdout(line + '\n')
         return SUCCESS
 
+class SetupParserEmergeInfoLog(BuildStep):
+
+    name = 'SetupParserEmergeInfoLog'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = False
+    flunkOnFailure = True
+    warnOnWarnings = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        workdir = yield os.path.join(self.master.basedir, 'workers', self.getProperty('build_workername'), str(self.getProperty("project_build_data")['buildbot_build_id']))
+        command = []
+        command.append('cat')
+        command.append('emerge_info.txt')
+        self.aftersteps_list = []
+        self.aftersteps_list.append(master_steps.MasterSetPropertyFromCommand(
+                                                            name = 'RunEmergeInfoLogParser',
+                                                            haltOnFailure = True,
+                                                            flunkOnFailure = True,
+                                                            command=command,
+                                                            workdir=workdir,
+                                                            strip=False,
+                                                            extract_fn=PersOutputOfEmergeInfo
+                                                            ))
+        yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
+        return SUCCESS
+
 class setEmergeInfoLog(BuildStep):
 
     name = 'setEmergeInfoLog'
@@ -406,9 +455,33 @@ class setEmergeInfoLog(BuildStep):
         log = yield self.addLog('emerge_info')
         #FIXME: add emerge info to db
         # add line for line
-        for line in self.getProperty('emerge_info'):
+        for line in self.getProperty('emerge_info_output')['emerge_info']:
             yield log.addStdout(line + '\n')
         return SUCCESS
+
+class setPackageInfoLog(BuildStep):
+
+    name = 'setPackageInfoLog'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = False
+    flunkOnFailure = True
+    warnOnWarnings = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        #setup the log
+        log = yield self.addLog('package_info')
+        #FIXME: add package info to db
+        # add line for line
+        for line in self.getProperty('emerge_info_output')['emerge_package_info']:
+            yield log.addStdout(line + '\n')
+        return SUCCESS
+
 
 class Upload(BuildStep):
 
