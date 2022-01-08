@@ -109,6 +109,18 @@ def run_build_request():
                                 workdir='/etc/'))
     f.addStep(buildbot_steps.MakeDirectory(dir="portage",
                                 workdir='/etc/'))
+    # Clean /var/cache/portage/logs and emerge.log
+    f.addStep(buildbot_steps.ShellCommand(
+                        name='Clean emerge.log',
+                        command=['rm', 'emerge.log'],
+                        workdir='/var/log/'
+                        ))
+    f.addStep(buildbot_steps.ShellCommand(
+                        flunkOnFailure=False,
+                        name='Clean logs',
+                        command=['rm', '-R', 'logs'],
+                        workdir='/var/cache/portage/'
+                        ))
     # setup the profile
     #NOTE: pkgcheck do not support it as a dir
     #f.addStep(buildbot_steps.MakeDirectory(dir="make.profile",
