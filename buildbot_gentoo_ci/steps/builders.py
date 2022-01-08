@@ -170,6 +170,17 @@ def PersOutputOfEmergeInfo(rc, stdout, stderr):
         'emerge_info_output' : emerge_info_output
         }
 
+def PersOutputOfElogLs(rc, stdout, stderr):
+    elog_ls_output = {}
+    elog_ls_output['rc'] = rc
+    elog_ls_list = []
+    for line in stdout.split('\n'):
+        elog_ls_list.append(line)
+    elog_ls_output['elog_ls'] = elog_ls_list
+    return {
+        'elog_ls_output' : elog_ls_output
+        }
+
 class TriggerRunBuildRequest(BuildStep):
     
     name = 'TriggerRunBuildRequest'
@@ -553,6 +564,42 @@ class RunEmerge(BuildStep):
             yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS
 
+class CheckElogLogs(BuildStep):
+
+    name = 'CheckElogLogs'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.aftersteps_list = []
+
+    def addFileUploade(self, sourcefile, destfile):
+        self.aftersteps_list.append(steps.FileUpload(
+            workersrc=sourcefile,
+            masterdest=destfile
+        ))
+
+    @defer.inlineCallbacks
+    def run(self):
+        elog_ls_output = self.getProperty('elog_ls_output')
+        workdir = yield os.path.join('/', 'var', 'cache', 'portage', 'logs', 'elog')
+        for elogfile in elog_ls_output['elog_ls']:
+            if self.getProperty('faild_cpv'):
+                cpv = self.getProperty('faild_cpv')
+            else:
+                cpv = self.getProperty('cpv')
+            if elogfile.replace(':', '/').startswith(cpv):
+                print(elogfile)
+                destfile = yield os.path.join(self.getProperty('masterdest'), elogfile.replace('.log', '.elog'))
+                sourcefile = yield os.path.join(workdir, elogfile)
+                self.addFileUploade(sourcefile, destfile)
+        if self.aftersteps_list != []:
+            yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
+        return SUCCESS
+
 class CheckEmergeLogs(BuildStep):
 
     name = 'CheckEmergeLogs'
@@ -567,6 +614,7 @@ class CheckEmergeLogs(BuildStep):
         self.descriptionSuffix = self.step
         self.aftersteps_list = []
         self.log_data = {}
+        self.faild_cpv = False
 
     @defer.inlineCallbacks
     def getVersionData(self, cpv):
@@ -603,16 +651,38 @@ class CheckEmergeLogs(BuildStep):
         self.addFileUploade(sourcefile, destfile)
 
     @defer.inlineCallbacks
-    def getEmergeFiles(self, faild_version_data):
+    def getElogFiles(self, cpv):
+        workdir = yield os.path.join('/', 'var', 'cache', 'portage', 'logs', 'elog')
+        elog_cpv = cpv.replace('/', ':')
+        shell_commad_list = []
+        shell_commad_list.append('ls')
+        #shell_commad_list.append(elog_cpv + '*')
+        self.aftersteps_list.append(
+                steps.SetPropertyFromCommand(
+                        command=shell_commad_list,
+                        strip=True,
+                        extract_fn=PersOutputOfElogLs,
+                        workdir=workdir,
+                        timeout=None
+                ))
+        self.aftersteps_list.append(CheckElogLogs())
+
+    @defer.inlineCallbacks
+    def getEmergeFiles(self, cpv):
         # get emerge info
         destfile = yield os.path.join(self.masterdest, 'emerge_info.txt')
         sourcefile = yield os.path.join('/', 'tmp', 'emerge_info.txt')
         self.addFileUploade(sourcefile, destfile)
-        #FIXME:
-        # if faild_version_data:
         # get emerge.log
-        # get elogs
+        destfile2 = yield os.path.join(self.masterdest, 'emerge.log')
+        sourcefile2 = yield os.path.join('/', 'var', 'log', 'emerge.log')
+        self.addFileUploade(sourcefile2, destfile2)
         # world file
+        destfile3 = yield os.path.join(self.masterdest, 'world')
+        sourcefile3 = yield os.path.join('/', 'var', 'lib', 'portage', 'world')
+        self.addFileUploade(sourcefile3, destfile3)
+        # get elogs
+        self.getElogFiles(cpv)
 
     def getBuildWorkdirFiles(self):
         #FIXME:
@@ -625,6 +695,8 @@ class CheckEmergeLogs(BuildStep):
         project_data = self.getProperty('project_data')
         projects_emerge_options = yield self.gentooci.db.projects.getProjectEmergeOptionsByUuid(project_data['uuid'])
         emerge_output = self.getProperty('emerge_output')
+        self.faild_cpv = emerge_output['failed']
+        self.setProperty('faild_cpv', self.faild_cpv, 'faild_cpv')
         shell_commad_list = [
                     'emerge',
                     '-v'
@@ -632,6 +704,7 @@ class CheckEmergeLogs(BuildStep):
         package_dict = emerge_output['packages']
 
         self.masterdest = yield os.path.join(self.master.basedir, 'workers', self.getProperty('workername'), str(self.getProperty("buildnumber")))
+        self.setProperty('masterdest', self.masterdest, 'masterdest')
 
         #FIXME: Prosees the logs and do stuff
         # preserved-libs
@@ -730,8 +803,8 @@ class CheckEmergeLogs(BuildStep):
             else:
                 # trigger parse_build_log with info about pre-build and it fail
                 pass
-        # Check if extra build did work
-        if self.step == 'extra-build':
+        # Make Logfile dict
+        if self.step == 'extra-build' or self.step == 'build':
             print(emerge_output)
             log_dict = {}
             # get cpv, logname and log path
@@ -746,11 +819,8 @@ class CheckEmergeLogs(BuildStep):
                                 full_logname = full_logname
                                 )
             print(log_dict)
-            # Find log for cpv that was requested or did failed
-            if not log_dict == {}:
-                # requested cpv
-                print(log_dict)
-                faild_cpv = emerge_output['failed']
+        if self.step == 'extra-build':
+            #FIXME: Check if extra build did work
             self.aftersteps_list.append(RunEmerge(step='pre-build'))
             self.setProperty('rerun', self.getProperty('rerun') + 1, 'rerun')
 
@@ -760,43 +830,29 @@ class CheckEmergeLogs(BuildStep):
         # local_log_path dir set in config
         # format /var/cache/portage/logs/build/gui-libs/egl-wayland-1.1.6:20210321-173525.log.gz
         if self.step == 'build':
-            print(emerge_output)
-            log_dict = {}
-            # get cpv, logname and log path
-            for log_path in emerge_output['log_paths']:
-                c = log_path.split('/')[6]
-                full_logname = log_path.split('/')[7]
-                print(full_logname)
-                pv = full_logname.split(':')[0]
-                cpv = c + '/' + pv
-                log_dict[cpv] = dict(
-                                log_path = log_path,
-                                full_logname = full_logname
-                                )
-            print(log_dict)
             # Find log for cpv that was requested or did failed
             if not log_dict == {}:
                 # requested cpv
-                print(log_dict)
                 cpv = self.getProperty('cpv')
-                faild_cpv = emerge_output['failed']
                 faild_version_data = False
-                if cpv in log_dict or faild_cpv in log_dict:
+                if cpv in log_dict or self.faild_cpv in log_dict:
                     yield self.createDistDir()
                     if cpv in log_dict:
                         self.log_data[cpv] = log_dict[cpv]
                         yield self.getLogFile(cpv, log_dict)
-                    if faild_cpv:
+                    if self.faild_cpv:
                         # failed and build requested cpv
-                        if cpv == faild_cpv:
+                        if cpv == self.faild_cpv:
                             faild_version_data = self.getProperty("version_data")
                         else:
                             # failed but not build requested cpv
-                            self.log_data[faild_cpv] = log_dict[faild_cpv]
-                            yield self.getLogFile(faild_cpv, log_dict)
-                            faild_version_data = yield self.getVersionData(faild_cpv)
+                            self.log_data[self.faild_cpv] = log_dict[self.faild_cpv]
+                            yield self.getLogFile(self.faild_cpv, log_dict)
+                            faild_version_data = yield self.getVersionData(self.faild_cpv)
+                        self.getEmergeFiles(self.faild_cpv)
                         self.getBuildWorkdirFiles()
-                    self.getEmergeFiles(faild_version_data)
+                    else:
+                        self.getEmergeFiles(cpv)
                     self.aftersteps_list.append(steps.Trigger(
                         schedulerNames=['parse_build_log'],
                         waitForFinish=False,
@@ -808,7 +864,7 @@ class CheckEmergeLogs(BuildStep):
                             'log_build_data' : self.log_data,
                             'pkg_check_log_data' : self.getProperty("pkg_check_log_data"),
                             'repository_data' : self.getProperty('repository_data'),
-                            'faild_cpv' : faild_cpv,
+                            'faild_cpv' : self.faild_cpv,
                             'step' : self.step,
                             'build_workername' : self.getProperty('workername')
                         }
