@@ -181,6 +181,19 @@ def PersOutputOfElogLs(rc, stdout, stderr):
         'elog_ls_output' : elog_ls_output
         }
 
+def PersOutputOfBuildWorkdir(rc, stdout, stderr):
+    build_workdir_find_output = {}
+    build_workdir_find_output['rc'] = rc
+    build_workdir_find_list = []
+    for line in stdout.split('\n'):
+        find_line = line.replace('./', '')
+        if find_line != '':
+            build_workdir_find_list.append(find_line)
+    build_workdir_find_output['build_workdir_find'] = build_workdir_find_list
+    return {
+        'build_workdir_find_output' : build_workdir_find_output
+        }
+
 class TriggerRunBuildRequest(BuildStep):
     
     name = 'TriggerRunBuildRequest'
@@ -317,6 +330,9 @@ class SetupPropertys(BuildStep):
                                                     project_build_data['buildbot_build_id'])
         self.setProperty('project_build_data', project_build_data, 'project_build_data')
         print(self.getProperty("project_build_data"))
+        self.masterdest = yield os.path.join(self.master.basedir, 'workers', self.getProperty('workername'), str(self.getProperty("buildnumber")))
+        self.setProperty('masterdest', self.masterdest, 'masterdest')
+
         return SUCCESS
 
 class UpdateRepos(BuildStep):
@@ -578,6 +594,7 @@ class CheckElogLogs(BuildStep):
 
     def addFileUploade(self, sourcefile, destfile):
         self.aftersteps_list.append(steps.FileUpload(
+            mode = 0o644,
             workersrc=sourcefile,
             masterdest=destfile
         ))
@@ -596,6 +613,51 @@ class CheckElogLogs(BuildStep):
                 destfile = yield os.path.join(self.getProperty('masterdest'), elogfile.replace('.log', '.elog'))
                 sourcefile = yield os.path.join(workdir, elogfile)
                 self.addFileUploade(sourcefile, destfile)
+        if self.aftersteps_list != []:
+            yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
+        return SUCCESS
+
+class CheckBuildWorkDirs(BuildStep):
+
+    name = 'CheckBuildWorkdir'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.aftersteps_list = []
+
+    @defer.inlineCallbacks
+    def run(self):
+        cpv = self.getProperty('faild_cpv')
+        cpv_build_dir = yield os.path.join('/', 'var', 'tmp', 'portage', self.getProperty('cpv_build_dir'))
+        compressed_log_file = cpv.replace('/', '_') + '.' + str(self.getProperty("buildnumber")) + '.logs.tar.bz2'
+        masterdest_file = yield os.path.join(self.getProperty('masterdest'), compressed_log_file)
+        # cpv_build_work_dir = yield os.path.join(cpv_build_dir, 'work')
+        if self.getProperty('build_workdir_find_output')['build_workdir_find'] != []:
+            shell_commad_list = []
+            shell_commad_list.append('tar')
+            shell_commad_list.append('-cjpf')
+            shell_commad_list.append(compressed_log_file)
+            for find_line in sorted(self.getProperty('build_workdir_find_output')['build_workdir_find']):
+                print(find_line)
+                filename = yield os.path.join('work', find_line)
+                shell_commad_list.append(filename)
+            self.aftersteps_list.append(
+                steps.ShellCommand(
+                        name = 'Tarlogs',
+                        command = shell_commad_list,
+                        workdir = cpv_build_dir
+            ))
+            self.aftersteps_list.append(steps.FileUpload(
+                name = 'UploadFindlogs',
+                mode = 0o644,
+                workersrc = compressed_log_file,
+                masterdest = masterdest_file,
+                workdir = cpv_build_dir
+            ))
         if self.aftersteps_list != []:
             yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
         return SUCCESS
@@ -640,13 +702,14 @@ class CheckEmergeLogs(BuildStep):
 
     def addFileUploade(self, sourcefile, destfile):
         self.aftersteps_list.append(steps.FileUpload(
+            mode = 0o644,
             workersrc=sourcefile,
             masterdest=destfile
         ))
 
     @defer.inlineCallbacks
     def getLogFile(self, cpv, log_dict):
-        destfile = yield os.path.join(self.masterdest, log_dict[cpv]['full_logname'])
+        destfile = yield os.path.join(self.getProperty('masterdest'), log_dict[cpv]['full_logname'])
         sourcefile = log_dict[cpv]['log_path']
         self.addFileUploade(sourcefile, destfile)
 
@@ -670,41 +733,61 @@ class CheckEmergeLogs(BuildStep):
     @defer.inlineCallbacks
     def getEmergeFiles(self, cpv):
         # get emerge info
-        destfile = yield os.path.join(self.masterdest, 'emerge_info.txt')
+        destfile = yield os.path.join(self.getProperty('masterdest'), 'emerge_info.txt')
         sourcefile = yield os.path.join('/', 'tmp', 'emerge_info.txt')
         self.addFileUploade(sourcefile, destfile)
         # get emerge.log
-        destfile2 = yield os.path.join(self.masterdest, 'emerge.log')
+        destfile2 = yield os.path.join(self.getProperty('masterdest'), 'emerge.log')
         sourcefile2 = yield os.path.join('/', 'var', 'log', 'emerge.log')
         self.addFileUploade(sourcefile2, destfile2)
         # world file
-        destfile3 = yield os.path.join(self.masterdest, 'world')
+        destfile3 = yield os.path.join(self.getProperty('masterdest'), 'world')
         sourcefile3 = yield os.path.join('/', 'var', 'lib', 'portage', 'world')
         self.addFileUploade(sourcefile3, destfile3)
         # get elogs
         self.getElogFiles(cpv)
 
-    def getBuildWorkdirFiles(self):
+    @defer.inlineCallbacks
+    def getBuildWorkDirs(self, cpv):
         #FIXME:
         # get files from the build workdir
-        pass
+        cpv_build_dir = yield os.path.join('/', 'var', 'tmp', 'portage', cpv)
+        print(cpv_build_dir)
+        self.setProperty('cpv_build_dir', cpv_build_dir, 'cpv_build_dir')
+        cpv_build_work_dir = yield os.path.join(cpv_build_dir, 'work')
+        #FIXME: take find pattern from db or config
+        find_pattern_list = ['meson-log.txt', 'CMakeCache.txt']
+        shell_commad_list = []
+        # we have *.log as default
+        shell_commad_list.append('find')
+        shell_commad_list.append('-name')
+        shell_commad_list.append('*.log')
+        for find_pattern in find_pattern_list:
+            shell_commad_list.append('-o')
+            shell_commad_list.append('-name')
+            shell_commad_list.append(find_pattern)
+        self.aftersteps_list.append(
+                steps.SetPropertyFromCommand(
+                        name = 'FindLogs',
+                        command = shell_commad_list,
+                        strip = True,
+                        extract_fn = PersOutputOfBuildWorkdir,
+                        workdir = cpv_build_work_dir
+                ))
+        self.aftersteps_list.append(CheckBuildWorkDirs())
 
     @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         project_data = self.getProperty('project_data')
         projects_emerge_options = yield self.gentooci.db.projects.getProjectEmergeOptionsByUuid(project_data['uuid'])
-        emerge_output = self.getProperty('emerge_output')
-        self.faild_cpv = emerge_output['failed']
-        self.setProperty('faild_cpv', self.faild_cpv, 'faild_cpv')
         shell_commad_list = [
                     'emerge',
                     '-v'
                     ]
+        emerge_output = self.getProperty('emerge_output')
+        self.faild_cpv = emerge_output['failed']
         package_dict = emerge_output['packages']
-
-        self.masterdest = yield os.path.join(self.master.basedir, 'workers', self.getProperty('workername'), str(self.getProperty("buildnumber")))
-        self.setProperty('masterdest', self.masterdest, 'masterdest')
 
         #FIXME: Prosees the logs and do stuff
         # preserved-libs
@@ -849,8 +932,9 @@ class CheckEmergeLogs(BuildStep):
                             self.log_data[self.faild_cpv] = log_dict[self.faild_cpv]
                             yield self.getLogFile(self.faild_cpv, log_dict)
                             faild_version_data = yield self.getVersionData(self.faild_cpv)
+                        self.setProperty('faild_cpv', self.faild_cpv, 'faild_cpv')
                         self.getEmergeFiles(self.faild_cpv)
-                        self.getBuildWorkdirFiles()
+                        self.getBuildWorkDirs(self.faild_cpv)
                     else:
                         self.getEmergeFiles(cpv)
                     self.aftersteps_list.append(steps.Trigger(
