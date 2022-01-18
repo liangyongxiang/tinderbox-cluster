@@ -1089,7 +1089,8 @@ class RunEmergeInfo(BuildStep):
                     'emerge',
                     ]
         shell_commad_list.append('--info')
-        shell_commad_list.append('>')
+        shell_commad_list.append('|')
+        shell_commad_list.append('tee')
         shell_commad_list.append('/tmp/emerge_info.txt')
         aftersteps_list.append(
                 steps.ShellCommand(
