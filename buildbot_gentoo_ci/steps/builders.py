@@ -1109,7 +1109,9 @@ class RunEmergeInfo(BuildStep):
         shell_commad_list.append('=' + self.getProperty('cpv'))
         shell_commad_list.append('--usepkg-exclude')
         shell_commad_list.append(c + '/' + p)
-        shell_commad_list.append('>>')
+        shell_commad_list.append('|')
+        shell_commad_list.append('tee')
+        shell_commad_list.append('-a')
         shell_commad_list.append('/tmp/emerge_info.txt')
         aftersteps_list.append(
                 steps.ShellCommand(
