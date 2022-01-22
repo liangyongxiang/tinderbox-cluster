@@ -289,10 +289,8 @@ class GetProjectRepositoryData(BuildStep):
         return SUCCESS
 
 class SetupPropertys(BuildStep):
-    
-    name = 'SetupPropertys'
+    name = 'Setup propertys for building'
     description = 'Running'
-    #descriptionDone = 'Ran'
     descriptionSuffix = None
     haltOnFailure = True
     flunkOnFailure = True
@@ -305,7 +303,6 @@ class SetupPropertys(BuildStep):
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         print('build this %s' % self.getProperty("cpv"))
-        self.descriptionDone = 'Building this %s' % self.getProperty("cpv")
         self.setProperty('portage_repos_path', self.gentooci.config.project['project']['worker_portage_repos_path'], 'portage_repos_path')
         projectrepository_data = self.getProperty('projectrepository_data')
         print(projectrepository_data)
@@ -332,7 +329,7 @@ class SetupPropertys(BuildStep):
         print(self.getProperty("project_build_data"))
         self.masterdest = yield os.path.join(self.master.basedir, 'workers', self.getProperty('workername'), str(self.getProperty("buildnumber")))
         self.setProperty('masterdest', self.masterdest, 'masterdest')
-
+        self.descriptionDone = ' '.join([self.getProperty("cpv"), 'for project', self.getProperty('project_data')['name']])
         return SUCCESS
 
 class UpdateRepos(BuildStep):
@@ -359,6 +356,7 @@ class UpdateRepos(BuildStep):
             repository_path = yield os.path.join(portage_repos_path, repository_data['name'])
             yield self.build.addStepsAfterCurrentStep([
                 steps.Git(repourl=repository_data['url'],
+                            name = 'Git pull ' +  repository_data['name'],
                             mode='full',
                             submodules=True,
                             alwaysUseLatest=True,
@@ -368,7 +366,6 @@ class UpdateRepos(BuildStep):
 
 class RunEmerge(BuildStep):
 
-    name = 'RunEmerge'
     description = 'Running'
     descriptionDone = 'Ran'
     haltOnFailure = True
@@ -378,6 +375,7 @@ class RunEmerge(BuildStep):
         self.step = step
         super().__init__(**kwargs)
         self.descriptionSuffix = self.step
+        self.name = 'Setup emerge for ' + self.step + ' step'
         self.build_env = {}
 
     @defer.inlineCallbacks
@@ -385,6 +383,7 @@ class RunEmerge(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         project_data = self.getProperty('project_data')
         projects_emerge_options = yield self.gentooci.db.projects.getProjectEmergeOptionsByUuid(project_data['uuid'])
+        self.stepname = 'Run emerge ' + 'step ' + self.step
         shell_commad_list = [
                     'emerge',
                     '-v'
@@ -423,6 +422,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('acct-*')
             aftersteps_list.append(
                 steps.SetPropertyFromCommand(
+                        name = self.stepname,
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
@@ -442,6 +442,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('acct-*')
             aftersteps_list.append(
                 steps.SetPropertyFromCommand(
+                        name = self.stepname,
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
@@ -457,6 +458,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('@preserved-rebuild')
             aftersteps_list.append(
                 steps.SetPropertyFromCommand(
+                        name = self.stepname,
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
@@ -471,6 +473,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('--depclean')
             aftersteps_list.append(
                 steps.SetPropertyFromCommand(
+                        name = self.stepname,
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfDepclean,
@@ -487,6 +490,7 @@ class RunEmerge(BuildStep):
                 pass
             aftersteps_list.append(
                 steps.SetPropertyFromCommand(
+                        name = self.stepname,
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfDepclean,
@@ -516,6 +520,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append(c + '/' + p)
             aftersteps_list.append(
                 steps.SetPropertyFromCommand(
+                        name = self.stepname,
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
@@ -540,6 +545,11 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('-p')
             aftersteps_list.append(
                 steps.SetPropertyFromCommand(
+                        warnOnWarnings = True,
+                        warnOnFailure = True,
+                        flunkOnFailure = False,
+                        flunkOnWarnings = False,
+                        name = self.stepname,
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
@@ -565,6 +575,7 @@ class RunEmerge(BuildStep):
             shell_commad_list.append('acct-*')
             aftersteps_list.append(
                 steps.SetPropertyFromCommand(
+                        name = self.stepname,
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
@@ -582,7 +593,7 @@ class RunEmerge(BuildStep):
 
 class CheckElogLogs(BuildStep):
 
-    name = 'CheckElogLogs'
+    name = 'Check elog logs'
     description = 'Running'
     descriptionDone = 'Ran'
     haltOnFailure = True
@@ -592,8 +603,9 @@ class CheckElogLogs(BuildStep):
         super().__init__(**kwargs)
         self.aftersteps_list = []
 
-    def addFileUploade(self, sourcefile, destfile):
+    def addFileUploade(self, sourcefile, destfile, name):
         self.aftersteps_list.append(steps.FileUpload(
+            name = name,
             mode = 0o644,
             workersrc=sourcefile,
             masterdest=destfile
@@ -612,14 +624,15 @@ class CheckElogLogs(BuildStep):
                 print(elogfile)
                 destfile = yield os.path.join(self.getProperty('masterdest'), elogfile.replace('.log', '.elog'))
                 sourcefile = yield os.path.join(workdir, elogfile)
-                self.addFileUploade(sourcefile, destfile)
+                name = 'Upload Elogs'
+                self.addFileUploade(sourcefile, destfile, name)
         if self.aftersteps_list != []:
             yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
         return SUCCESS
 
 class CheckBuildWorkDirs(BuildStep):
 
-    name = 'CheckBuildWorkdir'
+    name = 'Setup tar for taring the logs'
     description = 'Running'
     descriptionDone = 'Ran'
     haltOnFailure = True
@@ -647,12 +660,12 @@ class CheckBuildWorkDirs(BuildStep):
                 shell_commad_list.append(filename)
             self.aftersteps_list.append(
                 steps.ShellCommand(
-                        name = 'Tarlogs',
+                        name = 'Tar logs',
                         command = shell_commad_list,
                         workdir = cpv_build_dir
             ))
             self.aftersteps_list.append(steps.FileUpload(
-                name = 'UploadFindlogs',
+                name = 'Upload find logs',
                 mode = 0o644,
                 workersrc = compressed_log_file,
                 masterdest = masterdest_file,
@@ -664,7 +677,6 @@ class CheckBuildWorkDirs(BuildStep):
 
 class CheckEmergeLogs(BuildStep):
 
-    name = 'CheckEmergeLogs'
     description = 'Running'
     descriptionDone = 'Ran'
     haltOnFailure = True
@@ -674,6 +686,7 @@ class CheckEmergeLogs(BuildStep):
         self.step = step
         super().__init__(**kwargs)
         self.descriptionSuffix = self.step
+        self.name = 'Check emerge logs for ' + self.step + ' step'
         self.aftersteps_list = []
         self.log_data = {}
         self.faild_cpv = False
@@ -696,12 +709,14 @@ class CheckEmergeLogs(BuildStep):
     def createDistDir(self):
         workdir = yield os.path.join(self.master.basedir, 'workers', self.getProperty('workername'))
         self.aftersteps_list.append(steps.MasterShellCommand(
+            name = 'Make directory for Uploaded files',
             command=['mkdir', str(self.getProperty("buildnumber"))],
             workdir=workdir
         ))
 
-    def addFileUploade(self, sourcefile, destfile):
+    def addFileUploade(self, sourcefile, destfile, name):
         self.aftersteps_list.append(steps.FileUpload(
+            name = name,
             mode = 0o644,
             workersrc=sourcefile,
             masterdest=destfile
@@ -711,7 +726,8 @@ class CheckEmergeLogs(BuildStep):
     def getLogFile(self, cpv, log_dict):
         destfile = yield os.path.join(self.getProperty('masterdest'), log_dict[cpv]['full_logname'])
         sourcefile = log_dict[cpv]['log_path']
-        self.addFileUploade(sourcefile, destfile)
+        name = 'Upload build log'
+        self.addFileUploade(sourcefile, destfile, name)
 
     @defer.inlineCallbacks
     def getElogFiles(self, cpv):
@@ -722,6 +738,7 @@ class CheckEmergeLogs(BuildStep):
         #shell_commad_list.append(elog_cpv + '*')
         self.aftersteps_list.append(
                 steps.SetPropertyFromCommand(
+                        name = 'List elogs',
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfElogLs,
@@ -735,15 +752,18 @@ class CheckEmergeLogs(BuildStep):
         # get emerge info
         destfile = yield os.path.join(self.getProperty('masterdest'), 'emerge_info.txt')
         sourcefile = yield os.path.join('/', 'tmp', 'emerge_info.txt')
-        self.addFileUploade(sourcefile, destfile)
+        name = 'Upload emerge info'
+        self.addFileUploade(sourcefile, destfile, name)
         # get emerge.log
         destfile2 = yield os.path.join(self.getProperty('masterdest'), 'emerge.log')
         sourcefile2 = yield os.path.join('/', 'var', 'log', 'emerge.log')
-        self.addFileUploade(sourcefile2, destfile2)
+        name2 = 'Upload emerge log'
+        self.addFileUploade(sourcefile2, destfile2, name2)
         # world file
         destfile3 = yield os.path.join(self.getProperty('masterdest'), 'world')
         sourcefile3 = yield os.path.join('/', 'var', 'lib', 'portage', 'world')
-        self.addFileUploade(sourcefile3, destfile3)
+        name3 = 'Upload world file'
+        self.addFileUploade(sourcefile3, destfile3, name3)
         # get elogs
         self.getElogFiles(cpv)
 
@@ -768,7 +788,7 @@ class CheckEmergeLogs(BuildStep):
             shell_commad_list.append(find_pattern)
         self.aftersteps_list.append(
                 steps.SetPropertyFromCommand(
-                        name = 'FindLogs',
+                        name = 'Find logs',
                         command = shell_commad_list,
                         strip = True,
                         extract_fn = PersOutputOfBuildWorkdir,
@@ -828,6 +848,7 @@ class CheckEmergeLogs(BuildStep):
                     change_use_string = separator2.join(change_use_list)
                     self.aftersteps_list.append(
                         steps.StringDownload(change_use_string + separator,
+                            name = 'Update package.use flags',
                             workerdest='zz_autouse' + str(self.getProperty('rerun')),
                             workdir='/etc/portage/package.use/'
                             )
@@ -938,6 +959,7 @@ class CheckEmergeLogs(BuildStep):
                     else:
                         self.getEmergeFiles(cpv)
                     self.aftersteps_list.append(steps.Trigger(
+                        name = 'Setup properties for log parser and trigger it',
                         schedulerNames=['parse_build_log'],
                         waitForFinish=False,
                         updateSourceStamp=False,
@@ -969,6 +991,7 @@ class CheckDepcleanLogs(BuildStep):
         self.step = step
         super().__init__(**kwargs)
         self.descriptionSuffix = self.step
+        self.name = 'Check dep clean logs for ' + self.step + ' step'
 
     @defer.inlineCallbacks
     def run(self):
@@ -993,7 +1016,7 @@ class CheckDepcleanLogs(BuildStep):
 
 class RunPkgCheck(BuildStep):
 
-    name = 'RunPkgCheck'
+    name = 'Setup PkgCheck step'
     description = 'Running'
     descriptionDone = 'Ran'
     descriptionSuffix = None
@@ -1029,6 +1052,7 @@ class RunPkgCheck(BuildStep):
             pkgcheck_workdir = yield os.path.join(repository_path, c, p, '')
         aftersteps_list.append(
             steps.SetPropertyFromCommand(
+                        name='Run pkgcheck step',
                         command=shell_commad_list,
                         strip=True,
                         extract_fn=PersOutputOfPkgCheck,
@@ -1040,7 +1064,7 @@ class RunPkgCheck(BuildStep):
 
 class CheckPkgCheckLogs(BuildStep):
 
-    name = 'CheckPkgCheckLogs'
+    name = 'Check pkgcheck logs'
     description = 'Running'
     descriptionDone = 'Ran'
     descriptionSuffix = None
@@ -1094,6 +1118,7 @@ class RunEmergeInfo(BuildStep):
         shell_commad_list.append('/tmp/emerge_info.txt')
         aftersteps_list.append(
                 steps.ShellCommand(
+                        name ='emerge --info',
                         # the list need to be joined to pipe to a file
                         command=' '.join(shell_commad_list),
                         workdir='/'
@@ -1115,6 +1140,7 @@ class RunEmergeInfo(BuildStep):
         shell_commad_list.append('/tmp/emerge_info.txt')
         aftersteps_list.append(
                 steps.ShellCommand(
+                        name = 'Package info',
                         # the list need to be joined to pipe to a file
                         command=' '.join(shell_commad_list),
                         workdir='/'
@@ -1124,7 +1150,7 @@ class RunEmergeInfo(BuildStep):
 
 class RunBuild(BuildStep):
 
-    name = 'RunBuild'
+    name = 'Setup steps for building package'
     description = 'Running'
     descriptionDone = 'Ran'
     descriptionSuffix = None
