@@ -139,8 +139,8 @@ class IRCStatusPush(ReporterBase):
                                   self.join_channels, self.pm_to_nicks,
                                   self.authz, self.tags,
                                   self.notify_events, parent=self,
-                                  noticeOnChannel=noticeOnChannel,
-                                  useRevisions=useRevisions,
+                                  noticeOnChannel=self.noticeOnChannel,
+                                  useRevisions=self.useRevisions,
                                   showBlameList=showBlameList,
                                   lostDelay=lostDelay,
                                   failedDelay=failedDelay,
@@ -170,4 +170,7 @@ class IRCStatusPush(ReporterBase):
             if isinstance(c, dict):
                 channel = c.get('channel', None)
                 print(channel)
-                self.f.p.msg(channel, assembleFormattedText(A.normal[body]))
+                if self.noticeOnChannel:
+                    self.f.p.notice(channel, assembleFormattedText(A.normal[body]))
+                else:
+                    self.f.p.msg(channel, assembleFormattedText(A.normal[body]))
