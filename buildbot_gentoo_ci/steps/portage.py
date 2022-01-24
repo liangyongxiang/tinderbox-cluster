@@ -224,8 +224,9 @@ class SetMakeConf(BuildStep):
             for v in makeconf_variables_values_data:
                 if v['build_id'] == 0:
                     makeconf_variable_list.append(v['value'])
-            if k['variable'] == 'ACCEPT_LICENSE' and makeconf_variable_list != []:
-                makeconf_variable_list.append('ACCEPT_LICENSE="*"')
+            #NOTE: set it by project
+            #if k['variable'] == 'ACCEPT_LICENSE' and makeconf_variable_list != []:
+            #    makeconf_variable_list.append('ACCEPT_LICENSE="*"')
             if makeconf_variable_list != []:
                 makeconf_variable_string = k['variable'] + '="' + separator2.join(makeconf_variable_list) + '"'
                 makeconf_list.append(makeconf_variable_string)
