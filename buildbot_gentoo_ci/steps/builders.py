@@ -17,6 +17,9 @@ from buildbot.process.results import FAILURE
 from buildbot.process.results import SKIPPED
 from buildbot.plugins import steps
 
+#FIXME: should be set in config
+hosturl = 'http://77.110.8.67:8000'
+
 def PersOutputOfEmerge(rc, stdout, stderr):
     emerge_output = {}
     emerge_output['rc'] = rc
@@ -603,12 +606,14 @@ class CheckElogLogs(BuildStep):
         super().__init__(**kwargs)
         self.aftersteps_list = []
 
-    def addFileUploade(self, sourcefile, destfile, name):
+    def addFileUploade(self, sourcefile, destfile, name, url, urlText):
         self.aftersteps_list.append(steps.FileUpload(
             name = name,
             mode = 0o644,
-            workersrc=sourcefile,
-            masterdest=destfile
+            workersrc = sourcefile,
+            masterdest = destfile,
+            url = url,
+            urlText = urlText
         ))
 
     @defer.inlineCallbacks
@@ -625,7 +630,9 @@ class CheckElogLogs(BuildStep):
                 destfile = yield os.path.join(self.getProperty('masterdest'), elogfile.replace('.log', '.elog'))
                 sourcefile = yield os.path.join(workdir, elogfile)
                 name = 'Upload Elogs'
-                self.addFileUploade(sourcefile, destfile, name)
+                url = '/'.join([hosturl, self.getProperty('workername'), str(self.getProperty("buildnumber")), elogfile.replace('.log', '.elog')])
+                urlText = elogfile
+                self.addFileUploade(sourcefile, destfile, name, url, urlText)
         if self.aftersteps_list != []:
             yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
         return SUCCESS
@@ -669,7 +676,9 @@ class CheckBuildWorkDirs(BuildStep):
                 mode = 0o644,
                 workersrc = compressed_log_file,
                 masterdest = masterdest_file,
-                workdir = cpv_build_dir
+                workdir = cpv_build_dir,
+                url = '/'.join([hosturl, self.getProperty('workername'), str(self.getProperty("buildnumber")), compressed_log_file]),
+                urlText = 'Compresed file for all finds'
             ))
         if self.aftersteps_list != []:
             yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
@@ -710,24 +719,29 @@ class CheckEmergeLogs(BuildStep):
         workdir = yield os.path.join(self.master.basedir, 'workers', self.getProperty('workername'))
         self.aftersteps_list.append(steps.MasterShellCommand(
             name = 'Make directory for Uploaded files',
-            command=['mkdir', str(self.getProperty("buildnumber"))],
-            workdir=workdir
+            command = ['mkdir', str(self.getProperty("buildnumber"))],
+            workdir = workdir
         ))
 
-    def addFileUploade(self, sourcefile, destfile, name):
+    def addFileUploade(self, sourcefile, destfile, name, url, urlText):
         self.aftersteps_list.append(steps.FileUpload(
             name = name,
             mode = 0o644,
-            workersrc=sourcefile,
-            masterdest=destfile
+            workersrc = sourcefile,
+            masterdest = destfile,
+            url=url,
+            urlText=urlText
         ))
 
     @defer.inlineCallbacks
     def getLogFile(self, cpv, log_dict):
-        destfile = yield os.path.join(self.getProperty('masterdest'), log_dict[cpv]['full_logname'])
+        file = log_dict[cpv]['full_logname']
+        destfile = yield os.path.join(self.getProperty('masterdest'), file)
         sourcefile = log_dict[cpv]['log_path']
         name = 'Upload build log'
-        self.addFileUploade(sourcefile, destfile, name)
+        url = '/'.join([hosturl, self.getProperty('workername'), str(self.getProperty("buildnumber")), file])
+        urlText = file
+        self.addFileUploade(sourcefile, destfile, name, url, urlText)
 
     @defer.inlineCallbacks
     def getElogFiles(self, cpv):
@@ -750,20 +764,29 @@ class CheckEmergeLogs(BuildStep):
     @defer.inlineCallbacks
     def getEmergeFiles(self, cpv):
         # get emerge info
-        destfile = yield os.path.join(self.getProperty('masterdest'), 'emerge_info.txt')
-        sourcefile = yield os.path.join('/', 'tmp', 'emerge_info.txt')
+        file = 'emerge_info.txt'
+        destfile = yield os.path.join(self.getProperty('masterdest'), file)
+        sourcefile = yield os.path.join('/', 'tmp', file)
         name = 'Upload emerge info'
-        self.addFileUploade(sourcefile, destfile, name)
+        url = '/'.join([hosturl, self.getProperty('workername'), str(self.getProperty("buildnumber")), file])
+        urlText = 'emerge --info and package info'
+        self.addFileUploade(sourcefile, destfile, name, url, urlText)
         # get emerge.log
-        destfile2 = yield os.path.join(self.getProperty('masterdest'), 'emerge.log')
-        sourcefile2 = yield os.path.join('/', 'var', 'log', 'emerge.log')
-        name2 = 'Upload emerge log'
-        self.addFileUploade(sourcefile2, destfile2, name2)
+        file = 'emerge.log'
+        destfile = yield os.path.join(self.getProperty('masterdest'), file)
+        sourcefile = yield os.path.join('/', 'var', 'log', file)
+        name = 'Upload emerge log'
+        url = '/'.join([hosturl, self.getProperty('workername'), str(self.getProperty("buildnumber")), file])
+        urlText = 'emerge.log'
+        self.addFileUploade(sourcefile, destfile, name, url, urlText)
         # world file
-        destfile3 = yield os.path.join(self.getProperty('masterdest'), 'world')
-        sourcefile3 = yield os.path.join('/', 'var', 'lib', 'portage', 'world')
-        name3 = 'Upload world file'
-        self.addFileUploade(sourcefile3, destfile3, name3)
+        file = 'world'
+        destfile = yield os.path.join(self.getProperty('masterdest'), file)
+        sourcefile = yield os.path.join('/', 'var', 'lib', 'portage', file)
+        name = 'Upload world file'
+        url = '/'.join([hosturl, self.getProperty('workername'), str(self.getProperty("buildnumber")), file])
+        urlText = 'world file'
+        self.addFileUploade(sourcefile, destfile, name, url, urlText)
         # get elogs
         self.getElogFiles(cpv)
 
