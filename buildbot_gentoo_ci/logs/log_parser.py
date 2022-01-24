@@ -75,8 +75,8 @@ def search_buildlog(log_search_pattern_list, logfile_text_dict, tmp_index, max_t
         #FIXME take the ignore line pattern from db
         if text_line.startswith('>>> /'):
             pass
-        if else re.search('./\w+/'):
-            pass
+        #if else re.search('./\w+/'):
+        #    pass
         else:
             # search for match
             if search_pattern['search_type'] == 'in':
@@ -137,7 +137,7 @@ def search_buildlog(log_search_pattern_list, logfile_text_dict, tmp_index, max_t
         else:
             # we add all line that start with ' * ' as info
             # we add all line that start with '>>>' but not '>>> /' as info
-            if text_line.startswith(' * ') or (text_line.startswith('>>>') and not text_line.startswith('>>> /')):
+            if text_line.startswith(' * ') or text_line.startswith('>>>'):
                 if not tmp_index in summery_dict:
                     summery_dict[tmp_index] = {}
                     summery_dict[tmp_index]['text'] = text_line
@@ -145,7 +145,6 @@ def search_buildlog(log_search_pattern_list, logfile_text_dict, tmp_index, max_t
                     summery_dict[tmp_index]['status'] = 'info'
                     summery_dict[tmp_index]['id'] = 0
                     summery_dict[tmp_index]['search_pattern'] = 'auto'
-    #FIXME: print json
     if summery_dict == {}:
         return None
     return summery_dict
@@ -167,13 +166,13 @@ def runLogParser(args):
     # Is stored in a db instead of files.
     log_search_pattern_list = get_log_search_pattern(Session, args.uuid, config['default_uuid'])
     Session.close()
+    #FIXME: UnicodeDecodeError: 'utf-8' codec can't decode byte ... in some logs
     with io.TextIOWrapper(io.BufferedReader(gzip.open(args.file, 'rb'))) as f:
-            #FIXME: add support for multiprocessing
-            for text_line in f:
-                logfile_text_dict[index] = text_line.strip('\n')
-                index = index + 1
-                max_text_lines = index
-            f.close()
+        for text_line in f:
+            logfile_text_dict[index] = text_line.strip('\n')
+            index = index + 1
+            max_text_lines = index
+        f.close()
     # run the parse patten on the line
     for tmp_index, text in logfile_text_dict.items():
         res = mp_pool.apply_async(search_buildlog, (log_search_pattern_list, logfile_text_dict, tmp_index, max_text_lines,))
