@@ -3,6 +3,7 @@
 
 from buildbot.plugins import steps as buildbot_steps
 from buildbot.plugins import util
+from twisted.internet import defer
 
 from buildbot_gentoo_ci.steps import update_db
 from buildbot_gentoo_ci.steps import category
@@ -93,6 +94,7 @@ def build_request_check():
     f.addStep(builders.GetProjectRepositoryData())
     return f
 
+#@defer.inlineCallbacks
 def run_build_request():
     f = util.BuildFactory()
     # set needed Propertys
@@ -101,23 +103,42 @@ def run_build_request():
     f.addStep(builders.UpdateRepos())
     # Clean and add new /etc/portage
     #NOTE: remove the symlink befor the dir
-    f.addStep(buildbot_steps.ShellCommand(
-                        command=['rm', 'make.profile'],
-                        workdir='/etc/portage/'
+    #f.addStep(buildbot_steps.ShellCommand(
+    #                    flunkOnFailure=False,
+    #                    name='Clean make.profile',
+    #                    command=['rm', 'make.profile'],
+    #                    workdir='/etc/portage/'
+    #                    ))
+    if buildbot_steps.FileExists(file='portage/make.conf', workdir='/etc/', haltOnFailure = False):
+        f.addStep(buildbot_steps.ShellCommand(
+                        flunkOnFailure=False,
+                        name='Remove portage dir',
+                        command=['rm', '-R', 'portage'],
+                        workdir='/etc/'
                         ))
-    f.addStep(buildbot_steps.RemoveDirectory(dir="portage",
-                                workdir='/etc/'))
-    f.addStep(buildbot_steps.MakeDirectory(dir="portage",
-                                workdir='/etc/'))
+    f.addStep(buildbot_steps.ShellCommand(
+                        flunkOnFailure=False,
+                        name='Create portage dir',
+                        command=['mkdir', 'portage'],
+                        workdir='/etc/'
+                        ))
+    #f.addStep(buildbot_steps.RemoveDirectory(dir="portage",
+    #                            name='Remove portage dir',
+    #                            workdir='/etc/'))
+    #f.addStep(buildbot_steps.MakeDirectory(dir="portage",
+    #                            name = 'Create the portage dir',
+    #                            workdir='/etc/'))
     # Clean /var/cache/portage/logs and emerge.log
     f.addStep(buildbot_steps.ShellCommand(
+                        flunkOnFailure=False,
                         name='Clean emerge.log',
                         command=['rm', 'emerge.log'],
                         workdir='/var/log/'
                         ))
-    f.addStep(buildbot_steps.ShellCommand(
+    if buildbot_steps.FileExists(file='logs', workdir='/var/cache/portage/',haltOnFailure = False):
+        f.addStep(buildbot_steps.ShellCommand(
                         flunkOnFailure=False,
-                        name='Clean logs',
+                        name='Remove logs',
                         command=['rm', '-R', 'logs'],
                         workdir='/var/cache/portage/'
                         ))
