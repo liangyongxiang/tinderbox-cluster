@@ -3,6 +3,7 @@
 
 import os
 import io
+from pathlib import Path
 
 from portage import config as portage_config
 from portage import auxdbkeys
@@ -403,24 +404,29 @@ class CheckPathLocal(BuildStep):
     @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        self.repository_linkname = self.gentooci.config.project['repository_basedir']
-        self.repository_basedir2 = '/home/repos2/'
         self.portage_path = yield os.path.join('etc', 'portage')
         self.profile_path = yield os.path.join(self.portage_path, 'make.profile')
         self.repos_path = yield os.path.join(self.portage_path, 'repos.conf')
-        print(os.getcwd())
+        self.repository_basedir_db = yield os.path.join(self.master.basedir, 'repositorys')
+        self.build_repository_basedir_db = yield os.path.join(self.getProperty("builddir"), 'repositorys')
+        #print(self.repository_basedir_db)
+        log = yield self.addLog('CheckPathLocal')
+        #print(os.getcwd())
         print(self.getProperty("builddir"))
-        yield os.chdir(self.getProperty("builddir"))
-        print(os.getcwd())
+        #yield os.chdir(self.getProperty("builddir"))
+        #print(os.getcwd())
         for x in [
                 self.portage_path,
                 self.profile_path,
                 self.repos_path,
                 ]:
-            if not os.path.isdir(x):
-                os.makedirs(x)
-        if not os.path.islink(self.repository_linkname):
-            os.symlink(self.repository_basedir2, self.repository_linkname)
+            check_dir = yield os.path.join(self.getProperty("builddir"), x)
+            if not Path(check_dir).is_dir():
+                yield Path(check_dir).mkdir(parents=True)
+                yield log.addStdout(' '.join(['Makeing missing dir', x]))
+        if not Path(self.build_repository_basedir_db).is_dir():
+            yield Path(self.build_repository_basedir_db).symlink_to(self.repository_basedir_db)
+            yield log.addStdout(' '.join(['Makeing missing link', 'repositorys', 'to', self.repository_basedir_db]))
         return SUCCESS
 
 class SetMakeProfileLocal(BuildStep):
@@ -442,7 +448,7 @@ class SetMakeProfileLocal(BuildStep):
             return SKIPPED
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         self.profile_repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(self.getProperty('project_data')['profile_repository_uuid'])
-        self.repository_basedir = self.gentooci.config.project['repository_basedir']
+        self.repository_basedir = 'repositorys'
         makeprofiles_paths = []
         makeprofiles_data = yield self.gentooci.db.projects.getAllProjectPortageByUuidAndDirectory(self.getProperty('project_data')['uuid'], 'make.profile')
         for makeprofile in makeprofiles_data:
@@ -468,8 +474,7 @@ class SetReposConfLocal(BuildStep):
         repos_conf_path = yield os.path.join('etc', 'portage', 'repos.conf')
         repos_conf_default_path = yield os.path.join(repos_conf_path, 'default.conf')
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        # the path should be set in the confg
-        self.repository_basedir2 = '/home/repos2/'
+        self.repository_basedir_db = yield os.path.join(self.master.basedir, 'repositorys')
         if not os.path.isfile(repos_conf_default_path):
             # setup the default.conf
             repos_conf_data = yield self.gentooci.db.projects.getProjectPortageByUuidAndDirectory(self.getProperty('project_data')['uuid'], 'repos.conf')
@@ -483,7 +488,7 @@ class SetReposConfLocal(BuildStep):
             yield WriteTextToFile(repos_conf_default_path, default_conf)
         repos_conf_repository_path = yield os.path.join(repos_conf_path, self.getProperty("repository_data")['name'] + '.conf')
         if not os.path.isfile(repos_conf_repository_path):
-            repository_path = yield os.path.join(self.repository_basedir2, self.getProperty("repository_data")['name'])
+            repository_path = yield os.path.join(self.repository_basedir_db, self.getProperty("repository_data")['name'])
             repository_conf = []
             repository_conf.append('[' + self.getProperty("repository_data")['name'] + ']')
             repository_conf.append('location = ' + repository_path)

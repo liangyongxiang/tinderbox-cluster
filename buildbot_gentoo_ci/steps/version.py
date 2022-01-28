@@ -230,9 +230,8 @@ class CheckPathHash(BuildStep):
     @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        self.repository_basedir = self.gentooci.config.project['repository_basedir']
-        self.repository_path = yield os.path.join('/home', 'repos2', self.getProperty("repository_data")['name'])
-        #self.repository_path = yield os.path.join(self.repository_basedir, self.getProperty("repository_data")['name'])
+        self.repository_basedir_db = yield os.path.join(self.master.basedir, 'repositorys')
+        self.repository_path = yield os.path.join(self.repository_basedir_db, self.getProperty("repository_data")['name'])
         self.cp_path = yield pkgsplit(self.getProperty("cpv"))[0]
         self.file_name = yield self.getProperty("package_data")['name'] + '-' + self.getProperty("version") + '.ebuild'
         self.ebuild_file = yield os.path.join(self.repository_path, self.cp_path, self.file_name)

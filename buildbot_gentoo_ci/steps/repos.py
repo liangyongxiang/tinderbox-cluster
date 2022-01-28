@@ -3,6 +3,7 @@
 
 import os
 import git
+from pathlib import Path
 
 from twisted.internet import defer
 
@@ -25,14 +26,20 @@ class CheckPathRepositoryLocal(BuildStep):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+    @defer.inlineCallbacks
     def run(self):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        # self.repository_basedir = self.gentooci.config.project['mirror_repository_basedir']
-        repository_basedir = '/home/repos2/'
-        self.setProperty("repository_basedir", repository_basedir, 'repository_basedir')
-        if os.path.isdir(repository_basedir):
-            return SUCCESS
-        return FAILURE
+        self.repository_basedir_db = yield os.path.join(self.master.basedir, 'repositorys')
+        print(self.repository_basedir_db)
+        print(self.gentooci.config.project['repository_basedir'])
+        p = Path(self.repository_basedir_db)
+        self.setProperty("repository_basedir_db", self.repository_basedir_db, 'repository_basedir_db')
+        log = yield self.addLog('CheckPathRepositoryLocal')
+        if not Path(self.repository_basedir_db).is_dir():
+            yield log.addStdout(' '.join(['Missing link', self.repository_basedir_db]))
+            p.symlink_to(self.gentooci.config.project['repository_basedir'])
+            yield log.addStdout(' '.join(['Makeing missing link', 'repositorys', 'to', self.gentooci.config.project['repository_basedir']]))
+        return SUCCESS
 
 class CheckRepository(BuildStep):
 
@@ -105,7 +112,7 @@ class CheckRepository(BuildStep):
     @defer.inlineCallbacks
     def checkRepos(self, repository_data):
         success = False
-        repository_path = yield os.path.join(self.getProperty("repository_basedir"), repository_data['name'])
+        repository_path = yield os.path.join(self.getProperty("repository_basedir_db"), repository_data['name'])
         try:
             repo = git.Repo(repository_path)
         except:
