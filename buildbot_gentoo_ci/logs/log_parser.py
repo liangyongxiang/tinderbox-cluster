@@ -166,13 +166,10 @@ def runLogParser(args):
     # Is stored in a db instead of files.
     log_search_pattern_list = get_log_search_pattern(Session, args.uuid, config['default_uuid'])
     Session.close()
-    #FIXME: UnicodeDecodeError: 'utf-8' codec can't decode byte ... in some logs
-    with io.TextIOWrapper(io.BufferedReader(gzip.open(args.file, 'rb'))) as f:
-        for text_line in f:
-            logfile_text_dict[index] = text_line.strip('\n')
-            index = index + 1
-            max_text_lines = index
-        f.close()
+    for text_line in io.TextIOWrapper(io.BufferedReader(gzip.open(args.file)), encoding='utf8', errors='ignore'):
+        logfile_text_dict[index] = text_line.strip('\n')
+        index = index + 1
+        max_text_lines = index
     # run the parse patten on the line
     for tmp_index, text in logfile_text_dict.items():
         res = mp_pool.apply_async(search_buildlog, (log_search_pattern_list, logfile_text_dict, tmp_index, max_text_lines,))
