@@ -25,6 +25,7 @@ def gentoo_builders(worker_data):
     g_ci_w = gentoo_ci_workers(worker_data)
     LocalWorkers = g_ci_w.getLocalWorkersUuid()
     BuildWorkers = g_ci_w.getBuildWorkersUuid()
+    NodeWorkers = g_ci_w.getNodeWorkersUuid()
     b.append(util.BuilderConfig(
         name='update_db_check',
         workername=LocalWorkers[0],
@@ -85,6 +86,16 @@ def gentoo_builders(worker_data):
         workernames=LocalWorkers,
         collapseRequests=False,
         factory=buildfactorys.parse_build_log()
+        )
+    )
+    # For node workers
+    b.append(util.BuilderConfig(
+        name='run_build_stage4_request',
+        workernames=NodeWorkers,
+        #FIXME: support more the one node
+        #canStartBuild=CanWorkerBuildProject,
+        collapseRequests=False,
+        factory=buildfactorys.run_build_stage4_request()
         )
     )
     return b
