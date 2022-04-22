@@ -110,6 +110,7 @@ class Model(base.DBConnectorComponent):
         sa.Column('keyword_id', sa.Integer,
                   sa.ForeignKey('keywords.id', ondelete='CASCADE'),
                   nullable=False),
+        sa.Column('image', sa.String(255), nullable=False),
         sa.Column('status', sa.Enum('stable','unstable','all'), nullable=False),
         sa.Column('auto', sa.Boolean, default=False),
         sa.Column('enabled', sa.Boolean, default=False),

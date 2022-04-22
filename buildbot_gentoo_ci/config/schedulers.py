@@ -46,24 +46,18 @@ def gentoo_schedulers():
         builderNames = builderUpdateDbNames,
         change_filter=util.ChangeFilter(branch='master'),
     )
-    test_updatedb = schedulers.ForceScheduler(
-        name="force",
-        buttonName="pushMe!",
-        label="My nice Force form",
-        builderNames=['update_db_check'],
+    create_stage4 = schedulers.ForceScheduler(
+        name="create_stage4",
+        buttonName="Create stage4",
+        label="Create stage4 form",
+        builderNames=['run_build_stage4_request'],
         # A completely customized property list.  The name of the
         # property is the name of the parameter
         properties=[
-            util.NestedParameter(name="options", label="Build Options",
-                    layout="vertical", fields=[
-            util.StringParameter(name="cpv_changes",
-                    label="Package to check",
-                    default="dev-lang/python-3.8", size=80),
-            util.StringParameter(name="repository",
-                    label="repo",
-                    default="gentoo", size=80),
-            ])
-    ])
+            util.StringParameter(name="project_uuid",
+                    label="Project uuid",
+                    default="e89c2c1a-46e0-4ded-81dd-c51afeb7fcfd", size=36),
+        ])
     update_cpv_data = schedulers.Triggerable(name="update_cpv_data",
                                builderNames=["update_cpv_data"])
     update_repo_check = schedulers.Triggerable(name="update_repo_check",
@@ -76,8 +70,10 @@ def gentoo_schedulers():
                                builderNames=["run_build_request"])
     parse_build_log = schedulers.Triggerable(name="parse_build_log",
                                builderNames=["parse_build_log"])
+    run_build_stage4_request = schedulers.Triggerable(name="run_build_stage4_request",
+                               builderNames=["run_build_stage4_request"])
     s = []
-    s.append(test_updatedb)
+    s.append(create_stage4)
     s.append(scheduler_update_db)
     s.append(update_repo_check)
     s.append(update_cpv_data)

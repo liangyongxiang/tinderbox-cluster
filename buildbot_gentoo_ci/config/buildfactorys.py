@@ -13,6 +13,7 @@ from buildbot_gentoo_ci.steps import builders
 from buildbot_gentoo_ci.steps import portage
 from buildbot_gentoo_ci.steps import logs
 from buildbot_gentoo_ci.steps import repos
+from buildbot_gentoo_ci.steps import nodes
 
 def update_db_check():
     f = util.BuildFactory()
@@ -215,4 +216,12 @@ def parse_build_log():
     f.addStep(logs.setBuildStatus())
     # setup things for the irc bot
     #f.addStep(logs.SetIrcInfo())
+    return f
+
+def run_build_stage4_request():
+    f = util.BuildFactory()
+    # set needed Propertys
+    f.addStep(nodes.SetupPropertys())
+    # set the needed steps for making the stage4
+    f.addStep(nodes.SetupStage4Steps())
     return f
