@@ -76,7 +76,8 @@ class SetMakeProfile(BuildStep):
     haltOnFailure = True
     flunkOnFailure = True
 
-    def __init__(self, **kwargs):
+    def __init__(self, workdir=False, **kwargs):
+        self.rootworkdir = workdir
         super().__init__(**kwargs)
 
     @defer.inlineCallbacks
@@ -104,8 +105,12 @@ class SetMakeProfile(BuildStep):
                     'ln',
                     '-s'
                     ]
+        if self.rootworkdir:
+            symlink_makeprofile_path = yield os.path.join(self.rootworkdir, 'etc/portage/make.profile')
+        else:
+            symlink_makeprofile_path = '/etc/portage/make.profile'
         shell_commad_list.append(makeprofile_path)
-        shell_commad_list.append('/etc/portage/make.profile')
+        shell_commad_list.append(symlink_makeprofile_path)
         yield self.build.addStepsAfterCurrentStep([
             steps.ShellCommand(
                         command=shell_commad_list,
@@ -125,7 +130,8 @@ class SetReposConf(BuildStep):
     haltOnFailure = True
     flunkOnFailure = True
 
-    def __init__(self, **kwargs):
+    def __init__(self, workdir=False, **kwargs):
+        self.rootworkdir = workdir
         super().__init__(**kwargs)
 
     @defer.inlineCallbacks
@@ -133,6 +139,10 @@ class SetReposConf(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         portage_repos_path = self.getProperty('portage_repos_path')
         project_data = self.getProperty('project_data')
+        if self.rootworkdir:
+            portage_etc_path = yield os.path.join(self.rootworkdir, 'etc/portage/')
+        else:
+            portage_etc_path = '/etc/portage/'
         # setup the default.conf
         repos_conf_data = yield self.gentooci.db.projects.getProjectPortageByUuidAndDirectory(project_data['uuid'], 'repos.conf')
         if repos_conf_data is None:
@@ -149,7 +159,7 @@ class SetReposConf(BuildStep):
         yield self.build.addStepsAfterCurrentStep([
             steps.StringDownload(default_conf_string + separator,
                                 workerdest="repos.conf/default.conf",
-                                workdir='/etc/portage/')
+                                workdir=portage_etc_path)
             ])
         # display the default.conf
         yield log.addStdout('File: ' + 'default.conf' + '\n')
@@ -171,7 +181,7 @@ class SetReposConf(BuildStep):
             yield self.build.addStepsAfterCurrentStep([
                 steps.StringDownload(repository_conf_string + separator,
                                 workerdest='repos.conf/' + filename,
-                                workdir='/etc/portage/')
+                                workdir=portage_etc_path)
                 ])
             yield log.addStdout('File: ' + filename + '\n')
             for line in repository_conf:
@@ -187,7 +197,8 @@ class SetMakeConf(BuildStep):
     haltOnFailure = True
     flunkOnFailure = True
 
-    def __init__(self, **kwargs):
+    def __init__(self, workdir=False, **kwargs):
+        self.rootworkdir = workdir
         super().__init__(**kwargs)
 
     @defer.inlineCallbacks
@@ -196,6 +207,10 @@ class SetMakeConf(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         project_data = self.getProperty('project_data')
         makeconf_variables_data = yield self.gentooci.db.portages.getVariables()
+        if self.rootworkdir:
+            portage_etc_path = yield os.path.join(self.rootworkdir, 'etc/portage/')
+        else:
+            portage_etc_path = '/etc/portage/'
         separator1 = '\n'
         separator2 = ' '
         makeconf_list = []
@@ -248,7 +263,7 @@ class SetMakeConf(BuildStep):
         yield self.build.addStepsAfterCurrentStep([
             steps.StringDownload(makeconf_string + separator1,
                                 workerdest="make.conf",
-                                workdir='/etc/portage/')
+                                workdir=portage_etc_path)
             ])
         # display the make.conf
         for line in makeconf_list:

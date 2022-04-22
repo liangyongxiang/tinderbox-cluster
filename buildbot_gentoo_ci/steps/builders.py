@@ -344,7 +344,8 @@ class UpdateRepos(BuildStep):
     haltOnFailure = True
     flunkOnFailure = True
 
-    def __init__(self, **kwargs):
+    def __init__(self, workdir=False, **kwargs):
+        self.rootworkdir = workdir
         super().__init__(**kwargs)
 
     @defer.inlineCallbacks
@@ -356,14 +357,17 @@ class UpdateRepos(BuildStep):
         projects_repositorys_data = yield self.gentooci.db.projects.getRepositorysByProjectUuid(project_data['uuid'])
         for project_repository_data in projects_repositorys_data:
             repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(project_repository_data['repository_uuid'])
-            repository_path = yield os.path.join(portage_repos_path, repository_data['name'])
+            if self.rootworkdir:
+                repository_path = os.path.join(self.rootworkdir, portage_repos_path[1:], repository_data['name'])
+            else:
+                repository_path = os.path.join(portage_repos_path, repository_data['name'], '')
             yield self.build.addStepsAfterCurrentStep([
                 steps.Git(repourl=repository_data['url'],
                             name = 'Git pull ' +  repository_data['name'],
                             mode='full',
                             submodules=True,
                             alwaysUseLatest=True,
-                            workdir=os.path.join(repository_path, ''))
+                            workdir=repository_path)
             ])
         return SUCCESS
 
@@ -798,8 +802,8 @@ class CheckEmergeLogs(BuildStep):
         print(cpv_build_dir)
         self.setProperty('cpv_build_dir', cpv_build_dir, 'cpv_build_dir')
         cpv_build_work_dir = yield os.path.join(cpv_build_dir, 'work')
-        #FIXME: take find pattern from db or config
-        find_pattern_list = ['meson-log.txt', 'CMakeCache.txt']
+        #FIXME: take find pattern from db
+        find_pattern_list = ['meson-log.txt', 'CMakeCache.txt', 'testlog.txt', '*.out', 'project-config.jam', 'testlog-x11.txt']
         shell_commad_list = []
         # we have *.log as default
         shell_commad_list.append('find')
