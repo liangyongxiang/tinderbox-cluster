@@ -110,4 +110,5 @@ class DBConnector(service.ReconfigurableServiceMixin,
             if not current:
                 for l in upgrade_message.format(basedir=self.basedir).split('\n'):
                     log.msg(l)
+                log.msg("sqlite raise DatabaseNotReadyError")
                 raise exceptions.DatabaseNotReadyError()

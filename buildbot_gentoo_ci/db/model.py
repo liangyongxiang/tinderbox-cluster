@@ -382,6 +382,7 @@ class Model(base.DBConnectorComponent):
                 schema = ControlledSchema(engine, self.repo_path)
                 db_version = schema.version
             except exceptions.DatabaseNotControlledError:
+                print("buildbot_gentoo_ci/db/model.py: DatabaseNotControlledError");
                 return False
 
             return db_version == repo_version

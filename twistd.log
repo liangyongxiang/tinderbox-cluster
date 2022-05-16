@@ -1,0 +1,118 @@
+2022-05-16 21:31:36+0800 [-] Loading buildbot.tac...
+2022-05-16 21:31:37+0800 [-] Loaded.
+2022-05-16 21:31:37+0800 [-] twistd 22.4.0 (/usr/bin/python3.9 3.9.12) starting up.
+2022-05-16 21:31:37+0800 [-] reactor class: twisted.internet.epollreactor.EPollReactor.
+2022-05-16 21:31:37+0800 [-] Starting BuildMaster -- buildbot.version: 3.4.0
+2022-05-16 21:31:37+0800 [-] Loading configuration from '/home/yongxiang/work/tinderbox/tinderbox-cluster/master.cfg'
+2022-05-16 21:31:37+0800 [-] ['yongxiang']
+2022-05-16 21:31:37+0800 [-] []
+2022-05-16 21:31:37+0800 [-] []
+2022-05-16 21:31:37+0800 [-] ['yongxiang']
+2022-05-16 21:31:37+0800 [-] {'buildbotNetUsageData': None,
+2022-05-16 21:31:37+0800 [-]  'buildbotURL': 'http://localhost:8020/',
+2022-05-16 21:31:37+0800 [-]  'builders': [<buildbot.config.BuilderConfig object at 0x7f365656b940>,
+2022-05-16 21:31:37+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f365653a3d0>,
+2022-05-16 21:31:37+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f365653a520>,
+2022-05-16 21:31:37+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f365653a880>,
+2022-05-16 21:31:37+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f365653abe0>,
+2022-05-16 21:31:37+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f365648b220>,
+2022-05-16 21:31:37+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f365648b460>,
+2022-05-16 21:31:37+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f365648bd60>],
+2022-05-16 21:31:37+0800 [-]  'change_source': [<buildbot.changes.gitpoller.GitPoller object at 0x7f36574f8280>],
+2022-05-16 21:31:37+0800 [-]  'db': {'db_url': 'sqlite:///state.sqlite'},
+2022-05-16 21:31:37+0800 [-]  'db_url': 'sqlite:///state.sqlite',
+2022-05-16 21:31:37+0800 [-]  'protocols': {'pb': {'port': 9989}},
+2022-05-16 21:31:37+0800 [-]  'schedulers': [<buildbot.schedulers.forcesched.ForceScheduler object at 0x7f365654c880>,
+2022-05-16 21:31:37+0800 [-]                 <buildbot.schedulers.basic.SingleBranchScheduler object at 0x7f3656543100>,
+2022-05-16 21:31:37+0800 [-]                 <buildbot.schedulers.triggerable.Triggerable object at 0x7f365654cc10>,
+2022-05-16 21:31:37+0800 [-]                 <buildbot.schedulers.triggerable.Triggerable object at 0x7f3658600400>,
+2022-05-16 21:31:37+0800 [-]                 <buildbot.schedulers.triggerable.Triggerable object at 0x7f365656b490>,
+2022-05-16 21:31:37+0800 [-]                 <buildbot.schedulers.triggerable.Triggerable object at 0x7f365656b580>,
+2022-05-16 21:31:37+0800 [-]                 <buildbot.schedulers.triggerable.Triggerable object at 0x7f365656b6a0>,
+2022-05-16 21:31:37+0800 [-]                 <buildbot.schedulers.triggerable.Triggerable object at 0x7f365656b730>],
+2022-05-16 21:31:37+0800 [-]  'services': [<buildbot_gentoo_ci.config.service.GentooCiService object at 0x7f365656b7f0>,
+2022-05-16 21:31:37+0800 [-]               <buildbot_gentoo_ci.reporters.irc.IRCStatusPush object at 0x7f3656617a60>],
+2022-05-16 21:31:37+0800 [-]  'title': 'Gentoo CI',
+2022-05-16 21:31:37+0800 [-]  'titleURL': 'https://gentoo-ci.gentoo.org',
+2022-05-16 21:31:37+0800 [-]  'workers': [<LocalWorker 'yongxiang'>],
+2022-05-16 21:31:37+0800 [-]  'www': {'plugins': {'console_view': {}, 'grid_view': {}, 'waterfall_view': {}},
+2022-05-16 21:31:37+0800 [-]          'port': 8020,
+2022-05-16 21:31:37+0800 [-]          'ui_default_config': {'BuildRequests.buildrequestFetchLimit': 100,
+2022-05-16 21:31:37+0800 [-]                                'ChangeBuilds.buildsFetchLimit': 150,
+2022-05-16 21:31:37+0800 [-]                                'Changes.changesFetchLimit': 150,
+2022-05-16 21:31:37+0800 [-]                                'Console.buildLimit': 1000,
+2022-05-16 21:31:37+0800 [-]                                'Console.changeLimit': 150,
+2022-05-16 21:31:37+0800 [-]                                'Grid.revisionLimit': 30,
+2022-05-16 21:31:37+0800 [-]                                'Waterfall.lazy_limit_waterfall': 408}}}
+2022-05-16 21:31:37+0800 [-] Setting up database with URL 'sqlite:/state.sqlite'
+2022-05-16 21:31:37+0800 [-] setting database journal mode to 'wal'
+2022-05-16 21:31:37+0800 [-] The Buildmaster database needs to be upgraded before this version of
+2022-05-16 21:31:37+0800 [-] buildbot can run.  Use the following command-line
+2022-05-16 21:31:37+0800 [-] 
+2022-05-16 21:31:37+0800 [-]     buildbot upgrade-master /home/yongxiang/work/tinderbox/tinderbox-cluster
+2022-05-16 21:31:37+0800 [-] 
+2022-05-16 21:31:37+0800 [-] to upgrade the database, and try starting the buildmaster again.  You may
+2022-05-16 21:31:37+0800 [-] want to make a backup of your buildmaster before doing so.
+2022-05-16 21:31:37+0800 [-] BuildMaster startup failed
+2022-05-16 21:31:37+0800 [-] BuildMaster is stopped
+2022-05-16 21:31:37+0800 [-] Main loop terminated.
+2022-05-16 21:31:37+0800 [-] Server Shut Down.
+2022-05-16 23:30:25+0800 [-] Loading buildbot.tac...
+2022-05-16 23:30:26+0800 [-] Loaded.
+2022-05-16 23:30:26+0800 [-] twistd 22.4.0 (/usr/bin/python3.9 3.9.12) starting up.
+2022-05-16 23:30:26+0800 [-] reactor class: twisted.internet.epollreactor.EPollReactor.
+2022-05-16 23:30:26+0800 [-] Starting BuildMaster -- buildbot.version: 3.4.0
+2022-05-16 23:30:26+0800 [-] Loading configuration from '/home/yongxiang/work/tinderbox/tinderbox-cluster/master.cfg'
+2022-05-16 23:30:26+0800 [-] ['yongxiang']
+2022-05-16 23:30:26+0800 [-] []
+2022-05-16 23:30:26+0800 [-] []
+2022-05-16 23:30:26+0800 [-] ['yongxiang']
+2022-05-16 23:30:26+0800 [-] {'buildbotNetUsageData': None,
+2022-05-16 23:30:26+0800 [-]  'buildbotURL': 'http://localhost:8020/',
+2022-05-16 23:30:26+0800 [-]  'builders': [<buildbot.config.BuilderConfig object at 0x7f3f6fe78dc0>,
+2022-05-16 23:30:26+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f3f6fdff850>,
+2022-05-16 23:30:26+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f3f6fdff9a0>,
+2022-05-16 23:30:26+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f3f6fdffd00>,
+2022-05-16 23:30:26+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f3f6fd8b0d0>,
+2022-05-16 23:30:26+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f3f6fd9e6a0>,
+2022-05-16 23:30:26+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f3f6fd9e8e0>,
+2022-05-16 23:30:26+0800 [-]               <buildbot.config.BuilderConfig object at 0x7f3f6fda6220>],
+2022-05-16 23:30:26+0800 [-]  'change_source': [<buildbot.changes.gitpoller.GitPoller object at 0x7f3f75bb11c0>],
+2022-05-16 23:30:26+0800 [-]  'db': {'db_url': 'sqlite:///state.sqlite'},
+2022-05-16 23:30:26+0800 [-]  'db_url': 'sqlite:///state.sqlite',
+2022-05-16 23:30:26+0800 [-]  'protocols': {'pb': {'port': 9989}},
+2022-05-16 23:30:26+0800 [-]  'schedulers': [<buildbot.schedulers.forcesched.ForceScheduler object at 0x7f3f6fe5bd00>,
+2022-05-16 23:30:26+0800 [-]                 <buildbot.schedulers.basic.SingleBranchScheduler object at 0x7f3f6fe50250>,
+2022-05-16 23:30:26+0800 [-]                 <buildbot.schedulers.triggerable.Triggerable object at 0x7f3f6fe780d0>,
+2022-05-16 23:30:26+0800 [-]                 <buildbot.schedulers.triggerable.Triggerable object at 0x7f3f6fe5be80>,
+2022-05-16 23:30:26+0800 [-]                 <buildbot.schedulers.triggerable.Triggerable object at 0x7f3f6fe78910>,
+2022-05-16 23:30:26+0800 [-]                 <buildbot.schedulers.triggerable.Triggerable object at 0x7f3f6fe78a00>,
+2022-05-16 23:30:26+0800 [-]                 <buildbot.schedulers.triggerable.Triggerable object at 0x7f3f6fe78b20>,
+2022-05-16 23:30:26+0800 [-]                 <buildbot.schedulers.triggerable.Triggerable object at 0x7f3f6fe78bb0>],
+2022-05-16 23:30:26+0800 [-]  'services': [<buildbot_gentoo_ci.config.service.GentooCiService object at 0x7f3f6fe78c70>,
+2022-05-16 23:30:26+0800 [-]               <buildbot_gentoo_ci.reporters.irc.IRCStatusPush object at 0x7f3f75bb11f0>],
+2022-05-16 23:30:26+0800 [-]  'title': 'Gentoo CI',
+2022-05-16 23:30:26+0800 [-]  'titleURL': 'https://gentoo-ci.gentoo.org',
+2022-05-16 23:30:26+0800 [-]  'workers': [<LocalWorker 'yongxiang'>],
+2022-05-16 23:30:26+0800 [-]  'www': {'plugins': {'console_view': {}, 'grid_view': {}, 'waterfall_view': {}},
+2022-05-16 23:30:26+0800 [-]          'port': 8020,
+2022-05-16 23:30:26+0800 [-]          'ui_default_config': {'BuildRequests.buildrequestFetchLimit': 100,
+2022-05-16 23:30:26+0800 [-]                                'ChangeBuilds.buildsFetchLimit': 150,
+2022-05-16 23:30:26+0800 [-]                                'Changes.changesFetchLimit': 150,
+2022-05-16 23:30:26+0800 [-]                                'Console.buildLimit': 1000,
+2022-05-16 23:30:26+0800 [-]                                'Console.changeLimit': 150,
+2022-05-16 23:30:26+0800 [-]                                'Grid.revisionLimit': 30,
+2022-05-16 23:30:26+0800 [-]                                'Waterfall.lazy_limit_waterfall': 408}}}
+2022-05-16 23:30:26+0800 [-] Setting up database with URL 'sqlite:/state.sqlite'
+2022-05-16 23:30:26+0800 [-] setting database journal mode to 'wal'
+2022-05-16 23:30:26+0800 [-] The Buildmaster database needs to be upgraded before this version of
+2022-05-16 23:30:26+0800 [-] buildbot can run.  Use the following command-line
+2022-05-16 23:30:26+0800 [-] 
+2022-05-16 23:30:26+0800 [-]     buildbot upgrade-master /home/yongxiang/work/tinderbox/tinderbox-cluster
+2022-05-16 23:30:26+0800 [-] 
+2022-05-16 23:30:26+0800 [-] to upgrade the database, and try starting the buildmaster again.  You may
+2022-05-16 23:30:26+0800 [-] want to make a backup of your buildmaster before doing so.
+2022-05-16 23:30:26+0800 [-] BuildMaster startup failed
+2022-05-16 23:30:26+0800 [-] BuildMaster is stopped
+2022-05-16 23:30:26+0800 [-] Main loop terminated.
+2022-05-16 23:30:26+0800 [-] Server Shut Down.

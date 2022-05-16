@@ -24,8 +24,10 @@ def gentoo_builders(worker_data):
     b = []
     g_ci_w = gentoo_ci_workers(worker_data)
     LocalWorkers = g_ci_w.getLocalWorkersUuid()
-    BuildWorkers = g_ci_w.getBuildWorkersUuid()
-    NodeWorkers = g_ci_w.getNodeWorkersUuid()
+    BuildWorkers = LocalWorkers
+    NodeWorkers = LocalWorkers
+    #BuildWorkers = g_ci_w.getBuildWorkersUuid()
+    #NodeWorkers = g_ci_w.getNodeWorkersUuid()
     b.append(util.BuilderConfig(
         name='update_db_check',
         workername=LocalWorkers[0],
@@ -36,7 +38,7 @@ def gentoo_builders(worker_data):
     )
     b.append(util.BuilderConfig(
         name='update_repo_check',
-        workername=LocalWorkers[1],
+        workername=LocalWorkers[0],
         workerbuilddir='builds',
         collapseRequests=True,
         factory=buildfactorys.update_repo_check()
