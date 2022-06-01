@@ -44,7 +44,8 @@ from buildbot.util import safeTranslate
 from buildbot.util import service as util_service
 from buildbot.warnings import ConfigWarning
 from buildbot.warnings import warn_deprecated
-from buildbot.config import ConfigErrors, error, loadConfigDict
+from buildbot.config import ConfigErrors, error
+from buildbot.config.master import loadConfigDict
 
 _errors = None
 
