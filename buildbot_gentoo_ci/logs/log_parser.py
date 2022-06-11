@@ -71,10 +71,11 @@ def search_buildlog(log_search_pattern_list, logfile_text_dict, tmp_index, max_t
     # loop true the pattern list for match
     for search_pattern in log_search_pattern_list:
         search_hit = False
+        ignore_line = False
         # check if should ignore the line
         #FIXME take the ignore line pattern from db
-        if text_line.startswith('>>> /'):
-            pass
+        if re.search('^>>> /', text_line):
+            ignore_line = True
         #if else re.search('./\w+/'):
         #    pass
         else:
@@ -134,9 +135,9 @@ def search_buildlog(log_search_pattern_list, logfile_text_dict, tmp_index, max_t
                             summery_dict[i]['status'] = 'info'
                             summery_dict[i]['id'] = 0
                             summery_dict[i]['search_pattern'] = 'auto'
-        else:
+        if not ignore_line or not search_hit:
             # we add all line that start with ' * ' as info
-            # we add all line that start with '>>>' but not '>>> /' as info
+            # we add all line that start with '>>>' as info
             if text_line.startswith(' * ') or text_line.startswith('>>>'):
                 if not tmp_index in summery_dict:
                     summery_dict[tmp_index] = {}
@@ -146,7 +147,7 @@ def search_buildlog(log_search_pattern_list, logfile_text_dict, tmp_index, max_t
                     summery_dict[tmp_index]['id'] = 0
                     summery_dict[tmp_index]['search_pattern'] = 'auto'
     if summery_dict == {}:
-        return None
+        return False
     return summery_dict
 
 def getConfigSettings():
@@ -173,7 +174,7 @@ def runLogParser(args):
     # run the parse patten on the line
     for tmp_index, text in logfile_text_dict.items():
         res = mp_pool.apply_async(search_buildlog, (log_search_pattern_list, logfile_text_dict, tmp_index, max_text_lines,))
-        if res.get() is not None:
+        if res.get():
             print(json.dumps(res.get()))
     mp_pool.close()
     mp_pool.join()
