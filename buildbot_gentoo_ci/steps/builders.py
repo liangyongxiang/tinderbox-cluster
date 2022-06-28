@@ -18,7 +18,7 @@ from buildbot.process.results import SKIPPED
 from buildbot.plugins import steps
 
 #FIXME: should be set in config
-hosturl = 'http://77.110.8.67:8000'
+hosturl = 'http://90.231.13.235:8000'
 
 def PersOutputOfEmerge(rc, stdout, stderr):
     emerge_output = {}
@@ -856,7 +856,8 @@ class CheckEmergeLogs(BuildStep):
         if self.step == 'pre-build':
             print(emerge_output)
             # this should be set in the config
-            if self.getProperty('rerun') <= 3:
+            retrays = 5
+            if self.getProperty('rerun') <= retrays:
                 # when we need to change use. we could rerun pre-build with
                 # --autounmask-use=y --autounmask-write=y --autounmask-only=y
                 # but we use --binpkg--respect-use=y in EMERGE_DEFAULT_OPTS
