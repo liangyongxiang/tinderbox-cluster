@@ -22,6 +22,7 @@ from buildbot.plugins import steps
 
 from buildbot_gentoo_ci.steps import minio
 from buildbot_gentoo_ci.steps import master as master_steps
+from buildbot_gentoo_ci.steps import bugs
 
 def PersOutputOfLogParser(rc, stdout, stderr):
     build_summery_output = {}
@@ -299,6 +300,7 @@ class MakeIssue(BuildStep):
             cpv = self.getProperty('faild_cpv')
         else:
             cpv = self.getProperty('cpv')
+        self.error_dict['cpv'] = cpv
         yield log.addStdout('Titel:' + '\n')
         yield log.addStdout(separator2.join([cpv, '-', self.error_dict['title']]) + separator1)
         yield log.addStdout('Summary:' + '\n')
@@ -358,10 +360,11 @@ class MakeIssue(BuildStep):
         warning = False
         self.summary_log_list = []
         self.error_dict = {}
-        self.error_dict['hash'] = hashlib.sha256()
+        self.aftersteps_list = []
+        #self.error_dict['hash'] = hashlib.sha256()
         for k, v in sorted(self.summary_log_dict.items()):
             self.summary_log_list.append(v['text'])
-            self.error_dict['hash'].update(v['text'].encode('utf-8'))
+            #self.error_dict['hash'].update(v['text'].encode('utf-8'))
             if v['status'] == 'warning':
                 warning = True
             # check if the build did fail
@@ -377,9 +380,14 @@ class MakeIssue(BuildStep):
             print(self.error_dict)
             yield self.logIssue()
             self.setProperty("status", 'failed', 'status')
-        self.setProperty("summary_log_list", self.summary_log_list, 'summary_log_list')
+            self.setProperty("error_dict", self.error_dict, 'error_dict')
+            self.aftersteps_list.append(bugs.GetBugs())
         if warning:
             self.setProperty("status", 'warning', 'status')
+            self.setProperty("bgo", False, 'bgo')
+        self.setProperty("summary_log_list", self.summary_log_list, 'summary_log_list')
+        if self.aftersteps_list is not []:
+            yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
         return SUCCESS
 
 class setBuildbotLog(BuildStep):
