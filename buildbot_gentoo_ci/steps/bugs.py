@@ -88,7 +88,7 @@ class GetBugs(BuildStep):
         match = False
         for bug in buglist:
             yield log.addStdout('Bug: ' + str(bug['id']) + ' Summary: ' + bug['summary'] +'\n')
-            if re.search(self.getProperty('error_dict')['title_phase'][:20], bug['summary']):
+            if re.search(self.getProperty('error_dict')['title_issue'][:20], bug['summary']):
                 print('Bug found')
                 print(bug)
                 match = {}

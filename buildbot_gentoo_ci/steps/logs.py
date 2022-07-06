@@ -318,39 +318,16 @@ class MakeIssue(BuildStep):
         text_phase_list = []
         for k, v in sorted(self.summary_log_dict.items()):
             # get the issue error
-            if v['text'].startswith(' * ERROR:') and v['text'].endswith(' phase):'):
-                issue_text = self.summary_log_dict[k + 1]['text']
-                if issue_text.startswith(' *   ninja -v -j'):
-                    issue_text = 'ninja failed'
-                if issue_text.startswith(' *   (no error'):
-                    issue_text = False
-                if issue_text:
-                    text_issue_list.append(issue_text)
-            # get the phase error
             if v['type'] == self.error_dict['phase'] and v['status'] == 'error':
-                text_phase_list.append(v['text'])
-        # if not get the first issue
-        if text_issue_list == []:
-            for k, v in self.summary_log_dict.items():
-                if v['type'] == 'issues':
-                    text_issue_list.append(v['text'])
-        # if not get the first error
-        if text_phase_list == []:
-            for k, v in self.summary_log_dict.items():
-                if v['status'] == 'error':
-                    text_phase_list.append(v['text'])
+                text_issue_list.append(v['text'])
         # add the issue error
         if text_issue_list != []:
             self.error_dict['title_issue'] = text_issue_list[0].replace('*', '').strip()
         else:
             self.error_dict['title_issue'] = 'title_issue : None'
-        # add the error line
-        if text_phase_list != []:
-            self.error_dict['title_phase'] = text_phase_list[0].replace('*', '').strip()
-        else:
-            self.error_dict['title_phase'] = 'title_phase : None'
+        self.error_dict['title_phase'] = 'failed in '+ self.error_dict['phase']
         #set the error title
-        self.error_dict['title'] = self.error_dict['title_issue'] + ' (' + self.error_dict['title_phase'] + ')'
+        self.error_dict['title'] = self.error_dict['title_phase'] + ' - ' + self.error_dict['title_issue']
 
     @defer.inlineCallbacks
     def run(self):
