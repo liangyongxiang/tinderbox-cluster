@@ -301,7 +301,7 @@ class MakeIssue(BuildStep):
         else:
             cpv = self.getProperty('cpv')
         self.error_dict['cpv'] = cpv
-        yield log.addStdout('Titel:' + '\n')
+        yield log.addStdout('Title:' + '\n')
         yield log.addStdout(separator2.join([cpv, '-', self.error_dict['title']]) + separator1)
         yield log.addStdout('Summary:' + '\n')
         for line in self.summary_log_list:
