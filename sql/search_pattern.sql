@@ -457,6 +457,8 @@ INSERT INTO public.projects_pattern VALUES (480, 'e89c2c1a-46e0-4ded-81dd-c51afe
 INSERT INTO public.projects_pattern VALUES (481, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', ' \*   Failed to find configuration', 0, 0, 'configure', 'error', 'search');
 INSERT INTO public.projects_pattern VALUES (482, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', 'Reason: UndefinedError', 0, 0, 'configure', 'error', 'search');
 INSERT INTO public.projects_pattern VALUES (483, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', '^fatal: not a git repository', 0, 0, 'configure', 'info', 'search');
+INSERT INTO public.projects_pattern VALUES (484, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', ', not found$', 0, 0, 'configure', 'info', 'search');
+INSERT INTO public.projects_pattern VALUES (485, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', 'Could not find', 0, 0, 'configure', 'error', 'search');
 
 -- File CATCH.install
 INSERT INTO public.projects_pattern VALUES (500, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', 'Can''t locate Locale/gettext.pm in @INC', 0, 0, 'install', 'error', 'search');
