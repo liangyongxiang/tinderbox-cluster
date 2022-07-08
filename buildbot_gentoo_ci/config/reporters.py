@@ -1,8 +1,9 @@
-# Copyright 2021 Gentoo Authors
+# Copyright 2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
-#from buildbot import reporters as buildbot_reporters
-from buildbot.reporters.generators.build import BuildStatusGenerator
+from buildbot.plugins import util
+from buildbot.reporters.gitlab import GitLabStatusPush
+from buildbot.reporters.generators.build import BuildStatusGenerator, BuildStartEndStatusGenerator
 from buildbot.reporters.message import MessageFormatter
 
 from buildbot_gentoo_ci.reporters import irc
@@ -39,7 +40,26 @@ irc_reporter = irc.IRCStatusPush("irc.libera.chat", "gci_test",
                  generators=ircGenerators(),
                  noticeOnChannel=True
                  )
+#gitlab
+def gitlabGenerators():
+    builders = [
+        #'run_build_request',
+        'parse_build_log'
+    ]
+    return [
+        BuildStartEndStatusGenerator(
+            builders=builders
+        )
+    ]
+gitlab_gentoo_org = GitLabStatusPush(token=util.Secret("gitlabToken"),
+                                #context= util.Interpolate('Buildbot %(prop:buildername)s'),
+                                baseURL='https://gitlab.gentoo.org',
+                                generators=gitlabGenerators(),
+                                #debug=True,
+                                verbose=True
+                                )
 
 def gentoo_reporters(r=[]):
     r.append(irc_reporter)
+    r.append(gitlab_gentoo_org)
     return r

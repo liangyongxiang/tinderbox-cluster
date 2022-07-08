@@ -38,7 +38,10 @@ class GetDataGentooCiProject(BuildStep):
         if self.getProperty("repository").endswith('.git'):
             for v in self.getProperty("repository").split('/'):
                 if v.endswith('.git'):
-                    repository = v[:-4]
+                    if v[:-4] == 'gentoo-ci':
+                        repository = 'gentoo'
+                    else:
+                        repository = v[:-4]
         if repository:
             self.repository_data = yield self.gentooci.db.repositorys.getRepositoryByName(repository)
         if self.getProperty("change_data")['repository'] != self.repository_data['name']:

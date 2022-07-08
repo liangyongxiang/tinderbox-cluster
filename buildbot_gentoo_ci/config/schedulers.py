@@ -1,4 +1,4 @@
-# Copyright 2021 Gentoo Authors
+# Copyright 2022 Gentoo Authors
 # Distributed under the terms of the GNU General Public License v2
 
 from buildbot.plugins import schedulers, util
@@ -28,7 +28,11 @@ def getGitChanges(props):
     if k['repository'].endswith('.git'):
         for v in k['repository'].split('/'):
             if v.endswith('.git'):
-                change_data['repository'] = v[:-4]
+                # on gitlab we use gentoo-ci as fork of gentoo
+                if v[:-4] == 'gentoo-ci':
+                    change_data['repository'] = 'gentoo'
+                else:
+                    change_data['repository'] = v[:-4]
     change_data['author'] = k['author']
     change_data['committer'] = k['committer']
     change_data['comments'] = k['comments']
@@ -49,7 +53,7 @@ def gentoo_schedulers():
     create_stage4 = schedulers.ForceScheduler(
         name="create_stage4",
         buttonName="Create stage4",
-        label="Create stage4 form",
+        label="My nice create stage4 form",
         builderNames=['run_build_stage4_request'],
         # A completely customized property list.  The name of the
         # property is the name of the parameter
@@ -57,6 +61,12 @@ def gentoo_schedulers():
             util.StringParameter(name="project_uuid",
                     label="Project uuid",
                     default="e89c2c1a-46e0-4ded-81dd-c51afeb7fcfd", size=36),
+            util.StringParameter(name="worker",
+                    label="New worker uuid",
+                    default="a89c2c1a-46e0-4ded-81dd-c51afeb7fcfd", size=36),
+            util.StringParameter(name="type",
+                    label="type of worker",
+                    default="docker", size=10),
         ])
     update_cpv_data = schedulers.Triggerable(name="update_cpv_data",
                                builderNames=["update_cpv_data"])
