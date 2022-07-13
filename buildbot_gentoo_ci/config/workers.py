@@ -7,49 +7,29 @@ class gentoo_ci_workers():
     def __init__(self, worker_data, **kwargs):
         self.worker_data = worker_data
 
-    def getLocalWorkersUuid(self):
-        local_worker = []
+    def getWorkersUuid(self, worker_type):
+        worker_list = []
         for worker in self.worker_data:
-            if worker['type'] == 'local' and worker['enable'] is True:
-                local_worker.append(worker['uuid'])
-        print(local_worker)
-        return local_worker
+            if worker['type'] == worker_type and worker['enable'] is True:
+                worker_list.append(worker['uuid'])
+        print(worker_list)
+        return worker_list
 
-    def getBuildWorkersUuid(self):
-        build_worker = []
+    def getWorkersAllData(self, worker_type):
+        worker_list = []
         for worker in self.worker_data:
-            if (worker['type'] != 'local' and worker['type'] != 'node') and worker['enable'] is True:
-                build_worker.append(worker['uuid'])
-        print(build_worker)
-        return build_worker
-
-    def getBuildWorkersAllData(self):
-        build_worker = []
-        for worker in self.worker_data:
-            if (worker['type'] != 'local' and worker['type'] != 'node') and worker['enable'] is True:
-                build_worker.append(worker)
-        print(build_worker)
-        return build_worker
-
-    def getNodeWorkersUuid(self):
-        node_worker = []
-        for worker in self.worker_data:
-            if worker['type'] == 'node' and worker['enable'] is True:
-                node_worker.append(worker['uuid'])
-        print(node_worker)
-        return node_worker
-
-    def getNodedWorkersAllData(self):
-        node_worker = []
-        for worker in self.worker_data:
-            if worker['type'] == 'node' and worker['enable'] is True:
-                node_worker.append(worker)
-        print(node_worker)
-        return node_worker
+            if worker['type'] == worker_type and worker['enable'] is True:
+                worker_list.append(worker)
+        print(worker_list)
+        return worker_list
 
 @util.renderer
-def docker_images(props):
+def build_docker_images(props):
     return 'bb-worker-' + props.getProperty('project_uuid') + ':latest'
+
+@util.renderer
+def log_docker_images(props):
+    return 'bb-worker-log' + ':latest'
 
 @util.renderer
 def docker_volumes(props):
@@ -66,9 +46,12 @@ def docker_volumes(props):
 def gentoo_workers(worker_data):
     w = []
     g_ci_w = gentoo_ci_workers(worker_data)
-    LocalWorkers = g_ci_w.getLocalWorkersUuid()
-    BuildWorkers = g_ci_w.getBuildWorkersAllData()
-    NodeWorkers = g_ci_w.getNodedWorkersAllData()
+
+    for local_worker in g_ci_w.getWorkersUuid('local'):
+        w.append(worker.LocalWorker(local_worker))
+    for node_worker in g_ci_w.getWorkersAllData('node'):
+        w.append(worker.Worker(node_worker['uuid'], node_worker['password']))
+    # docker workers
     docker_hostconfig = {}
     # For use of sandbox stuff
     # FEATURES="ipc-sandbox network-sandbox pid-sandbox"
@@ -76,24 +59,30 @@ def gentoo_workers(worker_data):
     # libseccomp overhead
     # https://github.com/seccomp/libseccomp/issues/153
     docker_hostconfig['security_opt'] = ['seccomp=unconfined']
-    for local_worker in LocalWorkers:
-        w.append(worker.LocalWorker(local_worker))
-    for build_worker in BuildWorkers:
-        if build_worker['type'] == 'default':
-            w.append(worker.Worker(build_worker['uuid'], build_worker['password']))
+    for build_worker in g_ci_w.getWorkersAllData('docker'):
         #FIXME: set settings in master.cfg
         if build_worker['type'] == 'docker':
             w.append(worker.DockerLatentWorker(build_worker['uuid'],
                             build_worker['password'],
-                            docker_host='tcp://192.168.1.3:2375',
-                            image=docker_images,
+                            docker_host='tcp://192.168.1.12:2375',
+                            image=build_docker_images,
                             volumes=docker_volumes,
                             hostconfig=docker_hostconfig,
                             followStartupLogs=True,
                             masterFQDN='192.168.1.5',
                             build_wait_timeout=3600
                             ))
-    for node_worker in NodeWorkers:
-        if node_worker['type'] == 'node':
-            w.append(worker.Worker(node_worker['uuid'], node_worker['password']))
+    for log_worker in g_ci_w.getWorkersAllData('log'):
+        #FIXME: set settings in master.cfg
+        if log_worker['type'] == 'log':
+            w.append(worker.DockerLatentWorker(log_worker['uuid'],
+                            log_worker['password'],
+                            docker_host='tcp://192.168.1.12:2375',
+                            image=log_docker_images,
+                            #volumes=docker_volumes,
+                            hostconfig=docker_hostconfig,
+                            followStartupLogs=True,
+                            masterFQDN='192.168.1.5',
+                            build_wait_timeout=3600
+                            ))
     return w

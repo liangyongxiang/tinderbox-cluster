@@ -23,12 +23,9 @@ def CanWorkerBuildProject(builder, wfb, request):
 def gentoo_builders(worker_data):
     b = []
     g_ci_w = gentoo_ci_workers(worker_data)
-    LocalWorkers = g_ci_w.getLocalWorkersUuid()
-    BuildWorkers = g_ci_w.getBuildWorkersUuid()
-    NodeWorkers = g_ci_w.getNodeWorkersUuid()
     b.append(util.BuilderConfig(
         name='update_db_check',
-        workername=LocalWorkers[0],
+        workername=g_ci_w.getWorkersUuid('local')[0],
         workerbuilddir='builds',
         collapseRequests=False,
         factory=buildfactorys.update_db_check()
@@ -36,7 +33,7 @@ def gentoo_builders(worker_data):
     )
     b.append(util.BuilderConfig(
         name='update_repo_check',
-        workername=LocalWorkers[1],
+        workername=g_ci_w.getWorkersUuid('local')[1],
         workerbuilddir='builds',
         collapseRequests=True,
         factory=buildfactorys.update_repo_check()
@@ -48,7 +45,7 @@ def gentoo_builders(worker_data):
     # first LocalWorker need to be done before we can use mulitplay workers (git pull)
     b.append(util.BuilderConfig(
         name='update_cpv_data',
-        workernames=LocalWorkers,
+        workernames=g_ci_w.getWorkersUuid('local'),
         workerbuilddir='builds',
         collapseRequests=False,
         factory=buildfactorys.update_db_cp()
@@ -57,7 +54,7 @@ def gentoo_builders(worker_data):
     # Use multiplay workers
     b.append(util.BuilderConfig(
         name='update_v_data',
-        workernames=LocalWorkers,
+        workernames=g_ci_w.getWorkersUuid('local'),
         workerbuilddir='builds',
         collapseRequests=False,
         factory=buildfactorys.update_db_v()
@@ -66,7 +63,7 @@ def gentoo_builders(worker_data):
     # Use multiplay workers
     b.append(util.BuilderConfig(
         name='build_request_data',
-        workernames=LocalWorkers,
+        workernames=g_ci_w.getWorkersUuid('local'),
         collapseRequests=False,
         factory=buildfactorys.build_request_check()
         )
@@ -74,7 +71,7 @@ def gentoo_builders(worker_data):
     # Use multiplay workers
     b.append(util.BuilderConfig(
         name='run_build_request',
-        workernames=BuildWorkers,
+        workernames=g_ci_w.getWorkersUuid('docker'),
         canStartBuild=CanWorkerBuildProject,
         collapseRequests=False,
         factory=buildfactorys.run_build_request()
@@ -83,7 +80,7 @@ def gentoo_builders(worker_data):
     # Use multiplay workers
     b.append(util.BuilderConfig(
         name='parse_build_log',
-        workernames=LocalWorkers,
+        workernames=g_ci_w.getWorkersUuid('log'),
         collapseRequests=False,
         factory=buildfactorys.parse_build_log()
         )
@@ -91,7 +88,7 @@ def gentoo_builders(worker_data):
     # For node workers
     b.append(util.BuilderConfig(
         name='run_build_stage4_request',
-        workernames=NodeWorkers,
+        workernames=g_ci_w.getWorkersUuid('node'),
         #FIXME: support more the one node
         #canStartBuild=CanWorkerBuildProject,
         collapseRequests=False,
