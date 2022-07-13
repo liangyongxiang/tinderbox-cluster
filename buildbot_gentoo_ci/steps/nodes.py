@@ -172,12 +172,12 @@ class SetupStage4Steps(BuildStep):
                     workdir=self.getProperty("workerbase")
                     ))
                 # remove the gentoo repo
-                aftersteps_list.append(steps.ShellCommand(
-                    flunkOnFailure=True,
-                    name='Remove the repo dir',
-                    command=['rm', '-R', self.getProperty('project_uuid') + '/var/db/repos/gentoo'],
-                    workdir=self.getProperty("workerbase")
-                ))
+                #aftersteps_list.append(steps.ShellCommand(
+                #    flunkOnFailure=True,
+                #    name='Remove the repo dir',
+                #    command=['rm', '-R', self.getProperty('project_uuid') + '/var/db/repos/gentoo'],
+                #    workdir=self.getProperty("workerbase")
+                #))
                 # compress it
                 aftersteps_list.append(steps.ShellCommand(
                     flunkOnFailure=True,
