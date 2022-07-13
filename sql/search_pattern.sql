@@ -459,6 +459,7 @@ INSERT INTO public.projects_pattern VALUES (482, 'e89c2c1a-46e0-4ded-81dd-c51afe
 INSERT INTO public.projects_pattern VALUES (483, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', '^fatal: not a git repository', 0, 0, 'configure', 'info', 'search');
 INSERT INTO public.projects_pattern VALUES (484, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', ', not found$', 0, 0, 'configure', 'info', 'search');
 INSERT INTO public.projects_pattern VALUES (485, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', 'Could not find', 0, 0, 'configure', 'error', 'search');
+INSERT INTO public.projects_pattern VALUES (486, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', 'No such file or directory', 0, 0, 'configure', 'error', 'search');
 
 -- File CATCH.install
 INSERT INTO public.projects_pattern VALUES (500, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', 'Can''t locate Locale/gettext.pm in @INC', 0, 0, 'install', 'error', 'search');
@@ -742,7 +743,12 @@ INSERT INTO public.projects_pattern VALUES (915, 'e89c2c1a-46e0-4ded-81dd-c51afe
 INSERT INTO public.projects_pattern VALUES (916, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', 'warning: python_fix_shebang', 0, 0, 'qa', 'warning', 'search');
 INSERT INTO public.projects_pattern VALUES (917, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', 'SetuptoolsDeprecationWarning: 2to3', 0, 0, 'qa', 'warning', 'search');
 INSERT INTO public.projects_pattern VALUES (918, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', 'SetuptoolsDeprecationWarning: setup.py install', 0, 0, 'qa', 'warning', 'search');
-INSERT INTO public.projects_pattern VALUES (919, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', ' * QA Notice:', 0, 0, 'qa', 'warning', 'startswith');
+INSERT INTO public.projects_pattern VALUES (919, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', '^ * QA Notice:', 0, 0, 'qa', 'warning', 'search');
+
+-- ignore
+INSERT INTO public.projects_pattern VALUES (950, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', '^>>> /', 0, 0, 'ignore', 'ignore', 'search');
+INSERT INTO public.projects_pattern VALUES (950, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', '^./usr/', 0, 0, 'ignore', 'ignore', 'search');
+
 
 --
 -- TOC entry 2332 (class 0 OID 0)
