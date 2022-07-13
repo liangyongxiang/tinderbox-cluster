@@ -207,7 +207,7 @@ def parse_build_log():
     # add sum log to buildbot log
     f.addStep(logs.setBuildbotLog())
     # pers the emerge info
-    f.addStep(logs.SetupParserEmergeInfoLog())
+    f.addStep(logs.ReadEmergeInfoLog())
     # add emerge info to log and db
     f.addStep(logs.setEmergeInfoLog())
     # add package info to log and db
