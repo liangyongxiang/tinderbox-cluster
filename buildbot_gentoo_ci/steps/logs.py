@@ -86,6 +86,12 @@ class SetupPropertys(BuildStep):
         self.setProperty("default_project_data", default_project_data, 'default_project_data')
         self.setProperty("version_data", version_data, 'version_data')
         self.setProperty("status", 'completed', 'status')
+        if self.getProperty('faild_cpv'):
+            log_cpv = self.getProperty('faild_cpv')
+        else:
+            log_cpv = self.getProperty('cpv')
+        self.setProperty("log_cpv", log_cpv, 'log_cpv')
+        self.descriptionDone = 'Runing log checker on ' + log_cpv
         return SUCCESS
 
 class SetupParserBuildLoger(BuildStep):
@@ -102,24 +108,42 @@ class SetupParserBuildLoger(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
+        self.aftersteps_list = []
         workdir = yield os.path.join(self.master.basedir, 'workers', self.getProperty('build_workername'), str(self.getProperty("project_build_data")['buildbot_build_id']))
-        if self.getProperty('faild_cpv'):
-            log_cpv = self.getProperty('log_build_data')[self.getProperty('faild_cpv')]
-        else:
-            log_cpv = self.getProperty('log_build_data')[self.getProperty('cpv')]
+        log_cpv = self.getProperty('log_build_data')[self.getProperty('log_cpv')]
+        mastersrc_log = yield os.path.join(workdir, log_cpv['full_logname'])
+        log_py = 'log_parser.py'
+        config_log_py = 'logparser.json'
+        mastersrc_py = yield os.path.join(self.master.basedir, log_py)
+        mastersrc_config = yield os.path.join(self.master.basedir, config_log_py)
+        # Upload logfile to worker
+        self.aftersteps_list.append(steps.FileDownload(
+                                                    mastersrc=mastersrc_log,
+                                                    workerdest=log_cpv['full_logname']
+                                                        ))
+        # Upload log parser py code
+        self.aftersteps_list.append(steps.FileDownload(
+                                                    mastersrc=mastersrc_py,
+                                                    workerdest=log_py
+                                                    ))
+        # Upload log parser py config
+        self.aftersteps_list.append(steps.FileDownload(
+                                                    mastersrc=mastersrc_config,
+                                                    workerdest=config_log_py
+                                                    ))
+        # Run the log parser code
         command = []
-        command.append('ci_log_parser')
+        command.append('python3')
+        command.append(log_py)
         command.append('-f')
         command.append(log_cpv['full_logname'])
         command.append('-u')
         command.append(self.getProperty('project_data')['uuid'])
-        self.aftersteps_list = []
-        self.aftersteps_list.append(master_steps.MasterSetPropertyFromCommand(
+        self.aftersteps_list.append(steps.SetPropertyFromCommand(
                                                             name = 'RunBuildLogParser',
                                                             haltOnFailure = True,
                                                             flunkOnFailure = True,
                                                             command=command,
-                                                            workdir=workdir,
                                                             strip=False,
                                                             extract_fn=PersOutputOfLogParser
                                                             ))
@@ -296,19 +320,15 @@ class MakeIssue(BuildStep):
         separator1 = '\n'
         separator2 = ' '
         log = yield self.addLog('issue')
-        if self.getProperty('faild_cpv'):
-            cpv = self.getProperty('faild_cpv')
-        else:
-            cpv = self.getProperty('cpv')
-        self.error_dict['cpv'] = cpv
+        self.error_dict['cpv'] = self.getProperty('log_cpv')
         yield log.addStdout('Title:' + '\n')
-        yield log.addStdout(separator2.join([cpv, '-', self.error_dict['title']]) + separator1)
+        yield log.addStdout(separator2.join([self.getProperty('log_cpv'), '-', self.error_dict['title']]) + separator1)
         yield log.addStdout('Summary:' + '\n')
         for line in self.summary_log_list:
             yield log.addStdout(line + '\n')
         yield log.addStdout('Attachments:' + '\n')
         yield log.addStdout('emerge_info.log' + '\n')
-        log_cpv = self.getProperty('log_build_data')[cpv]
+        log_cpv = self.getProperty('log_build_data')[self.getProperty('log_cpv')]
         yield log.addStdout(log_cpv['full_logname'] + '\n')
         yield log.addStdout('world.log' + '\n')
 
@@ -389,9 +409,9 @@ class setBuildbotLog(BuildStep):
             yield log.addStdout(line + '\n')
         return SUCCESS
 
-class SetupParserEmergeInfoLog(BuildStep):
+class ReadEmergeInfoLog(BuildStep):
 
-    name = 'SetupParserEmergeInfoLog'
+    name = 'ReadEmergeInfoLog'
     description = 'Running'
     descriptionDone = 'Ran'
     descriptionSuffix = None
@@ -404,21 +424,22 @@ class SetupParserEmergeInfoLog(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
+        emerge_info_output = {}
+        emerge_info_list = []
+        emerge_package_info = []
+        # Read the file and add it to a property
         workdir = yield os.path.join(self.master.basedir, 'workers', self.getProperty('build_workername'), str(self.getProperty("project_build_data")['buildbot_build_id']))
-        command = []
-        command.append('cat')
-        command.append('emerge_info.txt')
-        self.aftersteps_list = []
-        self.aftersteps_list.append(master_steps.MasterSetPropertyFromCommand(
-                                                            name = 'RunEmergeInfoLogParser',
-                                                            haltOnFailure = True,
-                                                            flunkOnFailure = True,
-                                                            command=command,
-                                                            workdir=workdir,
-                                                            strip=False,
-                                                            extract_fn=PersOutputOfEmergeInfo
-                                                            ))
-        yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
+        with open(os.path.join(workdir, 'emerge_info.txt'), encoding='utf-8') as source:
+            emerge_info = source.read()
+        # set emerge_info_output Property
+        for line in emerge_info.split('\n'):
+            if line.startswith('['):
+                emerge_package_info.append(line)
+            else:
+                emerge_info_list.append(line)
+        emerge_info_output['emerge_info'] = emerge_info_list
+        emerge_info_output['emerge_package_info'] = emerge_package_info
+        self.setProperty("emerge_info_output", emerge_info_output, 'emerge_info_output')
         return SUCCESS
 
 class setEmergeInfoLog(BuildStep):
@@ -483,10 +504,7 @@ class Upload(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
-        if self.getProperty('faild_cpv'):
-            log_cpv = self.getProperty('log_build_data')[self.getProperty('faild_cpv')]
-        else:
-            log_cpv = self.getProperty('log_build_data')[self.getProperty('cpv')]
+        log_cpv = self.getProperty('log_build_data')[self.getProperty('log_cpv')]
         bucket = self.getProperty('project_data')['uuid'] + '-' + 'logs'
         file_path = yield os.path.join(self.master.basedir, 'workers', self.getProperty('build_workername'), str(self.getProperty("project_build_data")['buildbot_build_id']) ,log_cpv['full_logname'])
         aftersteps_list = []
