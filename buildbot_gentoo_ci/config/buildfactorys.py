@@ -160,33 +160,10 @@ def run_build_request():
     f.addStep(portage.SetPackageDefault())
     # setup files in /etc if needed
     # run --regen if needed on repo
-    # update packages before any tests
-    # run pretend on packages update on worker
-    f.addStep(builders.RunEmerge(step='pre-update'))
-    #   look at the log to see if we need to do stuff
-    #   run update package on worker and check log
-    f.addStep(builders.RunEmerge(step='update'))
-    # clean up the worker
-    # look at the log to see if we need to do stuff
-    # run pre-depclean and depclean if set
-    f.addStep(builders.RunEmerge(step='pre-depclean'))
-    # run preserved-libs and depclean
-    f.addStep(builders.RunEmerge(step='preserved-libs'))
-    f.addStep(builders.RunEmerge(step='depclean'))
-    # setup make.conf if build id has changes make.conf as dict from SetMakeConf
-    # setup package.* env if build id has changes
-    # setup pkgcheck.conf if needed
-    #f.addStep(builders.SetPkgCheckConf())
-    # run pkgcheck if wanted
-    #   check log
-    f.addStep(builders.RunPkgCheck())
     # check cpv match
     f.addStep(builders.RunEmerge(step='match'))
-    # Add the needed steps for build
-    f.addStep(builders.RunBuild())
-    # run eclean pkg and dist
-    #f.addStep(builders.RunEclean(step='pkg')
-    #f.addStep(builders.RunEclean(step='dist')
+    # Setup the needed stages for update, pkgcheck and build
+    f.addStep(builders.SetupStepts())
     return f
 
 def parse_build_log():

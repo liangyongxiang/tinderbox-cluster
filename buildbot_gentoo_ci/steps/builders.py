@@ -15,6 +15,7 @@ from buildbot.process.buildstep import BuildStep
 from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
 from buildbot.process.results import SKIPPED
+from buildbot.process.results import WARNINGS
 from buildbot.plugins import steps
 
 #FIXME: should be set in config
@@ -26,9 +27,11 @@ def PersOutputOfEmerge(rc, stdout, stderr):
     emerge_output['preserved_libs'] = False
     emerge_output['change_use'] = False
     emerge_output['circular_deps'] = False
+    emerge_output['masked'] = False
     emerge_output['failed'] = False
     package_dict = {}
     log_path_list = []
+    print('stderr')
     print(stderr)
     # split the lines
     for line in stdout.split('\n'):
@@ -115,7 +118,6 @@ def PersOutputOfEmerge(rc, stdout, stderr):
             if change_use_list:
                 change_use[cpv_split[0]] = change_use_list
                 emerge_output['change_use'] = change_use
-        err_line_list = []
         if line.startswith(' * '):
             if line.endswith('.log.gz'):
                 log_path = line.split(' ')[3]
@@ -125,6 +127,10 @@ def PersOutputOfEmerge(rc, stdout, stderr):
             if line.endswith('circular dependencies:'):
                 emerge_output['circular_deps'] = True
             stderr_line_list.append(line)
+        if line.startswith('- '):
+            if re.search('masked', line):
+                stderr_line_list.append(line)
+                emerge_output['masked'] = True
     emerge_output['stderr'] = stderr_line_list
     emerge_output['log_paths'] = log_path_list
 
@@ -397,6 +403,9 @@ class RunEmerge(BuildStep):
                     'emerge',
                     '-v'
                     ]
+        c = yield catpkgsplit(self.getProperty("cpv"))[0]
+        p = yield catpkgsplit(self.getProperty("cpv"))[1]
+        cp = c + '/' + p
         aftersteps_list = []
         #FIXME: Set build timeout in config
         self.build_timeout = 6600
@@ -510,25 +519,10 @@ class RunEmerge(BuildStep):
             aftersteps_list.append(CheckDepcleanLogs('depclean'))
 
         if self.step == 'match':
-            packages_excludes = yield self.gentooci.db.projects.getProjectPortagePackageByUuidAndExclude(self.getProperty('project_data')['uuid'])
-            cpv = self.getProperty("cpv")
-            c = yield catpkgsplit(cpv)[0]
-            p = yield catpkgsplit(cpv)[1]
-            # Check if package is on the exclude list
-            if packages_excludes != []:
-                print(packages_excludes)
-                print(cpv)
-                for package_exclude in packages_excludes:
-                    if '/' in package_exclude['package']:
-                        if package_exclude['package'] == c + '/' + p:
-                            return SKIPPED
-                    else:
-                        if package_exclude['package'] == p:
-                            return SKIPPED
             shell_commad_list.append('-pO')
             # don't use bin for match
             shell_commad_list.append('--usepkg=n')
-            shell_commad_list.append(c + '/' + p)
+            shell_commad_list.append(cp)
             aftersteps_list.append(
                 steps.SetPropertyFromCommand(
                         name = self.stepname,
@@ -536,18 +530,19 @@ class RunEmerge(BuildStep):
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
                         workdir='/',
-                        timeout=self.build_timeout
+                        timeout=self.build_timeout,
+                        warnOnWarnings = True,
+                        warnOnFailure = True,
+                        flunkOnFailure = False,
+                        flunkOnWarnings = False
                 ))
             aftersteps_list.append(CheckEmergeLogs('match'))
 
         if self.step == 'pre-build':
-            cpv = self.getProperty("cpv")
-            c = yield catpkgsplit(cpv)[0]
-            p = yield catpkgsplit(cpv)[1]
             shell_commad_list.append('=' + self.getProperty('cpv'))
             # we don't use the bin for the requsted cpv
             shell_commad_list.append('--usepkg-exclude')
-            shell_commad_list.append(c + '/' + p)
+            shell_commad_list.append(cp)
             # don't build bin for virtual and acct-*
             shell_commad_list.append('--buildpkg-exclude')
             shell_commad_list.append('virtual')
@@ -570,15 +565,12 @@ class RunEmerge(BuildStep):
             aftersteps_list.append(CheckEmergeLogs('pre-build'))
 
         if self.step == 'build':
-            cpv = self.getProperty("cpv")
-            c = yield catpkgsplit(cpv)[0]
-            p = yield catpkgsplit(cpv)[1]
             if projects_emerge_options['oneshot']:
                 shell_commad_list.append('-1')
             shell_commad_list.append('=' + self.getProperty('cpv'))
             # we don't use the bin for the requsted cpv
             shell_commad_list.append('--usepkg-exclude')
-            shell_commad_list.append(c + '/' + p)
+            shell_commad_list.append(cp)
             # don't build bin for virtual and acct-*
             shell_commad_list.append('--buildpkg-exclude')
             shell_commad_list.append('virtual')
@@ -1050,7 +1042,6 @@ class RunPkgCheck(BuildStep):
 
     name = 'Setup PkgCheck step'
     description = 'Running'
-    descriptionDone = 'Ran'
     descriptionSuffix = None
     haltOnFailure = True
     flunkOnFailure = True
@@ -1060,10 +1051,9 @@ class RunPkgCheck(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
-        projectrepository_data = self.getProperty('projectrepository_data')
-        if not projectrepository_data['pkgcheck']:
-            return SUCCESS
+        descriptionDone = 'Setting up steps for Pkgcheck on ' + self.getProperty('cpv')
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        projectrepository_data = self.getProperty('projectrepository_data')
         project_data = self.getProperty('project_data')
         portage_repos_path = self.getProperty('portage_repos_path')
         repository_path = yield os.path.join(portage_repos_path, self.getProperty('repository_data')['name'])
@@ -1182,9 +1172,8 @@ class RunEmergeInfo(BuildStep):
 
 class RunBuild(BuildStep):
 
-    name = 'Setup steps for building package'
+    name = 'Setup steps for building'
     description = 'Running'
-    descriptionDone = 'Ran'
     descriptionSuffix = None
     haltOnFailure = True
     flunkOnFailure = True
@@ -1194,10 +1183,7 @@ class RunBuild(BuildStep):
 
     @defer.inlineCallbacks
     def run(self):
-        if not self.getProperty('cpv_build'):
-            #FIXME:
-            # trigger pars_build_log if we have any logs to check
-            return SKIPPED
+        descriptionDone = 'Setting up steps for build ' + self.getProperty('cpv')
         aftersteps_list = []
         aftersteps_list.append(RunEmerge(step='pre-build'))
         aftersteps_list.append(RunEmergeInfo())
@@ -1208,4 +1194,112 @@ class RunBuild(BuildStep):
         self.setProperty('depclean', False, 'depclean')
         self.setProperty('preserved_libs', False, 'preserved-libs')
         yield self.build.addStepsAfterCurrentStep(aftersteps_list)
+        return SUCCESS
+
+class RunUpdate(BuildStep):
+
+    name = 'Setup steps for update'
+    description = 'Running'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        descriptionDone = 'Setting up steps for updating image'
+        aftersteps_list = []
+        # run pretend on packages update on worker
+        aftersteps_list.append(RunEmerge(step='pre-update'))
+        # look at the log to see if we need to do stuff
+        # run update package on worker and check log
+        aftersteps_list.append(RunEmerge(step='update'))
+        # clean up the worker
+        # look at the log to see if we need to do stuff
+        # run pre-depclean and depclean if set
+        aftersteps_list.append(RunEmerge(step='pre-depclean'))
+        # run preserved-libs and depclean
+        aftersteps_list.append(RunEmerge(step='preserved-libs'))
+        aftersteps_list.append(RunEmerge(step='depclean'))
+        yield self.build.addStepsAfterCurrentStep(aftersteps_list)
+        return SUCCESS
+
+class SetupStepts(BuildStep):
+
+    name = 'Setup steps for update, pkgcheck and build'
+    description = 'Running'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        projectrepository_data = self.getProperty('projectrepository_data')
+        build = False
+        aftersteps_list = []
+        log = yield self.addLog('match')
+        package_dict = self.getProperty('emerge_output')['packages']
+        stderr = self.getProperty('emerge_output')['stderr']
+        print(self.getProperty('cpv_build'))
+        print(package_dict)
+        print(stderr)
+        c = yield catpkgsplit(self.getProperty("cpv"))[0]
+        p = yield catpkgsplit(self.getProperty("cpv"))[1]
+        cp = c + '/' + p
+        yield log.addStdout('Package to match: ' + self.getProperty('cpv') + '\n')
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        packages_excludes = yield self.gentooci.db.projects.getProjectPortagePackageByUuidAndExclude(self.getProperty('project_data')['uuid'])
+        # Check if package is on the exclude list
+        if packages_excludes != []:
+            print(packages_excludes)
+            for package_exclude in packages_excludes:
+                if '/' in package_exclude['package']:
+                    if package_exclude['package'] == c + '/' + p:
+                        yield log.addStdout('Package ' + package_exclude['package'] + ' is in exclude list\n')
+                        yield log.addStdout('Runing Update: NO\n')
+                        yield log.addStdout('Runing Pkgcheck: NO\n')
+                        yield log.addStdout('Runing Build: NO\n')
+                        return SKIPPED
+        if not self.getProperty('cpv_build'):
+            # check what version
+            if package_dict == {}:
+                yield log.addStdout('No package to match\n')
+            else:
+                for cpv, v in package_dict.items():
+                    if re.search(cp, cpv):
+                        yield log.addStdout('Got' + cpv + '\n')
+                        yield log.addStdout('Match: NO\n')
+            # check for error
+            if stderr != []:
+                yield log.addStdout('Error: YES\n')
+                for error in stderr:
+                    yield log.addStdout(error + '\n')
+                return WARNINGS
+            else:
+                yield log.addStdout('Error: NO\n')
+            return SKIPPED
+        build = True
+        yield log.addStdout('Got' + self.getProperty("cpv") + '\n')
+        yield log.addStdout('Match: YES\n')
+        # update packages before any tests
+        if build:
+            yield log.addStdout('Runing Update: YES\n')
+            aftersteps_list.append(RunUpdate())
+        if projectrepository_data['pkgcheck']:
+            yield log.addStdout('Runing Pkgcheck: YES\n')
+            aftersteps_list.append(RunPkgCheck())
+        if build:
+            yield log.addStdout('Runing Build: YES\n')
+            aftersteps_list.append(RunBuild())
+        # run eclean pkg and dist
+        #if build:
+        #f.addStep(builders.RunEclean(step='pkg')
+        #f.addStep(builders.RunEclean(step='dist')
+        if aftersteps_list != []:
+            yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS
