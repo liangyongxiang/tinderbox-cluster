@@ -16,7 +16,7 @@ from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
 from buildbot.process.results import SKIPPED
 from buildbot.process.results import WARNINGS
-from buildbot.plugins import steps
+from buildbot.plugins import steps, util
 
 #FIXME: should be set in config
 hosturl = 'http://90.231.13.235:8000'
@@ -374,7 +374,11 @@ class UpdateRepos(BuildStep):
                             mode='full',
                             submodules=True,
                             alwaysUseLatest=True,
-                            workdir=repository_path)
+                            workdir=repository_path,
+                            #FIXME: set filenames in repositorys db
+                            sshPrivateKey = util.Secret("gitlab.gentoo.org_gentoo-ci.priv"),
+                            sshHostKey = util.Secret("gitlab.gentoo.org.host")
+                            )
             ])
         return SUCCESS
 
@@ -1272,7 +1276,7 @@ class SetupStepts(BuildStep):
             else:
                 for cpv, v in package_dict.items():
                     if re.search(cp, cpv):
-                        yield log.addStdout('Got' + cpv + '\n')
+                        yield log.addStdout('Got'  + cpv + '\n')
                         yield log.addStdout('Match: NO\n')
             # check for error
             if stderr != []:
@@ -1284,7 +1288,7 @@ class SetupStepts(BuildStep):
                 yield log.addStdout('Error: NO\n')
             return SKIPPED
         build = True
-        yield log.addStdout('Got' + self.getProperty("cpv") + '\n')
+        yield log.addStdout('Got ' + self.getProperty("cpv") + '\n')
         yield log.addStdout('Match: YES\n')
         # update packages before any tests
         if build:

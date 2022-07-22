@@ -37,7 +37,8 @@ def getGitChanges(props):
     change_data['committer'] = k['committer']
     change_data['comments'] = k['comments']
     change_data['revision'] = k['revision']
-    change_data['timestamp'] =k['when_timestamp']
+    change_data['timestamp'] = k['when_timestamp']
+    change_data['branch'] = k['branch']
     return change_data
 
 def gentoo_schedulers():
