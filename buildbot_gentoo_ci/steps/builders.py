@@ -314,6 +314,7 @@ class SetupPropertys(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         print('build this %s' % self.getProperty("cpv"))
         self.setProperty('portage_repos_path', self.gentooci.config.project['project']['worker_portage_repos_path'], 'portage_repos_path')
+        self.setProperty('rootworkdir', False, 'rootworkdir')
         projectrepository_data = self.getProperty('projectrepository_data')
         print(projectrepository_data)
         project_data = yield self.gentooci.db.projects.getProjectByUuid(projectrepository_data['project_uuid'])
@@ -342,6 +343,7 @@ class SetupPropertys(BuildStep):
         self.descriptionDone = ' '.join([self.getProperty("cpv"), 'for project', self.getProperty('project_data')['name']])
         return SUCCESS
 
+# Should be moved to repos.py
 class UpdateRepos(BuildStep):
 
     name = 'UpdateRepos'
@@ -351,8 +353,7 @@ class UpdateRepos(BuildStep):
     haltOnFailure = True
     flunkOnFailure = True
 
-    def __init__(self, workdir=False, **kwargs):
-        self.rootworkdir = workdir
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     @defer.inlineCallbacks
@@ -364,8 +365,8 @@ class UpdateRepos(BuildStep):
         projects_repositorys_data = yield self.gentooci.db.projects.getRepositorysByProjectUuid(project_data['uuid'])
         for project_repository_data in projects_repositorys_data:
             repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(project_repository_data['repository_uuid'])
-            if self.rootworkdir:
-                repository_path = os.path.join(self.rootworkdir, portage_repos_path[1:], repository_data['name'])
+            if self.getProperty('rootworkdir'):
+                repository_path = os.path.join(self.getProperty('rootworkdir'), portage_repos_path[1:], repository_data['name'])
             else:
                 repository_path = os.path.join(portage_repos_path, repository_data['name'], '')
             yield self.build.addStepsAfterCurrentStep([
