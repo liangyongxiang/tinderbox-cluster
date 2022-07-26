@@ -76,6 +76,7 @@ class SetupStage4Steps(BuildStep):
                 workerdest = yield os.path.join(self.getProperty("workerbase"), self.getProperty('project_uuid'))
                 workerdest_etc = yield os.path.join(workerdest, 'etc')
                 print(workerdest_etc)
+                self.setProperty('rootworkdir', workerdest, 'rootworkdir')
                 # create dir
                 aftersteps_list.append(steps.ShellCommand(
                         flunkOnFailure=True,
@@ -86,9 +87,9 @@ class SetupStage4Steps(BuildStep):
                 # download stage3
                 aftersteps_list.append(GetSteg3())
                 # setup portage
-                aftersteps_list.append(builders_steps.UpdateRepos(workdir=workerdest))
-                aftersteps_list.append(portage_steps.SetReposConf(workdir=workerdest))
-                aftersteps_list.append(portage_steps.SetMakeConf(workdir=workerdest))
+                aftersteps_list.append(builders_steps.UpdateRepos())
+                aftersteps_list.append(portage_steps.SetReposConf())
+                aftersteps_list.append(portage_steps.SetMakeConf())
                 # add localegen
                 #FIXME: set that in config
                 locale_conf = []
