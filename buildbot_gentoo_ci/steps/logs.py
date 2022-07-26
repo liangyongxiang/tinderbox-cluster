@@ -120,7 +120,7 @@ class SetupParserBuildLoger(BuildStep):
         self.aftersteps_list.append(steps.FileDownload(
                                                     mastersrc=mastersrc_log,
                                                     workerdest=log_cpv['full_logname']
-                                                        ))
+                                                    ))
         # Upload log parser py code
         self.aftersteps_list.append(steps.FileDownload(
                                                     mastersrc=mastersrc_py,
@@ -145,7 +145,8 @@ class SetupParserBuildLoger(BuildStep):
                                                             flunkOnFailure = True,
                                                             command=command,
                                                             strip=False,
-                                                            extract_fn=PersOutputOfLogParser
+                                                            extract_fn=PersOutputOfLogParser,
+                                                            timeout=3600
                                                             ))
         yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
         return SUCCESS
