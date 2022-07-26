@@ -20,6 +20,7 @@ from buildbot.process.buildstep import BuildStep
 from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
 from buildbot.process.results import SKIPPED
+from buildbot.process import remotecommand
 from buildbot.plugins import steps
 
 from buildbot_gentoo_ci.steps import master as master_steps
@@ -34,39 +35,6 @@ def WriteTextToFile(path, text_list):
         yield f.write(separator)
         yield f.close
 
-def PersOutputOfEbuildSH(rc, stdout, stderr):
-    metadata = None
-    NoSplit = []
-    NoSplit.append('DESCRIPTION')
-    #make dict of the stout
-    index = 1
-    metadata_line_dict = {}
-    for text_line in stdout.splitlines():
-        metadata_line_dict[index] = text_line
-        index = index + 1
-    # should have 22 lines
-    if len(auxdbkeys) != index -1:
-        # number of lines is incorrect.
-        return {
-            'auxdb' : metadata
-            }
-    # split all keys to list instead of speces
-    metadata = {}
-    i = 1
-    for key in auxdbkeys:
-        if metadata_line_dict[i] == '':
-            metadata[key] = None
-        else:
-            if ' ' in metadata_line_dict[i] and key not in NoSplit:
-                metadata[key] = metadata_line_dict[i].split(' ')
-            else:
-                metadata[key] = []
-                metadata[key].append(metadata_line_dict[i])
-        i = i + 1
-    return {
-        'auxdb' : metadata
-        }
-
 class SetMakeProfile(BuildStep):
 
     name = 'SetMakeProfile'
@@ -76,8 +44,7 @@ class SetMakeProfile(BuildStep):
     haltOnFailure = True
     flunkOnFailure = True
 
-    def __init__(self, workdir=False, **kwargs):
-        self.rootworkdir = workdir
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     @defer.inlineCallbacks
@@ -105,8 +72,8 @@ class SetMakeProfile(BuildStep):
                     'ln',
                     '-s'
                     ]
-        if self.rootworkdir:
-            symlink_makeprofile_path = yield os.path.join(self.rootworkdir, 'etc/portage/make.profile')
+        if self.getProperty('rootworkdir'):
+            symlink_makeprofile_path = yield os.path.join(self.getProperty('rootworkdir'), 'etc/portage/make.profile')
         else:
             symlink_makeprofile_path = '/etc/portage/make.profile'
         shell_commad_list.append(makeprofile_path)
@@ -130,8 +97,7 @@ class SetReposConf(BuildStep):
     haltOnFailure = True
     flunkOnFailure = True
 
-    def __init__(self, workdir=False, **kwargs):
-        self.rootworkdir = workdir
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
     @defer.inlineCallbacks
@@ -139,8 +105,8 @@ class SetReposConf(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         portage_repos_path = self.getProperty('portage_repos_path')
         project_data = self.getProperty('project_data')
-        if self.rootworkdir:
-            portage_etc_path = yield os.path.join(self.rootworkdir, 'etc/portage/')
+        if self.getProperty('rootworkdir'):
+            portage_etc_path = yield os.path.join(self.getProperty('rootworkdir'), 'etc/portage/')
         else:
             portage_etc_path = '/etc/portage/'
         # setup the default.conf
@@ -148,6 +114,13 @@ class SetReposConf(BuildStep):
         if repos_conf_data is None:
             print('Default repo is not set in repos.conf')
             return FAILURE
+        self.aftersteps_list = []
+        # check if we have the dir
+        cmd = remotecommand.RemoteCommand('stat', {'file': portage_etc_path + 'repos.conf'})
+        yield self.runCommand(cmd)
+        if cmd.didFail():
+            self.aftersteps_list.append(steps.MakeDirectory(dir="repos.conf",
+                                workdir=portage_etc_path))
         log = yield self.addLog('repos.conf')
         # check if repos_conf_data['value'] is vaild repo name
         separator = '\n'
@@ -156,11 +129,11 @@ class SetReposConf(BuildStep):
         default_conf.append('main-repo = ' + repos_conf_data['value'])
         default_conf.append('auto-sync = no')
         default_conf_string = separator.join(default_conf)
-        yield self.build.addStepsAfterCurrentStep([
+        self.aftersteps_list.append(
             steps.StringDownload(default_conf_string + separator,
                                 workerdest="repos.conf/default.conf",
                                 workdir=portage_etc_path)
-            ])
+            )
         # display the default.conf
         yield log.addStdout('File: ' + 'default.conf' + '\n')
         for line in default_conf:
@@ -178,14 +151,15 @@ class SetReposConf(BuildStep):
             repository_conf.append('auto-sync = no')
             repository_conf_string = separator.join(repository_conf)
             filename = repository_data['name'] + '.conf'
-            yield self.build.addStepsAfterCurrentStep([
+            self.aftersteps_list.append(
                 steps.StringDownload(repository_conf_string + separator,
                                 workerdest='repos.conf/' + filename,
                                 workdir=portage_etc_path)
-                ])
+                )
             yield log.addStdout('File: ' + filename + '\n')
             for line in repository_conf:
                 yield log.addStdout(line + '\n')
+        yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
         return SUCCESS
 
 class SetMakeConf(BuildStep):
@@ -207,8 +181,8 @@ class SetMakeConf(BuildStep):
         self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
         project_data = self.getProperty('project_data')
         makeconf_variables_data = yield self.gentooci.db.portages.getVariables()
-        if self.rootworkdir:
-            portage_etc_path = yield os.path.join(self.rootworkdir, 'etc/portage/')
+        if self.getProperty('rootworkdir'):
+            portage_etc_path = yield os.path.join(self.getProperty('rootworkdir'), 'etc/portage/')
         else:
             portage_etc_path = '/etc/portage/'
         separator1 = '\n'
@@ -540,140 +514,4 @@ class SetMakeConfLocal(BuildStep):
         makeconf_list.append('ABI_X86="32 64"')
         makeconf_list.append('FEATURES="sandbox"')
         yield WriteTextToFile(make_conf_path, makeconf_list)
-        return SUCCESS
-
-class SetEnvForEbuildSH(BuildStep):
-
-    name = 'SetEnvForEbuildSH'
-    description = 'Running'
-    descriptionDone = 'Ran'
-    descriptionSuffix = None
-    haltOnFailure = True
-    flunkOnFailure = True
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    def getEapiFromFile(self):
-        with io.open(_unicode_encode(self.getProperty("ebuild_file"),
-            encoding=_encodings['fs'], errors='strict'),
-            mode='r', encoding=_encodings['repo.content'],
-            errors='replace') as f:
-            _eapi, _eapi_lineno = _parse_eapi_ebuild_head(f)
-
-        return _eapi
-
-    @defer.inlineCallbacks
-    def run(self):
-        addStepEbuildSH = []
-        ebuild_commands = []
-        ebuild_env = {}
-        config_root = yield os.path.join(self.getProperty("builddir"), '')
-        mysettings = yield portage_config(config_root = config_root)
-
-        #Get EAPI from file and add it to env
-        eapi = yield self.getEapiFromFile()
-        print(eapi)
-        if eapi is None or not eapi_is_supported(eapi):
-            print('invalid eapi')
-            eapi = '0'
-        print(eapi_is_supported(eapi))
-        ebuild_env['EAPI'] = eapi
-
-        #FIXME: check manifest on ebuild_file
-
-        #Setup ENV
-        category = yield catpkgsplit(self.getProperty("cpv"))[0]
-        package = yield catpkgsplit(self.getProperty("cpv"))[1]
-        version = yield catpkgsplit(self.getProperty("cpv"))[2]
-        revision = yield catpkgsplit(self.getProperty("cpv"))[3]
-        portage_bin_path = mysettings["PORTAGE_BIN_PATH"]
-        ebuild_sh_path = yield os.path.join(portage_bin_path, 'ebuild.sh')
-        #ebuild_env['PORTAGE_DEBUG'] = '1'
-        ebuild_env['EBUILD_PHASE'] = 'depend'
-        ebuild_env['CATEGORY'] = category
-        ebuild_env['P'] = package + '-' + version
-        ebuild_env['PN'] = package
-        ebuild_env['PR'] = revision
-        ebuild_env['PV'] = version
-        if revision == 'r0':
-            ebuild_env['PF'] = ebuild_env['P']
-            ebuild_env['PVR'] = version
-        else:
-            ebuild_env['PF'] = ebuild_env['P'] + '-' + revision
-            ebuild_env['PVR'] = version + '-' + revision
-        ebuild_env['PORTAGE_BIN_PATH'] = portage_bin_path
-        ebuild_env['EBUILD'] = self.getProperty("ebuild_file")
-        ebuild_env['PORTAGE_PIPE_FD'] = '1'
-        ebuild_env['WORKDIR'] = yield os.path.join(mysettings["PORTAGE_TMPDIR"], 'portage', category, ebuild_env['PF'], 'work')
-        ebuild_env['PORTAGE_ECLASS_LOCATIONS'] = self.getProperty("repository_path")
-
-        #FIXME: use sandbox if in FEATURES
-        ebuild_commands.append(ebuild_sh_path)
-        ebuild_commands.append('depend')
-
-        addStepEbuildSH.append(master_steps.MasterSetPropertyFromCommand(
-                                                            name = 'RunEbuildSH',
-                                                            haltOnFailure = True,
-                                                            flunkOnFailure = True,
-                                                            command=ebuild_commands,
-                                                            env=ebuild_env,
-                                                            workdir=self.getProperty("builddir"),
-                                                            strip=False,
-                                                            extract_fn=PersOutputOfEbuildSH
-                                                            ))
-        yield self.build.addStepsAfterCurrentStep(addStepEbuildSH)
-        return SUCCESS
-
-class GetAuxMetadata(BuildStep):
-
-    name = 'GetAuxMetadata'
-    description = 'Running'
-    descriptionDone = 'Ran'
-    descriptionSuffix = None
-    haltOnFailure = True
-    flunkOnFailure = True
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    #@defer.inlineCallbacks
-    def thd_getAuxDbKeys(self):
-        auxdbs = self.myportdb.aux_get(self.getProperty("cpv"), auxdbkeys, myrepo=self.getProperty("repository_data")['name'])
-        return auxdbs
-
-    @defer.inlineCallbacks
-    def run(self):
-        config_root = yield os.path.join(self.getProperty("builddir"), '')
-        # setup mysettings and myportdb
-        mysettings = yield portage_config(config_root = config_root)
-        self.myportdb = yield portdbapi(mysettings=mysettings)
-        auxdbs = yield self.thd_getAuxDbKeys()
-        metadata = None
-        NoSplit = []
-        NoSplit.append('DESCRIPTION')
-        # should have 22 lines
-        if len(auxdbkeys) != len(auxdbs) or not isinstance(auxdbs, list):
-            # number of lines is incorrect or not a list.
-            print("Lines don't match or not a list")
-            yield self.myportdb.close_caches()
-            yield portdbapi.portdbapi_instances.remove(self.myportdb)
-            #self.setProperty('auxdb', metadata, 'auxdb')
-            return FAILURE
-        # split all keys to list instead of speces
-        metadata = {}
-        i = 0
-        for key in auxdbkeys:
-            if auxdbs[i] == '':
-                metadata[key] = None
-            else:
-                if ' ' in auxdbs[i] and key not in NoSplit:
-                    metadata[key] = auxdbs[i].split(' ')
-                else:
-                    metadata[key] = []
-                    metadata[key].append(auxdbs[i])
-            i = i + 1
-        self.setProperty('auxdb', metadata, 'auxdb')
-        yield self.myportdb.close_caches()
-        yield portdbapi.portdbapi_instances.remove(self.myportdb)
         return SUCCESS
