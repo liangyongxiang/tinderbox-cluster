@@ -16,6 +16,23 @@ from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
 from buildbot.plugins import steps
 
+class SetupPropertys(BuildStep):
+    name = 'Setup propertys for CPV check'
+    description = 'Running'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        # set this in config
+        super().__init__(**kwargs)
+
+    #@defer.inlineCallbacks
+    def run(self):
+        self.setProperty('portage_repos_path', '/repositorys', 'portage_repos_path')
+        self.setProperty('rootworkdir', '/var/lib/buildbot_worker', 'rootworkdir')
+        return SUCCESS
+
 class AddPackage(BuildStep):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -100,6 +117,7 @@ class TriggerCheckForV(BuildStep):
                         'category_data' : self.getProperty("category_data"),
                         'change_data' : self.getProperty("change_data"),
                         'project_data' : self.getProperty("project_data"),
+                        'cp_worker' : self.getProperty('workername'),
                     }
                 )
             )
