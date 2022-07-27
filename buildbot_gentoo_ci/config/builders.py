@@ -20,6 +20,14 @@ def CanWorkerBuildProject(builder, wfb, request):
     print('no worker')
     return False
 
+# Use same worker as update_cpv_data was done by so we have same git commit
+def CanWorkerUpdateV(builder, wfb, request):
+    print(request.properties['cp_worker'])
+    print(wfb)
+    if wfb.worker.workername == request.properties['cp_worker']:
+        return True
+    return False
+
 def gentoo_builders(worker_data):
     b = []
     g_ci_w = gentoo_ci_workers(worker_data)
@@ -39,24 +47,24 @@ def gentoo_builders(worker_data):
         factory=buildfactorys.update_repo_check()
         )
     )
-    # Use multiplay workers depend on Property(cp)
-    # if cp do not match next one, use diffrent worker then
-    # or first cp have done its buildsteps.
-    # first LocalWorker need to be done before we can use mulitplay workers (git pull)
+    # update cpv in db and call build_request_data
+    #FIXME: look so we don't run parallel with diffrent worker
+    # (builders.UpdateRepos step)
     b.append(util.BuilderConfig(
         name='update_cpv_data',
-        workernames=g_ci_w.getWorkersUuid('local'),
+        workernames=g_ci_w.getWorkersUuid('log')[0],
         workerbuilddir='builds',
         collapseRequests=False,
-        factory=buildfactorys.update_db_cp()
+        factory=buildfactorys.update_db_cpv()
         )
     )
     # Use multiplay workers
     b.append(util.BuilderConfig(
         name='update_v_data',
-        workernames=g_ci_w.getWorkersUuid('local'),
+        workername=g_ci_w.getWorkersUuid('log')[0],
         workerbuilddir='builds',
         collapseRequests=False,
+        canStartBuild=CanWorkerUpdateV,
         factory=buildfactorys.update_db_v()
         )
     )
@@ -80,7 +88,7 @@ def gentoo_builders(worker_data):
     # Use multiplay workers
     b.append(util.BuilderConfig(
         name='parse_build_log',
-        workernames=g_ci_w.getWorkersUuid('log'),
+        workernames=g_ci_w.getWorkersUuid('log')[1:],
         collapseRequests=False,
         factory=buildfactorys.parse_build_log()
         )

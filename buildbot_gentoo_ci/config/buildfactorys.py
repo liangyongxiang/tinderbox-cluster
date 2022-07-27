@@ -22,12 +22,13 @@ def update_db_check():
     #   return profile_repository, project
     f.addStep(update_db.GetDataGentooCiProject())
     # update the repos
-    f.addStep(update_db.TriggerUpdateRepositorys())
+    #f.addStep(update_db.TriggerUpdateRepositorys())
     # Make a for loop and trigger new builders with cpv from git_changes
     #   return cpv, repository, project_data
     f.addStep(update_db.TriggerCheckForCPV())
     return f
 
+# we run repo update in update_db_cpv instead
 def update_repo_check():
     f = util.BuildFactory()
     # FIXME: 6
@@ -40,9 +41,14 @@ def update_repo_check():
     f.addStep(repos.CheckRepository())
     return f
 
-def update_db_cp():
+def update_db_cpv():
     f = util.BuildFactory()
-    # FIXME: 2
+    # set needed Propertys
+    f.addStep(package.SetupPropertys())
+    # update the repositorys listed in project_repository
+    f.addStep(builders.UpdateRepos())
+    # add repo.conf
+    #f.addStep(portage.SetReposConf())
     # if categorys in db
     #   return category_data
     #   add check category path step at end
@@ -57,33 +63,25 @@ def update_db_cp():
     #   add package to db step
     #   return package_data
     f.addStep(package.CheckP())
-    # Trigger new builders with v from cpv
-    #   return package_data, cpv, repository_data, project_data
+    # Trigger update_db_v
     f.addStep(package.TriggerCheckForV())
     return f
 
 def update_db_v():
     f = util.BuildFactory()
-    # FIXME: 3
-    # if version in db
-    #   return version_data
-    f.addStep(version.GetVData())
-    #   check path and hash
-    f.addStep(version.CheckPathHash())
-    #   if not path
-    #       if not hash
-    #           add deleted stage att end
-    #           add version to db stage
-    #           add version metadata to db
-    #           add version to build check
-    #   else
-    #       add deleted stage att end
-    #       add version to build check stage att end
-    # else
-    #   add version to db
-    #   add version metadata to db
-    #   add version to build check
-    f.addStep(version.CheckV())
+    # set needed Propertys
+    f.addStep(version.SetupPropertys())
+    # check path
+    f.addStep(version.CheckPath())
+    #  if path
+    #    if we have a old version
+    #       mark that version as old
+    #    add new version to db
+    #    add version metadata to db
+    #    Trigger build_request_check
+    #  else
+    #    mark version as old
+    f.addStep(version.SetupStepsForCheckV())
     return f
 
 def build_request_check():
@@ -149,8 +147,8 @@ def run_build_request():
     #                            workdir='/etc/portage/'))
     f.addStep(portage.SetMakeProfile())
     # setup repos.conf dir
-    f.addStep(buildbot_steps.MakeDirectory(dir="repos.conf",
-                                workdir='/etc/portage/'))
+    #f.addStep(buildbot_steps.MakeDirectory(dir="repos.conf",
+    #                            workdir='/etc/portage/'))
     f.addStep(portage.SetReposConf())
     # setup make.conf
     f.addStep(portage.SetMakeConf())

@@ -34,13 +34,25 @@ def log_docker_images(props):
 @util.renderer
 def docker_volumes(props):
     volumes_list = []
-    #FIXME: set in master.cfg
+    #FIXME: set in master.cfg /srv/gentoo/portage/
     src_dir = '/srv/gentoo/portage/' + props.getProperty('project_uuid')
     dest_dir = '/var/cache/portage'
     #add distdir
     volumes_list.append(src_dir + '/distfiles' + ':' + dest_dir + '/distfiles')
     #add bindir
     volumes_list.append(src_dir + '/packages' + ':' + dest_dir + '/packages')
+    return volumes_list
+
+#NOTE: source permission set to user/group buildbot
+@util.renderer
+def docker_volumes_repositorys(props):
+    volumes_list = []
+    #FIXME: set in master.cfg /srv/gentoo/portage/repos
+    src_dir = '/srv/gentoo/portage/repos'
+    #FIXME: set to getProperty('builddir') + repositorys
+    dest_dir = '/var/lib/buildbot_worker/repositorys'
+    #add distdir
+    volumes_list.append(':'.join([src_dir, dest_dir]))
     return volumes_list
 
 def gentoo_workers(worker_data):
@@ -79,10 +91,10 @@ def gentoo_workers(worker_data):
                             log_worker['password'],
                             docker_host='tcp://192.168.1.12:2375',
                             image=log_docker_images,
-                            #volumes=docker_volumes,
+                            volumes=docker_volumes_repositorys,
                             hostconfig=docker_hostconfig,
                             followStartupLogs=True,
                             masterFQDN='192.168.1.5',
-                            build_wait_timeout=3600
+                            #build_wait_timeout=3600
                             ))
     return w
