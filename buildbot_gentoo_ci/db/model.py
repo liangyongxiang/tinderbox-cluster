@@ -71,10 +71,18 @@ class Model(base.DBConnectorComponent):
         # description of the repository
         sa.Column('description', sa.Text, nullable=True),
         sa.Column('url', sa.String(255), nullable=True),
-        sa.Column('type', sa.Enum('gitpuller'), nullable=False, default='gitpuller'),
+        sa.Column('branch', sa.String(255), nullable=True),
+        sa.Column('type', sa.Enum('git', 'gitlab'), nullable=False, default='git'),
+        sa.Column('mode', sa.Enum('full', 'incremental'), nullable=False, default='incremental'),
+        sa.Column('method', sa.Enum('clobber', 'fresh', 'clean', 'copy'), nullable=False, default='fresh'),
+        sa.Column('alwaysuselatest', sa.Boolean, default=False),
         sa.Column('auto', sa.Boolean, default=False),
         sa.Column('enabled', sa.Boolean, default=False),
-        sa.Column('ebuild', sa.Boolean, default=False),
+        sa.Column('ebuild', sa.Boolean, default=True),
+        sa.Column('merge', sa.Boolean, default=False),
+        # filenames for SecretInAFile
+        sa.Column('sshprivatekey', sa.String(50), nullable=True),
+        sa.Column('sshhostkey', sa.String(50), nullable=True),
     )
 
     # Use by GitPoller

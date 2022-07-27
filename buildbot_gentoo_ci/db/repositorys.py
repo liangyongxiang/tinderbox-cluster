@@ -91,15 +91,32 @@ class RepositorysConnectorComponent(base.DBConnectorComponent):
         yield self.db.pool.do(thd)
 
     def _row2dict(self, conn, row):
+        if row.branch == 'none':
+            branch = False
+        else:
+            branch = row.branch
+        if row.sshprivatekey == 'none':
+            sshprivatekey = False
+            sshhostkey = False
+        else:
+            sshprivatekey = row.sshprivatekey
+            sshhostkey = row.sshhostkey
         return dict(
             uuid=row.uuid,
             name=row.name,
             description=row.description,
             url=row.url,
+            type=row.type,
+            branch=branch,
+            mode=row.mode,
+            method=row.method,
+            alwaysuselatest=row.alwaysuselatest,
             auto=row.auto,
             enabled=row.enabled,
             ebuild=row.ebuild,
-            type=row.type
+            merge=row.merge,
+            sshprivatekey=sshprivatekey,
+            sshhostkey=sshhostkey
             )
 
     def _row2dict_gitpuller(self, conn, row):

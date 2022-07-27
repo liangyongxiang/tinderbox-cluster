@@ -343,46 +343,6 @@ class SetupPropertys(BuildStep):
         self.descriptionDone = ' '.join([self.getProperty("cpv"), 'for project', self.getProperty('project_data')['name']])
         return SUCCESS
 
-# Should be moved to repos.py
-class UpdateRepos(BuildStep):
-
-    name = 'UpdateRepos'
-    description = 'Running'
-    descriptionDone = 'Ran'
-    descriptionSuffix = None
-    haltOnFailure = True
-    flunkOnFailure = True
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-
-    @defer.inlineCallbacks
-    def run(self):
-        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
-        portage_repos_path = self.getProperty('portage_repos_path')
-        project_data = self.getProperty('project_data')
-        # update/add all repos that in project_repository for the project
-        projects_repositorys_data = yield self.gentooci.db.projects.getRepositorysByProjectUuid(project_data['uuid'])
-        for project_repository_data in projects_repositorys_data:
-            repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(project_repository_data['repository_uuid'])
-            if self.getProperty('rootworkdir'):
-                repository_path = os.path.join(self.getProperty('rootworkdir'), portage_repos_path[1:], repository_data['name'])
-            else:
-                repository_path = os.path.join(portage_repos_path, repository_data['name'], '')
-            yield self.build.addStepsAfterCurrentStep([
-                steps.Git(repourl=repository_data['url'],
-                            name = 'Git pull ' +  repository_data['name'],
-                            mode='full',
-                            submodules=True,
-                            alwaysUseLatest=True,
-                            workdir=repository_path,
-                            #FIXME: set filenames in repositorys db
-                            sshPrivateKey = util.Secret("gitlab.gentoo.org_gentoo-ci.priv"),
-                            sshHostKey = util.Secret("gitlab.gentoo.org.host")
-                            )
-            ])
-        return SUCCESS
-
 class RunEmerge(BuildStep):
 
     description = 'Running'

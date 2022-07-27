@@ -46,7 +46,7 @@ def update_db_cpv():
     # set needed Propertys
     f.addStep(package.SetupPropertys())
     # update the repositorys listed in project_repository
-    f.addStep(builders.UpdateRepos())
+    f.addStep(repos.UpdateRepos())
     # add repo.conf
     #f.addStep(portage.SetReposConf())
     # if categorys in db
@@ -99,7 +99,7 @@ def run_build_request():
     # set needed Propertys
     f.addStep(builders.SetupPropertys())
     # update the repositorys listed in project_repository
-    f.addStep(builders.UpdateRepos())
+    f.addStep(repos.UpdateRepos())
     # Clean and add new /etc/portage
     #NOTE: remove the symlink befor the dir
     #f.addStep(buildbot_steps.ShellCommand(

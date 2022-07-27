@@ -11,7 +11,7 @@ from buildbot.process.buildstep import BuildStep
 from buildbot.process.results import SUCCESS
 from buildbot.process.results import FAILURE
 from buildbot.process.results import SKIPPED
-from buildbot.plugins import steps
+from buildbot.plugins import steps, util
 from buildbot.config import error as config_error
 
 class CheckPathRepositoryLocal(BuildStep):
@@ -167,4 +167,75 @@ class CheckRepository(BuildStep):
         if not success:
             return FAILURE
         #yield self.gentooci.db.repositorys.updateGitPollerTime(repository_uuid)
+        return SUCCESS
+
+class UpdateRepos(BuildStep):
+
+    name = 'UpdateRepos'
+    description = 'Running'
+    descriptionDone = 'Ran'
+    descriptionSuffix = None
+    haltOnFailure = True
+    flunkOnFailure = True
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    @defer.inlineCallbacks
+    def run(self):
+        self.gentooci = self.master.namedServices['services'].namedServices['gentooci']
+        portage_repos_path = self.getProperty('portage_repos_path')
+        project_data = self.getProperty('project_data')
+        # update/add all repos that in project_repository for the project
+        projects_repositorys_data = yield self.gentooci.db.projects.getRepositorysByProjectUuid(project_data['uuid'])
+        for project_repository_data in projects_repositorys_data:
+            repository_data = yield self.gentooci.db.repositorys.getRepositoryByUuid(project_repository_data['repository_uuid'])
+            print(repository_data)
+            if repository_data['auto'] and repository_data['enabled']:
+                if self.getProperty('rootworkdir'):
+                    repository_path = os.path.join(self.getProperty('rootworkdir'), portage_repos_path[1:], repository_data['name'])
+                else:
+                    repository_path = os.path.join(portage_repos_path, repository_data['name'], '')
+                if repository_data['branch']:
+                    branch = repository_data['branch']
+                else:
+                    branch = 'HEAD'
+                # filenames to use with Secret
+                if repository_data['sshprivatekey']:
+                    sshprivatekey = util.Secret(repository_data['sshprivatekey'])
+                    sshhostkey = util.Secret(repository_data['sshhostkey'])
+                else:
+                    sshprivatekey = None
+                    sshhostkey = None
+                GitdescriptionDone = ' '.join([repository_data['type'], 'pull',  repository_data['name'], branch])
+                if repository_data['type'] == 'git':
+                    yield self.build.addStepsAfterCurrentStep([
+                        steps.Git(repourl=repository_data['url'],
+                            name = 'RunGit',
+                            descriptionDone=GitdescriptionDone,
+                            branch = branch,
+                            mode=repository_data['mode'],
+                            method=repository_data['method'],
+                            submodules=True,
+                            alwaysUseLatest=repository_data['alwaysuselatest'],
+                            workdir=repository_path,
+                            sshPrivateKey = sshprivatekey,
+                            sshHostKey = sshhostkey
+                            )
+                    ])
+                if repository_data['type'] =='gitlab':
+                    yield self.build.addStepsAfterCurrentStep([
+                        steps.GitLab(repourl=repository_data['url'],
+                            name = 'RunGit',
+                            descriptionDone=GitdescriptionDone,
+                            branch = branch,
+                            mode=repository_data['mode'],
+                            method=repository_data['method'],
+                            submodules=True,
+                            alwaysUseLatest=repository_data['alwaysuselatest'],
+                            workdir=repository_path,
+                            sshPrivateKey = sshprivatekey,
+                            sshHostKey = sshhostkey
+                            )
+                    ])
         return SUCCESS
