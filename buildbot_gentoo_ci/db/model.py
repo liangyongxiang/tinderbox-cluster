@@ -109,6 +109,8 @@ class Model(base.DBConnectorComponent):
                   default=lambda: str(uuid.uuid4())),
         # project's name
         sa.Column('name', sa.String(255), nullable=False),
+        # project name on gitlab/github
+        sa.Column('git_project_name', sa.String(255), nullable=False),
         # description of the project
         sa.Column('description', sa.Text, nullable=True),
         sa.Column('profile', sa.String(255), nullable=False),

@@ -216,6 +216,7 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
         return dict(
             uuid=row.uuid,
             name=row.name,
+            git_project_name=row.git_project_name,
             description=row.description,
             profile=row.profile,
             profile_repository_uuid=row.profile_repository_uuid,
