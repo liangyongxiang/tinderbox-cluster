@@ -22,7 +22,7 @@ from buildbot.process.results import SKIPPED
 from buildbot.plugins import steps, util
 
 from buildbot_gentoo_ci.steps import portage as portage_steps
-from buildbot_gentoo_ci.steps import builders as builders_steps
+from buildbot_gentoo_ci.steps import repos as repos_steps
 
 class SetupPropertys(BuildStep):
     name = 'Setup propertys for stage4 image'
@@ -87,7 +87,7 @@ class SetupStage4Steps(BuildStep):
                 # download stage3
                 aftersteps_list.append(GetSteg3())
                 # setup portage
-                aftersteps_list.append(builders_steps.UpdateRepos())
+                aftersteps_list.append(repos_steps.UpdateRepos())
                 aftersteps_list.append(portage_steps.SetReposConf())
                 aftersteps_list.append(portage_steps.SetMakeConf())
                 # add localegen
