@@ -39,7 +39,14 @@ def getGitChanges(props):
     change_data['revision'] = k['revision']
     change_data['timestamp'] = k['when_timestamp']
     change_data['branch'] = k['branch']
+    change_data['project'] = k['project']
     return change_data
+
+def mr_branch_fn(branch):
+    # if branch end with -mr or -pr
+    if branch[-3] == '-mr' or branch[-3] == '-pr':
+        return True
+    return False
 
 def gentoo_schedulers():
     scheduler_update_db = schedulers.SingleBranchScheduler(
@@ -49,7 +56,16 @@ def gentoo_schedulers():
                         change_data = getGitChanges
                         ),
         builderNames = builderUpdateDbNames,
-        change_filter=util.ChangeFilter(branch='master'),
+        change_filter=util.ChangeFilter(branch='master', category='push'),
+    )
+    scheduler_update_db_mr= schedulers.SingleBranchScheduler(
+        name='scheduler_update_db_mr',
+        treeStableTimer=0,
+        properties = dict(
+                        change_data = getGitChanges
+                        ),
+        builderNames = builderUpdateDbNames,
+        change_filter=util.ChangeFilter(branch_fn=mr_branch_fn, category='merge_request'),
     )
     create_stage4 = schedulers.ForceScheduler(
         name="create_stage4",
@@ -86,6 +102,7 @@ def gentoo_schedulers():
     s = []
     s.append(create_stage4)
     s.append(scheduler_update_db)
+    s.append(scheduler_update_db_mr)
     s.append(update_repo_check)
     s.append(update_cpv_data)
     s.append(update_v_data)
