@@ -4,6 +4,7 @@
 import os
 import re
 import json
+from pathlib import Path
 
 from portage.versions import catpkgsplit, cpv_getversion
 from portage.dep import dep_getcpv, dep_getslot, dep_getrepo
@@ -90,6 +91,8 @@ def PersOutputOfEmerge(rc, stdout, stderr):
     # split the lines
     #FIXME: Handling of stderr output
     stderr_line_list = []
+    if stderr != '' and not emerge_output['failed']:
+        emerge_output['failed'] = True
     for line in stderr.split('\n'):
         if 'Change USE:' in line:
             line_list = line.split(' ')
@@ -340,6 +343,7 @@ class SetupPropertys(BuildStep):
         print(self.getProperty("project_build_data"))
         self.masterdest = yield os.path.join(self.master.basedir, 'workers', self.getProperty('workername'), str(self.getProperty("buildnumber")))
         self.setProperty('masterdest', self.masterdest, 'masterdest')
+        self.setProperty('build_env', {}, 'build_env')
         self.descriptionDone = ' '.join([self.getProperty("cpv"), 'for project', self.getProperty('project_data')['name']])
         return SUCCESS
 
@@ -355,7 +359,6 @@ class RunEmerge(BuildStep):
         super().__init__(**kwargs)
         self.descriptionSuffix = self.step
         self.name = 'Setup emerge for ' + self.step + ' step'
-        self.build_env = {}
         self.build_timeout = 0
 
     @defer.inlineCallbacks
@@ -374,25 +377,28 @@ class RunEmerge(BuildStep):
         aftersteps_list = []
         #FIXME: Set build timeout in config
         self.build_timeout = 6600
-        # set env
-        # https://bugs.gentoo.org/683118
-        # export TERM=linux
-        # export TERMINFO=/etc/terminfo
-        self.build_env['TERM'] = 'linux'
-        self.build_env['TERMINFO'] = '/etc/terminfo'
-        # Lang
-        self.build_env['LANG'] = 'C.utf8'
-        self.build_env['LC_MESSAGES'] = 'C'
-        # no color
-        self.build_env['CARGO_TERM_COLOR'] = 'never'
-        self.build_env['GCC_COLORS'] = '0'
-        self.build_env['OCAML_COLOR'] = 'never'
-        self.build_env['PY_FORCE_COLOR'] = '0'
-        self.build_env['PYTEST_ADDOPTS'] = '--color=no'
-        self.build_env['NO_COLOR'] = '1'
-        # not all terms support urls
-        self.build_env['GCC_URLS'] = 'no'
-        self.build_env['TERM_URLS'] = 'no'
+        if self.step == 'update':
+            # set env
+            build_env = {}
+            # https://bugs.gentoo.org/683118
+            # export TERM=linux
+            # export TERMINFO=/etc/terminfo
+            build_env['TERM'] = 'linux'
+            build_env['TERMINFO'] = '/etc/terminfo'
+            # Lang
+            build_env['LANG'] = 'C.utf8'
+            build_env['LC_MESSAGES'] = 'C'
+            # no color
+            build_env['CARGO_TERM_COLOR'] = 'never'
+            build_env['GCC_COLORS'] = '0'
+            build_env['OCAML_COLOR'] = 'never'
+            build_env['PY_FORCE_COLOR'] = '0'
+            build_env['PYTEST_ADDOPTS'] = '--color=no'
+            build_env['NO_COLOR'] = '1'
+            # not all terms support urls
+            build_env['GCC_URLS'] = 'no'
+            build_env['TERM_URLS'] = 'no'
+            self.setProperty('build_env', build_env, 'build_env')
 
         if self.step == 'pre-update':
             shell_commad_list.append('-uDN')
@@ -432,6 +438,7 @@ class RunEmerge(BuildStep):
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
                         workdir='/',
+                        env=self.getProperty("build_env"),
                         timeout=self.build_timeout
                 ))
             aftersteps_list.append(CheckEmergeLogs('update'))
@@ -548,7 +555,7 @@ class RunEmerge(BuildStep):
                         strip=True,
                         extract_fn=PersOutputOfEmerge,
                         workdir='/',
-                        env=self.build_env,
+                        env=self.getProperty("build_env"),
                         timeout=self.build_timeout
                 ))
             aftersteps_list.append(CheckEmergeLogs('build'))
@@ -682,11 +689,9 @@ class CheckEmergeLogs(BuildStep):
     @defer.inlineCallbacks
     def createDistDir(self):
         workdir = yield os.path.join(self.master.basedir, 'workers', self.getProperty('workername'))
-        self.aftersteps_list.append(steps.MasterShellCommand(
-            name = 'Make directory for Uploaded files',
-            command = ['mkdir', str(self.getProperty("buildnumber"))],
-            workdir = workdir
-        ))
+        check_dir = yield os.path.join(workdir, str(self.getProperty("buildnumber")))
+        if not Path(check_dir).is_dir():
+            yield Path(check_dir).mkdir(parents=True)
 
     def addFileUploade(self, sourcefile, destfile, name, url, urlText):
         self.aftersteps_list.append(steps.FileUpload(
@@ -814,7 +819,7 @@ class CheckEmergeLogs(BuildStep):
             print(emerge_output)
             # this should be set in the config
             retrays = 5
-            if self.getProperty('rerun') <= retrays:
+            if self.getProperty('rerun') <= retrays and self.faild_cpv:
                 # when we need to change use. we could rerun pre-build with
                 # --autounmask-use=y --autounmask-write=y --autounmask-only=y
                 # but we use --binpkg--respect-use=y in EMERGE_DEFAULT_OPTS
@@ -895,7 +900,9 @@ class CheckEmergeLogs(BuildStep):
                         self.aftersteps_list.append(CheckEmergeLogs('extra-build'))
             else:
                 # trigger parse_build_log with info about pre-build and it fail
-                pass
+                if self.faild_cpv:
+                    pass
+                self.setProperty('rerun', 0, 'rerun')
         # Make Logfile dict
         if self.step == 'extra-build' or self.step == 'build':
             print(emerge_output)
@@ -922,7 +929,9 @@ class CheckEmergeLogs(BuildStep):
         # trigger a logparser
         # local_log_path dir set in config
         # format /var/cache/portage/logs/build/gui-libs/egl-wayland-1.1.6:20210321-173525.log.gz
+        rebuild = False
         if self.step == 'build':
+            retrays = 1
             # Find log for cpv that was requested or did failed
             if not log_dict == {}:
                 # requested cpv
@@ -934,36 +943,62 @@ class CheckEmergeLogs(BuildStep):
                         self.log_data[cpv] = log_dict[cpv]
                         yield self.getLogFile(cpv, log_dict)
                     if self.faild_cpv:
-                        # failed and build requested cpv
-                        if cpv == self.faild_cpv:
-                            faild_version_data = self.getProperty("version_data")
-                        else:
-                            # failed but not build requested cpv
-                            self.log_data[self.faild_cpv] = log_dict[self.faild_cpv]
-                            yield self.getLogFile(self.faild_cpv, log_dict)
-                            faild_version_data = yield self.getVersionData(self.faild_cpv)
-                        self.setProperty('faild_cpv', self.faild_cpv, 'faild_cpv')
-                        self.getEmergeFiles(self.faild_cpv)
-                        self.getBuildWorkDirs(self.faild_cpv)
+                        c = yield catpkgsplit(self.faild_cpv)[0]
+                        if c == 'dev-haskell':
+                            rebuild = 'haskell'
+                        if not rebuild or self.getProperty('rerun') >= retrays:
+                            # failed and build requested cpv
+                            if cpv == self.faild_cpv:
+                                faild_version_data = self.getProperty("version_data")
+                            else:
+                                # failed but not build requested cpv
+                                self.log_data[self.faild_cpv] = log_dict[self.faild_cpv]
+                                yield self.getLogFile(self.faild_cpv, log_dict)
+                                faild_version_data = yield self.getVersionData(self.faild_cpv)
+                            self.setProperty('faild_cpv', self.faild_cpv, 'faild_cpv')
+                            self.getEmergeFiles(self.faild_cpv)
+                            self.getBuildWorkDirs(self.faild_cpv)
+                            rebuild = False
                     else:
                         self.getEmergeFiles(cpv)
-                    self.aftersteps_list.append(steps.Trigger(
-                        name = 'Setup properties for log parser and trigger it',
-                        schedulerNames=['parse_build_log'],
-                        waitForFinish=False,
-                        updateSourceStamp=False,
-                        set_properties={
-                            'cpv' : self.getProperty("cpv"),
-                            'faild_version_data' : faild_version_data,
-                            'project_build_data' : self.getProperty('project_build_data'),
-                            'log_build_data' : self.log_data,
-                            'pkg_check_log_data' : self.getProperty("pkg_check_log_data"),
-                            'repository_data' : self.getProperty('repository_data'),
-                            'faild_cpv' : self.faild_cpv,
-                            'step' : self.step,
-                            'build_workername' : self.getProperty('workername')
-                        }
-                    ))
+                    if not rebuild:
+                        self.aftersteps_list.append(steps.Trigger(
+                            name = 'Setup properties for log parser and trigger it',
+                            schedulerNames=['parse_build_log'],
+                            waitForFinish=False,
+                            updateSourceStamp=False,
+                            set_properties={
+                                'cpv' : self.getProperty("cpv"),
+                                'faild_version_data' : faild_version_data,
+                                'project_build_data' : self.getProperty('project_build_data'),
+                                'log_build_data' : self.log_data,
+                                'pkg_check_log_data' : self.getProperty("pkg_check_log_data"),
+                                'repository_data' : self.getProperty('repository_data'),
+                                'faild_cpv' : self.faild_cpv,
+                                'step' : self.step,
+                                'build_workername' : self.getProperty('workername')
+                            }
+                        ))
+                    if rebuild:
+                        #FIXME: Set build timeout in config
+                        build_timeout = 6600
+                        shell_commad_list = []
+                        # rebuild broken haskell
+                        if rebuild == 'haskell':
+                            shell_commad_list.append('haskell-updater')
+                            shell_commad_list.append('--')
+                            shell_commad_list.append('--usepkg=n')
+                        if shell_commad_list != []:
+                            self.aftersteps_list.append(
+                                steps.ShellCommand(
+                                    command=shell_commad_list,
+                                    workdir='/',
+                                    env=self.getProperty("build_env"),
+                                    timeout=build_timeout
+                            ))
+                        self.aftersteps_list.append(RunEmerge(step='build'))
+                        self.aftersteps_list.append(CheckEmergeLogs('build'))
+                        self.setProperty('rerun', self.getProperty('rerun') + 1, 'rerun')
         if not self.step is None and self.aftersteps_list != []:
             yield self.build.addStepsAfterCurrentStep(self.aftersteps_list)
         return SUCCESS
