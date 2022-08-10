@@ -436,7 +436,7 @@ class SetupStepsForCheckV(BuildStep):
                                                             name = 'RunGetEAPI',
                                                             haltOnFailure = True,
                                                             flunkOnFailure = True,
-                                                            command=['head', '-n', '8', self.getProperty("ebuild_file")],
+                                                            command=['head', '-n', '10', self.getProperty("ebuild_file")],
                                                             strip=False,
                                                             extract_fn=PersOutputOfGetEapi
                                                             ))
