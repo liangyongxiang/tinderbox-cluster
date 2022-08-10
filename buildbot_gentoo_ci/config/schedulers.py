@@ -42,9 +42,17 @@ def getGitChanges(props):
     change_data['project'] = k['project']
     return change_data
 
-def mr_branch_fn(branch):
-    # if branch end with -mr or -pr
-    if branch[-3] == '-mr' or branch[-3] == '-pr':
+def bb_branch_fn(branch):
+    # check branch
+    print(f"Branch: {branch}")
+    if branch.endswith('-mr') or branch.endswith('-pr') or branch == 'master':
+        return True
+    return False
+
+def bb_category_fn(category):
+    # check event
+    print(f"Category: {category}")
+    if category == 'push' or category == 'merge_request':
         return True
     return False
 
@@ -56,16 +64,7 @@ def gentoo_schedulers():
                         change_data = getGitChanges
                         ),
         builderNames = builderUpdateDbNames,
-        change_filter=util.ChangeFilter(branch='master', category='push'),
-    )
-    scheduler_update_db_mr= schedulers.SingleBranchScheduler(
-        name='scheduler_update_db_mr',
-        treeStableTimer=0,
-        properties = dict(
-                        change_data = getGitChanges
-                        ),
-        builderNames = builderUpdateDbNames,
-        change_filter=util.ChangeFilter(branch_fn=mr_branch_fn, category='merge_request'),
+        change_filter=util.ChangeFilter(branch_fn=bb_branch_fn, category_fn=bb_category_fn),
     )
     create_stage4 = schedulers.ForceScheduler(
         name="create_stage4",
@@ -102,7 +101,6 @@ def gentoo_schedulers():
     s = []
     s.append(create_stage4)
     s.append(scheduler_update_db)
-    s.append(scheduler_update_db_mr)
     s.append(update_repo_check)
     s.append(update_cpv_data)
     s.append(update_v_data)
