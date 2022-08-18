@@ -11,7 +11,7 @@ COPY --from=portage /var/db/repos/gentoo /var/db/repos/gentoo
 # emerge needed deps buildbot-worker, psycopg, git and sqlalchemy
 # get the needed buildbot-worker config
 RUN echo -e "[binhost]\npriority = 9999\nsync-uri = https://gentoo.osuosl.org/experimental/amd64/binpkg/default/linux/17.1/x86-64/\n" | cat >> /etc/portage/binrepos.conf\
- && echo 'EMERGE_DEFAULT_OPTS="--binpkg-respect-use=n --usepkg=y --getbinpkg=y --autounmask-write --autounmask-continue --autounmask-keep-keywords=y --autounmask-use=y"' | cat >> /etc/portage/m>
+ && echo 'EMERGE_DEFAULT_OPTS="--binpkg-respect-use=n --usepkg=y --getbinpkg=y --autounmask-write --autounmask-continue --autounmask-keep-keywords=y --autounmask-use=y"' | cat >> /etc/portage/make.conf\
  && echo 'FEATURES="-ipc-sandbox -pid-sandbox -network-sandbox -usersandbox -mount-sandbox sandbox"' | cat >> /etc/portage/make.conf\
  && echo 'FEATURES="${FEATURES} parallel-install parallel-fetch -merge-sync"' | cat >> /etc/portage/make.conf\
  && echo 'FEATURES="${FEATURES} buildpkg"' | cat >> /etc/portage/make.conf\
