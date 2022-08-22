@@ -1,0 +1,212 @@
+--- a/buildbot/www/hooks/gitlab.py	2022-03-06 15:10:44.000000000 +0100
++++ b/buildbot/www/hooks/gitlab.py	2022-08-07 22:22:16.570498909 +0200
+@@ -19,6 +19,8 @@ import re
+ 
+ from dateutil.parser import parse as dateparse
+ 
++import gitlab as python_gitlab
++
+ from twisted.internet.defer import inlineCallbacks
+ from twisted.python import log
+ 
+@@ -26,6 +28,7 @@ from buildbot.process.properties import
+ from buildbot.util import bytes2unicode
+ from buildbot.www.hooks.base import BaseHookHandler
+ 
++_HOSTED_BASE_URL = 'https://gitlab.com'
+ _HEADER_EVENT = b'X-Gitlab-Event'
+ _HEADER_GITLAB_TOKEN = b'X-Gitlab-Token'
+ 
+@@ -94,6 +97,35 @@ class GitLabHandler(BaseHookHandler):
+ 
+         return changes
+ 
++    #@inlineCallbacks
++    def _configGitlabRest(self, token, baseURL=None):
++        if baseURL is None:
++            baseURL = _HOSTED_BASE_URL
++        if baseURL.endswith('/'):
++            baseURL = baseURL[:-1]
++        return python_gitlab.Gitlab(url=baseURL, private_token=token)
++
++    #@inlineCallbacks
++    def _getFiles(self, attrs):
++        """
++        get the files changes
++        """
++        files = []
++        project = self.gl.projects.get(attrs['target']['id'])
++        mr = project.mergerequests.get(attrs['iid'])
++        changes = mr.changes()
++        if isinstance(changes['changes'], list):
++            for change in changes['changes']:
++                print(change['old_path'])
++                print(change['new_path'])
++                print(change['new_file'])
++                print(change['renamed_file'])
++                print(change['deleted_file'])
++                if change['old_path'] == change['new_path']:
++                   files.append(change['old_path'])
++        print(f"Files: {files}")
++        return files
++
+     def _process_merge_request_change(self, payload, event, codebase=None):
+         """
+         Consumes the merge_request JSON as a python object and turn it into a buildbot change.
+@@ -126,7 +158,7 @@ class GitLabHandler(BaseHookHandler):
+ 
+         changes = [{
+             'author': f"{commit['author']['name']} <{commit['author']['email']}>",
+-            'files': [],  # @todo use rest API
++            'files' : self._getFiles(attrs),
+             'comments': f"MR#{attrs['iid']}: {attrs['title']}\n\n{attrs['description']}",
+             'revision': commit['id'],
+             'when_timestamp': when_timestamp,
+@@ -151,6 +183,65 @@ class GitLabHandler(BaseHookHandler):
+             changes[0]['codebase'] = codebase
+         return changes
+ 
++    def _process_note_addition_to_merge_request(self, payload, event, codebase=None):
++        """
++        Consumes a note event JSON as a python object and turn it into a buildbot change.
++        :arguments:
++            payload
++                Python Object that represents the JSON sent by GitLab Service
++                Hook.
++        Comments in merge_requests are send as note events by the API
++        """
++        attrs = payload['object_attributes']
++
++        # handle only note events coming from merge_requests
++        # this can be direct comments or comments added to a changeset of the MR
++        #
++        # editing a comment does NOT lead to an event at all
++        if 'merge_request' not in payload:
++            log.msg(f"Found note event (id {attrs['id']}) without corresponding MR - ignore")
++            return []
++
++        # change handling is very similar to the method above, but
++        commit = payload['merge_request']['last_commit']
++        when_timestamp = dateparse(commit['timestamp'])
++        # @todo provide and document a way to choose between http and ssh url
++        repo_url = payload['merge_request']['target']['git_http_url']
++        # project name from http headers is empty for me, so get it from
++        # object_attributes/target/name
++        mr = payload['merge_request']
++        project = mr['target']['name']
++
++        log.msg(f"Found notes on MR#{mr['iid']}: {attrs['note']}")
++        changes = [{
++            'author': f"{commit['author']['name']} <{commit['author']['email']}>",
++            'files': [],  # not provided by rest API
++            'comments': f"MR#{mr['iid']}: {mr['title']}\n\n{mr['description']}",
++            'revision': commit['id'],
++            'when_timestamp': when_timestamp,
++            'branch': mr['target_branch'],
++            'repository': repo_url,
++            'project': project,
++            'category': event,
++            'revlink': mr['url'],
++            'properties': {
++                'source_branch': mr['source_branch'],
++                'source_project_id': mr['source_project_id'],
++                'source_repository': mr['source']['git_http_url'],
++                'source_git_ssh_url': mr['source']['git_ssh_url'],
++                'target_branch': mr['target_branch'],
++                'target_project_id': mr['target_project_id'],
++                'target_repository': mr['target']['git_http_url'],
++                'target_git_ssh_url': mr['target']['git_ssh_url'],
++                'event': event,
++                'comments': attrs['note'],
++            },
++        }]
++        if codebase is not None:
++            changes[0]['codebase'] = codebase
++        return changes
++
++
+     @inlineCallbacks
+     def getChanges(self, request):
+         """
+@@ -160,17 +251,21 @@ class GitLabHandler(BaseHookHandler):
+             request
+                 the http request object
+         """
++        p = Properties()
++        p.master = self.master
+         expected_secret = isinstance(self.options, dict) and self.options.get('secret')
+         if expected_secret:
+             received_secret = request.getHeader(_HEADER_GITLAB_TOKEN)
+             received_secret = bytes2unicode(received_secret)
+-
+-            p = Properties()
+-            p.master = self.master
+             expected_secret_value = yield p.render(expected_secret)
+ 
+             if received_secret != expected_secret_value:
+                 raise ValueError("Invalid secret")
++
++        baseUrl_value = isinstance(self.options, dict) and self.options.get('baseUrl')
++        expected_token = isinstance(self.options, dict) and self.options.get('token')
++        expected_token_value = yield p.render(expected_token)
++
+         try:
+             content = request.content.read()
+             payload = json.loads(bytes2unicode(content))
+@@ -189,7 +284,11 @@ class GitLabHandler(BaseHookHandler):
+             repo_url = payload['repository']['url']
+             changes = self._process_change(
+                 payload, user, repo, repo_url, event_type, codebase=codebase)
++        elif event_type == 'note':
++            changes = self._process_note_addition_to_merge_request(
++                payload, event_type, codebase=codebase)
+         elif event_type == 'merge_request':
++            self.gl = self._configGitlabRest(expected_token_value, baseURL=baseUrl_value)
+             changes = self._process_merge_request_change(
+                 payload, event_type, codebase=codebase)
+         else:
+--- a/buildbot/reporters/gitlab.py	2022-03-06 15:10:44.000000000 +0100
++++ b/buildbot/reporters/gitlab.py	2022-08-23 00:11:55.996195542 +0200
+@@ -95,7 +95,7 @@ class GitLabStatusPush(ReporterBase):
+         :param branch: Branch name to create the status for.
+         :param sha: Full sha to create the status for.
+         :param state: one of the following 'pending', 'success', 'failed'
+-                      or 'cancelled'.
++                      or 'canceled'.
+         :param target_url: Target url to associate with this status.
+         :param description: Short description of the status.
+         :param context: Context of the result
+@@ -155,10 +155,12 @@ class GitLabStatusPush(ReporterBase):
+                 SKIPPED: 'success',
+                 EXCEPTION: 'failed',
+                 RETRY: 'pending',
+-                CANCELLED: 'cancelled'
++                CANCELLED: 'canceled'
+             }.get(build['results'], 'failed')
+-        else:
++        elif build.get('started_at'):
+             state = 'running'
++        else:
++            state = 'pending'
+ 
+         context = yield props.render(self.context)
+ 
+@@ -167,8 +169,8 @@ class GitLabStatusPush(ReporterBase):
+         # FIXME: probably only want to report status for the last commit in the changeset
+         for sourcestamp in sourcestamps:
+             sha = sourcestamp['revision']
+-            if 'source_project_id' in props:
+-                proj_id = props['source_project_id']
++            if 'target_project_id' in props:
++                proj_id = props['target_project_id']
+             else:
+                 proj_id = yield self.getProjectId(sourcestamp)
+             if proj_id is None:
+@@ -189,6 +191,7 @@ class GitLabStatusPush(ReporterBase):
+                     description=description
+                 )
+                 if res.code not in (200, 201, 204):
++                    log.msg(res.code)
+                     message = yield res.json()
+                     message = message.get('message', 'unspecified error')
+                     log.msg(
