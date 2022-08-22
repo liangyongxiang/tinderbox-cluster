@@ -203,7 +203,6 @@ ALTER TYPE public.repositorys_mode OWNER TO postgres;
 --
 
 CREATE TYPE public.repositorys_type AS ENUM (
-    'gitpuller',
     'git',
     'gitlab'
 );
