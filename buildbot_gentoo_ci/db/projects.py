@@ -241,7 +241,8 @@ class ProjectsConnectorComponent(base.DBConnectorComponent):
             auto=row.auto,
             pkgcheck=pkgcheck,
             build=row.build,
-            test=row.test
+            test=row.test,
+            test_mr=row.test_mr
             )
 
     def _row2dict_projects_workers(self, conn, row):
