@@ -61,6 +61,6 @@ gitlab_gentoo_org = GitLabStatusPush(token=util.Secret("gitlabToken"),
                                 )
 
 def gentoo_reporters(r=[]):
-    r.append(irc_reporter)
+    #r.append(irc_reporter)
     r.append(gitlab_gentoo_org)
     return r
