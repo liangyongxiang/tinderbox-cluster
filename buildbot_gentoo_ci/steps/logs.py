@@ -20,7 +20,7 @@ from buildbot.process.results import WARNINGS
 from buildbot.process.results import SKIPPED
 from buildbot.plugins import steps
 
-from buildbot_gentoo_ci.steps import minio
+#from buildbot_gentoo_ci.steps import minio
 from buildbot_gentoo_ci.steps import master as master_steps
 from buildbot_gentoo_ci.steps import bugs
 
@@ -525,8 +525,8 @@ class Upload(BuildStep):
         bucket = self.getProperty('project_data')['uuid'] + '-' + 'logs'
         file_path = yield os.path.join(self.master.basedir, 'workers', self.getProperty('build_workername'), str(self.getProperty("project_build_data")['buildbot_build_id']) ,log_cpv['full_logname'])
         aftersteps_list = []
-        aftersteps_list.append(minio.putFileToMinio(file_path, log_cpv['full_logname'], bucket))
-        yield self.build.addStepsAfterCurrentStep(aftersteps_list)
+        #aftersteps_list.append(minio.putFileToMinio(file_path, log_cpv['full_logname'], bucket))
+        #yield self.build.addStepsAfterCurrentStep(aftersteps_list)
         return SUCCESS
 
 class ParserPkgCheckLog(BuildStep):
