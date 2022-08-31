@@ -199,7 +199,7 @@ class SetMakeConf(BuildStep):
                 makeconf_variable_list.append('-fno-diagnostics-color')
                 #FIXME:
                 # Depend on worker we may have to add a diffrent march
-                makeconf_variable_list.append('-march=native')
+                #makeconf_variable_list.append('-march=native')
             if k['variable'] == 'CXXFLAGS':
                 makeconf_variable_list.append('${CFLAGS}')
             if k['variable'] == 'FFLAGS':
@@ -509,7 +509,7 @@ class SetMakeConfLocal(BuildStep):
         makeconf_list.append('CXXFLAGS=""')
         makeconf_list.append('ACCEPT_LICENSE="*"')
         makeconf_list.append('USE=""')
-        makeconf_list.append('ACCEPT_KEYWORDS="~amd64 amd64"')
+        makeconf_list.append('ACCEPT_KEYWORDS="~riscv riscv"')
         makeconf_list.append('EMERGE_DEFAULT_OPTS=""')
         makeconf_list.append('ABI_X86="32 64"')
         makeconf_list.append('FEATURES="sandbox"')
