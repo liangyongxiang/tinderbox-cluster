@@ -76,12 +76,12 @@ def gentoo_workers(worker_data):
         if build_worker['type'] == 'docker':
             w.append(worker.DockerLatentWorker(build_worker['uuid'],
                             build_worker['password'],
-                            docker_host='tcp://192.168.1.12:2375',
+                            docker_host='tcp://127.0.0.1:2375',
                             image=build_docker_images,
                             volumes=docker_volumes,
                             hostconfig=docker_hostconfig,
                             followStartupLogs=True,
-                            masterFQDN='192.168.1.5',
+                            masterFQDN='127.0.0.1',
                             build_wait_timeout=3600
                             ))
     for log_worker in g_ci_w.getWorkersAllData('log'):
@@ -89,7 +89,7 @@ def gentoo_workers(worker_data):
         if log_worker['type'] == 'log':
             w.append(worker.DockerLatentWorker(log_worker['uuid'],
                             log_worker['password'],
-                            docker_host='tcp://192.168.1.12:2375',
+                            docker_host='tcp://127.0.0.1:2375',
                             image=log_docker_images,
                             volumes=docker_volumes_repositorys,
                             hostconfig=docker_hostconfig,
