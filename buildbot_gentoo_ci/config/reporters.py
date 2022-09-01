@@ -8,10 +8,11 @@ from buildbot.reporters.message import MessageFormatter
 
 from buildbot_gentoo_ci.reporters import irc
 irc_template = '''{% set resultsList = ["\x0303SUCCESS", "\x0308WARNINGS", "\x0304FAILURE"] %}\
-{{ "\x02" }}{{ build['properties']['cpv'][0] }}{{ "\x02" }} {{ "\x0303" }}repo/{{ projects }}:{{ build['properties']['branch'][0] }}{{ "\x03" }} \
+{{ "\x02" }}{{ build['properties']['cpv'][0] }}{{ "\x02" }} {{ "\x0303" }}Repo:{{ projects }}:{{ build['properties']['branch'][0] }}{{ "\x03" }} \
 {{ build['properties']['revision'][0]|truncate(10, True) }} {{ "\x0302" }}{{ build['properties']['owners'][0][0] }}{{ "\x03" }} \
-{{ build['properties']['event'][0] }} {{ projects }}:{{ build['properties']['project_data'][0]['name'] }} \
-{{ "\x02" }}{{ "Build: "}}{{ resultsList[build['results']] }}{{ "\x03" }}{{ "\x02" }} {{ "\x0312" }}{{ build_url }}{{ "\x03" }}\
+{{ "\x0306" }}{{ build['properties']['event'][0] }}{{ "\x03" }} {{ projects }}:{{ build['properties']['project_data'][0]['name'] }} \
+{{ "\x02" }}{{ "Build: "}}{{ resultsList[build['results']] }}{{ "\x03" }}{{ "\x02" }} {{ "\x0312" }}{{ build_url }}{{ "\x03" }} \
+{% if build['properties']['bgo'][0]['match'] is true %}{{ "\x0311" }}Bugid: {{build['properties']['bgo'][0]['id']}}{{ "\x03" }}{% endif %}\
 '''
 
 def ircGenerators():

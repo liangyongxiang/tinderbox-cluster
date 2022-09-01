@@ -91,6 +91,7 @@ class SetupPropertys(BuildStep):
         else:
             log_cpv = self.getProperty('cpv')
         self.setProperty("log_cpv", log_cpv, 'log_cpv')
+        self.setProperty("bgo", dict( match=False), 'bgo')
         self.descriptionDone = 'Runing log checker on ' + log_cpv
         return SUCCESS
 
@@ -333,6 +334,19 @@ class MakeIssue(BuildStep):
         yield log.addStdout(log_cpv['full_logname'] + '\n')
         yield log.addStdout('world.log' + '\n')
 
+    def getNiceErrorLine(self, line):
+        # strip away hex addresses, loong path names, line and time numbers and other stuff
+        # https://github.com/toralf/tinderbox/blob/main/bin/job.sh#L467
+        # FIXME: Add the needed line when needed
+        if re.search(': line', line):
+            line = re.sub(r"\d", "<snip>", line)
+        # Shorten the path
+        if line.startswith('/usr/'):
+            line = line.replace(os.path.split(line.split(' ', 1)[0])[0], '/...')
+        if re.search(': \d:\d: ', line):
+            line = re.sub(r":\d:\d: ", ": ", line)
+        return line
+
     def ClassifyIssue(self):
         # get the title for the issue
         text_issue_list = []
@@ -344,8 +358,10 @@ class MakeIssue(BuildStep):
         # add the issue error
         if text_issue_list != []:
             self.error_dict['title_issue'] = text_issue_list[0].replace('*', '').strip()
+            self.error_dict['title_issue_nice'] = self.getNiceErrorLine(text_issue_list[0].replace('*', '').strip())
         else:
             self.error_dict['title_issue'] = 'title_issue : None'
+            self.error_dict['title_nice'] = 'title_issue : None'
         self.error_dict['title_phase'] = 'failed in '+ self.error_dict['phase']
         #set the error title
         self.error_dict['title'] = self.error_dict['title_phase'] + ' - ' + self.error_dict['title_issue']

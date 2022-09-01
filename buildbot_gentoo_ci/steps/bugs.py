@@ -87,20 +87,28 @@ class GetBugs(BuildStep):
         yield log.addStdout('Open Bugs\n')
         match = False
         for bug in buglist:
-            yield log.addStdout('Bug: ' + str(bug['id']) + ' Summary: ' + bug['summary'] +'\n')
-            if re.search(self.getProperty('error_dict')['title_issue'][:20], bug['summary']):
-                print('Bug found')
-                print(bug)
+            yield log.addStdout(f"Bug: {str(bug['id'])} Summary: {bug['summary']}\n")
+            # we splite the lines to lists and try to match the words
+            matches = 0
+            match_search_text = list(self.getProperty('error_dict')['title_issue'].split())
+            match_bug_text = list(bug['summary'].split())
+            #FIXME: add check for cp
+            for match_word in match_search_text:
+                if match_word in match_bug_text:
+                    matches = matches + 1
+            if matches >= 10:
+                print(f"Bug: {str(bug['id'])} Summary: {bug['summary']}")
                 match = {}
+                match['match'] = True
                 match['id'] = bug['id']
                 match['summary'] = bug['summary']
+        yield log.addStdout(f"Line to match: {self.getProperty('error_dict')['title_issue']}\n")
         if match:
-            yield log.addStdout('Match bug found\n')
-            yield log.addStdout('Bug: ' + str(match['id']) + ' Summary: ' + match['summary'] +'\n')
+            yield log.addStdout('Match bug: YES\n')
+            yield log.addStdout(f"Bug: {str(match['id'])} Summary: {match['summary']}\n")
             self.setProperty("bgo", match, 'bgo')
             return
-        yield log.addStdout('NO Match bug found\n')
-        self.setProperty("bgo", False, 'bgo')
+        yield log.addStdout('Match bug: NO\n')
 
     @defer.inlineCallbacks
     def run(self):
