@@ -747,7 +747,7 @@ INSERT INTO public.projects_pattern VALUES (919, 'e89c2c1a-46e0-4ded-81dd-c51afe
 
 -- ignore
 INSERT INTO public.projects_pattern VALUES (950, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', '^>>> /', 0, 0, 'ignore', 'ignore', 'search');
-INSERT INTO public.projects_pattern VALUES (950, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', '^./usr/', 0, 0, 'ignore', 'ignore', 'search');
+INSERT INTO public.projects_pattern VALUES (951, 'e89c2c1a-46e0-4ded-81dd-c51afeb7fcff', '^./usr/', 0, 0, 'ignore', 'ignore', 'search');
 
 
 --
