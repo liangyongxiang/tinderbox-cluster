@@ -1,1 +1,1 @@
-{"database": "postgresql+psycopg2://user:password@host/gentoo-ci", "default_uuid" : "uuid", "core" : "2" }
+{"database": "postgresql+psycopg2://buildbot:bu1ldb0t@127.0.0.1/gentoo-ci", "default_uuid" : "uuid", "core" : "2" }
