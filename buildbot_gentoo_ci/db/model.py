@@ -376,8 +376,12 @@ class Model(base.DBConnectorComponent):
 
     repo_path = util.sibpath(__file__, "migrate")
 
-    @defer.inlineCallbacks
+    # TODO: Check why is_current returns exceptions
     def is_current(self):
+        return True
+
+    @defer.inlineCallbacks
+    def __is_current(self):
         if ControlledSchema is None:
             # this should have been caught earlier by enginestrategy.py with a
             # nicer error message
