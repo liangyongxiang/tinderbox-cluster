@@ -52,7 +52,7 @@ def gentoo_builders(worker_data):
     # (builders.UpdateRepos step)
     b.append(util.BuilderConfig(
         name='update_cpv_data',
-        workernames=g_ci_w.getWorkersUuid('log')[0],
+        workernames=g_ci_w.getWorkersUuid('node')[0],
         workerbuilddir='builds',
         collapseRequests=False,
         factory=buildfactorys.update_db_cpv()
@@ -61,7 +61,7 @@ def gentoo_builders(worker_data):
     # Use multiplay workers
     b.append(util.BuilderConfig(
         name='update_v_data',
-        workername=g_ci_w.getWorkersUuid('log')[0],
+        workername=g_ci_w.getWorkersUuid('node')[0],
         workerbuilddir='builds',
         collapseRequests=False,
         canStartBuild=CanWorkerUpdateV,
@@ -79,7 +79,7 @@ def gentoo_builders(worker_data):
     # Use multiplay workers
     b.append(util.BuilderConfig(
         name='run_build_request',
-        workernames=g_ci_w.getWorkersUuid('docker'),
+        workernames=g_ci_w.getWorkersUuid('node')[1:],
         canStartBuild=CanWorkerBuildProject,
         collapseRequests=False,
         factory=buildfactorys.run_build_request()
@@ -88,7 +88,7 @@ def gentoo_builders(worker_data):
     # Use multiplay workers
     b.append(util.BuilderConfig(
         name='parse_build_log',
-        workernames=g_ci_w.getWorkersUuid('log')[1:],
+        workernames=g_ci_w.getWorkersUuid('node')[0],
         collapseRequests=False,
         factory=buildfactorys.parse_build_log()
         )
