@@ -51,10 +51,11 @@ def bb_branch_fn(branch):
 
 def bb_category_fn(category):
     # check event
-    print(f"Category: {category}")
-    if category == 'push' or category == 'merge_request':
-        return True
-    return False
+    print(f"bb_branch_fn: Category: {category}")
+    return True
+    #if category == 'push' or category == 'merge_request':
+    #    return True
+    #return False
 
 def gentoo_schedulers():
     scheduler_update_db = schedulers.SingleBranchScheduler(
