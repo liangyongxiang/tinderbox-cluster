@@ -113,7 +113,7 @@ class SetupParserBuildLoger(BuildStep):
         workdir = yield os.path.join(self.master.basedir, 'workers', self.getProperty('build_workername'), str(self.getProperty("project_build_data")['buildbot_build_id']))
         log_cpv = self.getProperty('log_build_data')[self.getProperty('log_cpv')]
         mastersrc_log = yield os.path.join(workdir, log_cpv['full_logname'])
-        log_py = 'log_parser.py'
+        log_py = 'py/log_parser.py'
         config_log_py = 'logparser.json'
         mastersrc_py = yield os.path.join(self.master.basedir, log_py)
         mastersrc_config = yield os.path.join(self.master.basedir, config_log_py)
