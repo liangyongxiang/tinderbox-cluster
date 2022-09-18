@@ -23,7 +23,7 @@ SET row_security = off;
 -- Name: gentoo-ci; Type: DATABASE; Schema: -; Owner: buildbot
 --
 
-CREATE DATABASE "gentoo-ci" WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE = 'sv_SE.utf8';
+CREATE DATABASE "gentoo-ci" WITH TEMPLATE = template0 ENCODING = 'UTF8' LOCALE = 'en_US.utf8';
 
 
 ALTER DATABASE "gentoo-ci" OWNER TO buildbot;
