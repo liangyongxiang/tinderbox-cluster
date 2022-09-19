@@ -8,7 +8,7 @@ from buildbot.plugins import changes, util
 def gentoo_change_source(cs=[]):
     cs.append(changes.GitPoller(
             #repourl='https://github.com/zorry/gentoo.git',
-            repourl='https://github.com/liangyongxiang/gentoo.git',
+            repourl='https://github.com/gentoo/gentoo.git',
             branches=True,
             workdir= 'repositorys' + '/gentoo.git/',
             pollAtLaunch=True,
