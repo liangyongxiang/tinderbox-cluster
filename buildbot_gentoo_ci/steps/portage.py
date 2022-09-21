@@ -231,6 +231,12 @@ class SetMakeConf(BuildStep):
         else:
             makeconf_keyword = keyword_data['name']
         makeconf_list.append('ACCEPT_KEYWORDS="' + makeconf_keyword + '"')
+        #TODO: find best way tu set jobs counter
+        workername = self.getProperty('workername')
+        if 'qemu' in workername:
+            makeconf_list.append('MAKEOPTS="-j32"')
+        else:
+            makeconf_list.append('MAKEOPTS="-j4"')
         makeconf_string = separator1.join(makeconf_list)
         print(makeconf_string)
         yield self.build.addStepsAfterCurrentStep([
