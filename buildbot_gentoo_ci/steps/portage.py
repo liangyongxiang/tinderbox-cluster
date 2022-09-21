@@ -231,7 +231,6 @@ class SetMakeConf(BuildStep):
         else:
             makeconf_keyword = keyword_data['name']
         makeconf_list.append('ACCEPT_KEYWORDS="' + makeconf_keyword + '"')
-        makeconf_list.append('MAKEOPTS="-j14"')
         makeconf_string = separator1.join(makeconf_list)
         print(makeconf_string)
         yield self.build.addStepsAfterCurrentStep([
