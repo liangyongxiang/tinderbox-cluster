@@ -231,7 +231,7 @@ function select_repo_gentoo_uuid() {
     repo_gentoo_uuid=$(sudo -u postgres psql -Aqt -Ubuildbot -d gentoo-ci -c "SELECT uuid FROM repositorys;")
     if [ -z "$repo_gentoo_uuid" ]; then
         repo_gentoo_uuid=$(_uuidgen)
-        insert_repositorys gentoo "https://gitlab.com/liangyongxiang/gentoo-ci.git" "$repo_gentoo_uuid" "Gentoo main tree"
+        insert_repositorys gentoo "https://github.com/gentoo/gentoo.git" "$repo_gentoo_uuid" "Gentoo main tree"
     fi
 }
 
